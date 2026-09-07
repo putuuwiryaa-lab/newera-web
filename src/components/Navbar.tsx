@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, RefreshCw, Database, Cpu, Share2 } from 'lucide-react';
+import { Activity, RefreshCw, Database, Cpu, Share2, Download, Smartphone, X } from 'lucide-react';
 
 interface NavbarProps {
   marketCount: number;
@@ -19,6 +19,55 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenShare
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
+  const [showIosModal, setShowIosModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check if running as standalone PWA
+    const standaloneCheck =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    setIsStandalone(standaloneCheck);
+
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsStandalone(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsStandalone(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIos) {
+        setShowIosModal(true);
+      } else {
+        alert(
+          'Untuk menginstall VORTEX 2D, buka menu browser (titik 3 di kanan atas) lalu pilih "Install Aplikasi" atau "Tambahkan ke Layar Utama".'
+        );
+      }
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -35,6 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
 
   return (
     <header className="sticky top-0 z-40 bg-[#0B0F19]/90 backdrop-blur-md border-b border-gray-800">
@@ -90,6 +140,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-mono text-[10px] opacity-75">({marketCount})</span>
           </div>
 
+          {/* PWA Install Button */}
+          {!isStandalone && (
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-cyan-500/20 active:scale-95 border border-cyan-400/30 animate-pulse hover:animate-none"
+              title="Pasang aplikasi VORTEX 2D di layar HP / Desktop"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-200" />
+              <span className="hidden sm:inline">Install App</span>
+              <span className="sm:hidden">Install</span>
+            </button>
+          )}
+
           {/* Share Prediction Button */}
           <button
             onClick={onOpenShare}
@@ -112,6 +175,50 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
       </div>
+
+      {/* iOS Safari PWA Instruction Modal */}
+      {showIosModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Smartphone className="w-5 h-5 text-cyan-400" />
+                <h3 className="font-bold text-white text-sm">Install di iPhone / iPad</h3>
+              </div>
+              <button
+                onClick={() => setShowIosModal(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white bg-gray-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="text-xs text-gray-300 space-y-2.5">
+              <p>Untuk menginstall aplikasi VORTEX 2D di Safari iOS:</p>
+              <ol className="list-decimal list-inside space-y-1.5 text-gray-200 bg-gray-950/60 p-3 rounded-xl border border-gray-800/80">
+                <li>
+                  Tekan tombol <strong className="text-cyan-400">Bagikan (Share / ⎙)</strong> di menu bawah Safari.
+                </li>
+                <li>
+                  Gulir ke bawah lalu pilih menu <strong className="text-emerald-400">"Tambahkan ke Layar Utama" (Add to Home Screen)</strong>.
+                </li>
+                <li>
+                  Tekan <strong className="text-white">"Tambah" (Add)</strong> di pojok kanan atas.
+                </li>
+              </ol>
+              <p className="text-[11px] text-gray-400">
+                Aplikasi VORTEX 2D akan langsung muncul sebagai ikon di beranda HP Anda dan dapat dibuka fullscreen tanpa bar browser!
+              </p>
+            </div>
+            <button
+              onClick={() => setShowIosModal(false)}
+              className="w-full py-2 bg-gradient-to-r from-emerald-600 to-cyan-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20"
+            >
+              Mengerti & Tutup
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
+
