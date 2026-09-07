@@ -280,9 +280,14 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
           <div>
             Parameter Aktif: <strong className="text-purple-300 font-mono">BBFS-{selectedBBFSTier}</strong> ({selectedBBFSTier === 6 ? '30 Line Ekonomis' : selectedBBFSTier === 7 ? '42 Line Keseimbangan Utama' : selectedBBFSTier === 8 ? '56 Line Cakupan Luas' : '72 Line Proteksi Penuh'})
           </div>
-          <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
-            ✓ Evaluasi Khusus {selectedBBFSTier} Digit
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-cyan-400 font-mono font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30">
+              🛡️ Anti-Osilasi
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
+              ✓ Evaluasi Khusus {selectedBBFSTier} Digit
+            </span>
+          </div>
         </div>
 
         {(() => {

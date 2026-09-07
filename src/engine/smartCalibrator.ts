@@ -250,7 +250,37 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
   const allAIFrozen = Object.values(aiTierAudits).every((t) => t.action === 'FREEZE');
 
   if (!allAIFrozen) {
-    // Penyelarasan bobot HANYA dilakukan jika ada tier yang ZONK / butuh kalibrasi
+    // --------------------------------------------------------------------------
+    // SMART BOBOT (ANTI-OSILASI): Streak-Aware, Symmetric Multiplier & EMA Smoothing
+    // --------------------------------------------------------------------------
+    // 1. Hitung streak historis masing-masing metode (apakah baru meleset 1x atau beruntun)
+    const methodStreaks: Record<string, number> = { Momentum: 0, Markov: 0, Delta: 0, Mistik: 0 };
+    for (const mName of Object.keys(methodEvaluations)) {
+      let mStreak = 0;
+      for (let i = valid4D.length - 2; i >= Math.max(0, valid4D.length - 8); i--) {
+        const hSub = valid4D.slice(0, i + 1).map((r) => [parseInt(r[2], 10), parseInt(r[3], 10)] as [number, number]);
+        const nextK = parseInt(valid4D[i + 1][2], 10);
+        const nextE = parseInt(valid4D[i + 1][3], 10);
+        let sMap: Record<number, number> = {};
+        if (mName === 'Momentum') sMap = getMomentumScores(hSub);
+        else if (mName === 'Markov') sMap = getMarkovScores(hSub);
+        else if (mName === 'Delta') sMap = getDeltaScores(hSub);
+        else if (mName === 'Mistik') sMap = getAdaptiveMistikScores(hSub);
+
+        const top3 = Object.keys(sMap).map(Number).sort((a, b) => sMap[b] - sMap[a]).slice(0, 3);
+        const wasHit = top3.includes(nextK) || top3.includes(nextE);
+
+        if (i === valid4D.length - 2) {
+          mStreak = wasHit ? 1 : -1;
+        } else {
+          if (mStreak > 0 && wasHit) mStreak++;
+          else if (mStreak < 0 && !wasHit) mStreak--;
+          else break;
+        }
+      }
+      methodStreaks[mName] = mStreak;
+    }
+
     for (const [mName, scores] of Object.entries(methodEvaluations)) {
       const top3 = Object.keys(scores)
         .map(Number)
@@ -258,14 +288,38 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
         .slice(0, 3);
 
       const hitMethod = top3.includes(actualK) || top3.includes(actualE);
+      const prevW = calibratedWeights[mName] || 10.0;
+
+      // Hitung panjang streak (berapa kali beruntun dalam arah yang sama)
+      const prevStreak = methodStreaks[mName] || 0;
+      const currentStreakLen = hitMethod
+        ? (prevStreak > 0 ? prevStreak + 1 : 1)
+        : (prevStreak < 0 ? Math.abs(prevStreak) + 1 : 1);
+
+      // 1. Streak-Aware Learning Rate (η):
+      // Streak 1 (fluktuasi harian biasa / noise): η = 0.08 (±8%)
+      // Streak 2 (mulai konsisten): η = 0.16 (±16%)
+      // Streak >= 3 (tren kuat / on fire): η = 0.25 (±25%)
+      let eta = 0.08;
+      if (currentStreakLen >= 3) eta = 0.25;
+      else if (currentStreakLen === 2) eta = 0.16;
+
+      // 2. Symmetric Multiplier (e^+η vs e^-η):
+      // e^+η * e^-η = 1.000 (Mencegah Volatility Drag & Efek Ping-Pong)
+      const multiplier = hitMethod ? Math.exp(eta) : Math.exp(-eta);
+      const targetWeight = prevW * multiplier;
+
+      // 3. Exponential Moving Average (EMA) Smoothing (Filter Inersia 70:30):
+      const beta = 0.70;
+      const smoothedWeight = beta * prevW + (1 - beta) * targetWeight;
+
+      // 4. Safety Bounds Clamping [4.0x - 16.0x]:
+      const clamped = Math.max(4.0, Math.min(16.0, smoothedWeight));
+      calibratedWeights[mName] = Number(clamped.toFixed(1));
 
       if (hitMethod) {
-        calibratedWeights[mName] = Number(((calibratedWeights[mName] || 1.0) * 1.35).toFixed(2));
         rewardApplied.push(mName);
       } else {
-        calibratedWeights[mName] = Number(
-          Math.max(0.4, (calibratedWeights[mName] || 1.0) * 0.65).toFixed(2)
-        );
         penaltyApplied.push(mName);
       }
     }

@@ -196,7 +196,10 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
               <div className="text-[10px] text-gray-400 font-sans mb-2 bg-gray-900/60 px-2.5 py-1 rounded border border-gray-800/80 flex items-center justify-between">
                 <span>Evaluasi Akurasi: <strong className="text-cyan-400 font-mono">Parameter AI-{selectedWeightTier} ({selectedWeightTier} Digit)</strong></span>
-                <span className="text-[9px] text-emerald-400 font-mono">Independen</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] text-cyan-400 font-mono bg-cyan-950/50 px-1.5 py-0.5 rounded border border-cyan-800/40">🛡️ Anti-Osilasi</span>
+                  <span className="text-[9px] text-emerald-400 font-mono">Independen</span>
+                </div>
               </div>
 
               {(() => {
