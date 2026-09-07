@@ -182,7 +182,7 @@ export const SmartCalibrationCard: React.FC<SmartCalibrationCardProps> = ({
                           </span>
                         </div>
                         <span className="text-gray-400 leading-tight block truncate mt-0.5" title={t.tuningDirective || t.marginalNote}>
-                          {t.tuningDirective ? t.tuningDirective.replace(/^[🔒⚡]\s*/, '') : t.marginalNote}
+                          {t.tuningDirective ? t.tuningDirective.replace(/^[🔒⚡]\s*/u, '') : t.marginalNote}
                         </span>
                       </div>
                     </div>
@@ -227,7 +227,7 @@ export const SmartCalibrationCard: React.FC<SmartCalibrationCardProps> = ({
                           </span>
                         </div>
                         <span className="text-gray-400 leading-tight block truncate mt-0.5" title={t.tuningDirective || t.marginalNote}>
-                          {t.tuningDirective ? t.tuningDirective.replace(/^[🔒⚡]\s*/, '') : t.marginalNote}
+                          {t.tuningDirective ? t.tuningDirective.replace(/^[🔒⚡]\s*/u, '') : t.marginalNote}
                         </span>
                       </div>
                     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { Market } from '../engine/types';
 import { generatePrediction } from '../engine/adaptiveEngine';
 import {
@@ -106,9 +106,12 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
+  const hasInitialized = useRef(false);
+
   // Sync default selection when markets load
   useEffect(() => {
-    if (markets.length > 0 && selectedIds.size === 0) {
+    if (markets.length > 0 && !hasInitialized.current) {
+      hasInitialized.current = true;
       const initial = new Set<string>();
       markets.forEach((m) => {
         if (POPULAR_MARKET_IDS.includes(m.id)) {

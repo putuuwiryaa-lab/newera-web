@@ -39,7 +39,7 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
         }
       }
     }
-  } catch (err: any) {
+  } catch {
     // Fallback silent ke cached data
   }
 
