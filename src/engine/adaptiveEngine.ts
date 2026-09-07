@@ -271,22 +271,78 @@ export interface DedicatedBBFSResult {
   tiers: { 6: number[]; 7: number[]; 8: number[]; 9: number[] };
   deadDigits: number[];
   bbfsRanked: number[];
+  tierFactorWeights: Record<number, Record<string, number>>; // Bobot spesifik 4 faktor per parameter BBFS (6, 7, 8, 9)
+}
+
+/**
+ * Menghitung bobot adaptif 4 komponen BBFS secara spesifik per-tier (6, 7, 8, 9):
+ * 1. Densitas Pasangan (Direct Pair Density)
+ * 2. Transisi Markov 2D (Transition Flow)
+ * 3. Momentum Posisi (Positional Decay)
+ * 4. Coverage Proteksi (Anti-Dead Digits & Pair Breadth)
+ */
+export function computeBBFSTierFactorWeights(
+  history2D: [number, number][],
+  evalWindow = 15
+): Record<number, Record<string, number>> {
+  const sub = history2D.slice(-evalWindow);
+
+  // Basis prior struktural sesuai karakteristik ukuran tier
+  const basePriors: Record<number, Record<string, number>> = {
+    6: { 'Densitas Pasangan': 10.0, 'Transisi Markov': 8.0, 'Momentum Posisi': 6.0, 'Coverage Proteksi': 4.0 },
+    7: { 'Densitas Pasangan': 8.0, 'Transisi Markov': 8.0, 'Momentum Posisi': 7.0, 'Coverage Proteksi': 7.0 },
+    8: { 'Densitas Pasangan': 7.0, 'Transisi Markov': 6.0, 'Momentum Posisi': 8.0, 'Coverage Proteksi': 9.0 },
+    9: { 'Densitas Pasangan': 5.0, 'Transisi Markov': 5.0, 'Momentum Posisi': 8.0, 'Coverage Proteksi': 12.0 }
+  };
+
+  const tierWeights: Record<number, Record<string, number>> = {
+    6: { ...basePriors[6] },
+    7: { ...basePriors[7] },
+    8: { ...basePriors[8] },
+    9: { ...basePriors[9] }
+  };
+
+  if (sub.length < 3) return tierWeights;
+
+  for (let i = 0; i < sub.length - 1; i++) {
+    const [prevK, prevE] = sub[i];
+    const [actK, actE] = sub[i + 1];
+
+    // Evaluasi empiris 4 komponen pada putaran historis:
+    const hadDirectPair = sub.slice(0, i + 1).some(([k, e]) => (k === actK && e === actE) || (k === actE && e === actK));
+    const hadMarkovTrans = sub.slice(0, i).some(([k, e], idx) => (k === prevK && sub[idx + 1][0] === actK) || (e === prevE && sub[idx + 1][1] === actE));
+    const recent5 = sub.slice(Math.max(0, i - 4), i + 1);
+    const hadPosMomentum = recent5.some(([k, e]) => k === actK || e === actK || k === actE || e === actE);
+
+    [6, 7, 8, 9].forEach((sz) => {
+      if (hadDirectPair) tierWeights[sz]['Densitas Pasangan'] += (sz === 6 ? 1.0 : sz === 7 ? 0.8 : 0.6);
+      if (hadMarkovTrans) tierWeights[sz]['Transisi Markov'] += (sz === 6 ? 0.9 : sz === 7 ? 0.8 : 0.5);
+      if (hadPosMomentum) tierWeights[sz]['Momentum Posisi'] += (sz >= 8 ? 1.0 : 0.7);
+      tierWeights[sz]['Coverage Proteksi'] += (sz === 9 ? 1.2 : sz === 8 ? 0.9 : 0.4);
+    });
+  }
+
+  [6, 7, 8, 9].forEach((sz) => {
+    Object.keys(tierWeights[sz]).forEach((f) => {
+      tierWeights[sz][f] = Number(tierWeights[sz][f].toFixed(1));
+    });
+  });
+
+  return tierWeights;
 }
 
 /**
  * ENGINE KHUSUS BBFS:
  * Berbeda dari AI yang menghitung probabilitas 1 digit (marginal),
- * BBFS menghitung optimasi cakupan pasangan 2D (Joint Pair Coverage):
- * 1. Asimetri Posisi: Model Kepala vs Model Ekor (Kepala & Ekor Markov + Momentum)
- * 2. Matriks Afinitas Ko-okurensi 2D (Pair Co-occurrence Matrix)
- * 3. Matriks Densitas Gabungan 10x10 (Joint Density Matrix)
- * 4. Optimasi Kombinatorial: Memilih himpunan digit K yang memaksimalkan total pasangan yang ter-cover
- * 5. Perhitungan 2 Digit Terlemah (Dead Digits) berbasis skor konektivitas 2D BBFS
+ * BBFS menghitung optimasi cakupan pasangan 2D (Joint Pair Coverage)
+ * dengan evaluasi & pembobotan 4 faktor yang BERBEDA untuk setiap tier (6, 7, 8, 9).
  */
 export function computeDedicatedBBFSTiers(
   history2D: [number, number][],
   lookback = 50
 ): DedicatedBBFSResult {
+  const tierFactorWeights = computeBBFSTierFactorWeights(history2D);
+
   const sub = history2D.slice(-lookback);
   const n = sub.length;
   if (n < 2) {
@@ -298,7 +354,8 @@ export function computeDedicatedBBFSTiers(
         9: [0, 1, 2, 3, 4, 5, 6, 7, 8]
       },
       deadDigits: [8, 9],
-      bbfsRanked: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      bbfsRanked: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      tierFactorWeights
     };
   }
 
@@ -334,15 +391,6 @@ export function computeDedicatedBBFSTiers(
     pairMatrix[e][k] += 1.2 * decay;
   }
 
-  // Gabungkan ke Matriks Densitas Gabungan 2D (Joint Density Matrix)
-  const joint: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0));
-  for (let k = 0; k < 10; k++) {
-    for (let e = 0; e < 10; e++) {
-      const posPot = (kScores[k] + kTrans[k] * 1.5) * (eScores[e] + eTrans[e] * 1.5);
-      joint[k][e] = posPot + pairMatrix[k][e] * 3.0;
-    }
-  }
-
   const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
   const result: { 6: number[]; 7: number[]; 8: number[]; 9: number[] } = {
     6: [],
@@ -353,6 +401,26 @@ export function computeDedicatedBBFSTiers(
 
   const sizes: (6 | 7 | 8 | 9)[] = [6, 7, 8, 9];
   for (const size of sizes) {
+    const w = tierFactorWeights[size];
+    const totalW = w['Densitas Pasangan'] + w['Transisi Markov'] + w['Momentum Posisi'] + w['Coverage Proteksi'];
+    const normW = {
+      pair: (w['Densitas Pasangan'] / totalW) * 4,
+      trans: (w['Transisi Markov'] / totalW) * 4,
+      pos: (w['Momentum Posisi'] / totalW) * 4,
+      cov: (w['Coverage Proteksi'] / totalW) * 4
+    };
+
+    // Matriks densitas gabungan spesifik yang terbobot untuk parameter tier ukuran ini
+    const joint_size: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0));
+    for (let k = 0; k < 10; k++) {
+      for (let e = 0; e < 10; e++) {
+        const posPot = (kScores[k] + kTrans[k] * 1.5) * (eScores[e] + eTrans[e] * 1.5);
+        const pairPot = pairMatrix[k][e] * 3.0;
+        const covPot = (kScores[k] + eScores[e]) * 0.8;
+        joint_size[k][e] = normW.pair * pairPot + normW.trans * (kTrans[k] * eTrans[e] * 2.0) + normW.pos * posPot + normW.cov * covPot;
+      }
+    }
+
     const combinations = getCombinations(digits, size);
     let bestScore = -1;
     let bestComb: number[] = combinations[0];
@@ -361,7 +429,7 @@ export function computeDedicatedBBFSTiers(
       let score = 0;
       for (let i = 0; i < size; i++) {
         for (let j = 0; j < size; j++) {
-          score += joint[comb[i]][comb[j]];
+          score += joint_size[comb[i]][comb[j]];
         }
       }
       if (score > bestScore) {
@@ -370,12 +438,12 @@ export function computeDedicatedBBFSTiers(
       }
     }
 
-    // Urutkan digit di dalam kombinasi berdasarkan kontribusi internal terhadap pasangan
+    // Urutkan digit di dalam kombinasi berdasarkan kontribusi internal terhadap joint_size
     const digitContrib: Record<number, number> = {};
     for (const d of bestComb) {
       let c = 0;
       for (const other of bestComb) {
-        c += joint[d][other] + joint[other][d];
+        c += joint_size[d][other] + joint_size[other][d];
       }
       digitContrib[d] = c;
     }
@@ -383,12 +451,19 @@ export function computeDedicatedBBFSTiers(
     result[size] = [...bestComb].sort((a, b) => digitContrib[b] - digitContrib[a]);
   }
 
-  // Hitung Skor Afinitas Total 2D per Digit (0-9) di seluruh matriks pasangan
+  // Hitung Skor Afinitas Total 2D per Digit (0-9) untuk mendeteksi Dead Digits
+  const baseJoint: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0));
+  for (let k = 0; k < 10; k++) {
+    for (let e = 0; e < 10; e++) {
+      baseJoint[k][e] = (kScores[k] + kTrans[k] * 1.5) * (eScores[e] + eTrans[e] * 1.5) + pairMatrix[k][e] * 3.0;
+    }
+  }
+
   const bbfsDigitScores: Record<number, number> = {};
   for (let d = 0; d < 10; d++) {
     let s = 0;
     for (let x = 0; x < 10; x++) {
-      s += joint[d][x] + joint[x][d];
+      s += baseJoint[d][x] + baseJoint[x][d];
     }
     bbfsDigitScores[d] = s;
   }
@@ -399,7 +474,8 @@ export function computeDedicatedBBFSTiers(
   return {
     tiers: result,
     deadDigits,
-    bbfsRanked
+    bbfsRanked,
+    tierFactorWeights
   };
 }
 
@@ -479,6 +555,7 @@ export function generatePrediction(results4D: string[]): PredictionResult | null
     bbfs: dedicatedBBFS.tiers,
     methodWeights: res4.weights,
     tierMethodWeights,
+    bbfsTierWeights: dedicatedBBFS.tierFactorWeights,
     confidenceScore,
     convergenceStatus,
     deadDigits: dedicatedBBFS.deadDigits, // 2 Digit terlemah berbasis skor BBFS 2D!

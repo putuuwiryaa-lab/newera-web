@@ -24,6 +24,7 @@ export interface PredictionResult {
   };
   methodWeights: Record<string, number>;
   tierMethodWeights: Record<number, Record<string, number>>; // Bobot spesifik per tier (3, 4, 5, 6)
+  bbfsTierWeights: Record<number, Record<string, number>>;   // Bobot spesifik 4 faktor per tier BBFS (6, 7, 8, 9)
   confidenceScore: number;
   convergenceStatus: 'TINGGI' | 'SEDANG' | 'RENDAH';
   deadDigits: number[]; // 2 Digit paling lemah
@@ -116,6 +117,7 @@ export interface BBFSTuningDetail {
   penalizedFactor: string;
   recommendedTier: string;
   actionSummary: string;
+  tierFactorWeights?: Record<number, Record<string, number>>;
 }
 
 export interface DayTuningLog {

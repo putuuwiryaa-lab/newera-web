@@ -14,7 +14,8 @@ import {
   Check,
   TrendingUp,
   Sparkles,
-  Layers2
+  Layers2,
+  BarChart2
 } from 'lucide-react';
 
 interface BBFSDashboardProps {
@@ -33,6 +34,8 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   onOpenGenerator
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [selectedBBFSTier, setSelectedBBFSTier] = useState<6 | 7 | 8 | 9>(7);
+
 
   if (!prediction) {
     return (
@@ -212,6 +215,99 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
       {/* 2. Smart Audit Khusus BBFS */}
       <SmartCalibrationCard audit={audit} marketName={marketName} mode="bbfs" />
 
+      {/* 2.5. Bobot 4 Komponen Evaluasi BBFS (Independen Per-Tier Parameter) */}
+      <div className="bg-gray-900/90 border border-purple-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800 mb-4 relative z-10">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30">
+              <BarChart2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-wide flex items-center gap-2">
+                <span>BOBOT 4 KOMPONEN EVALUASI BBFS</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30">
+                  INDEPENDEN PER TIER
+                </span>
+              </h3>
+              <p className="text-xs text-gray-400">
+                Setiap parameter BBFS dihitung dan dievaluasi dengan bobot komponen yang berbeda sesuai tuntutan efisiensi line.
+              </p>
+            </div>
+          </div>
+
+          {/* Selector Parameter Tier BBFS */}
+          <div className="flex items-center space-x-1.5 bg-gray-950 p-1 rounded-xl border border-gray-800">
+            {[6, 7, 8, 9].map((sz) => (
+              <button
+                key={sz}
+                onClick={() => setSelectedBBFSTier(sz as 6 | 7 | 8 | 9)}
+                className={`px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all ${
+                  selectedBBFSTier === sz
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/30'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                BBFS-{sz}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-xs text-gray-300 font-sans mb-3 bg-gray-950/70 p-3 rounded-xl border border-purple-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            Parameter Aktif: <strong className="text-purple-300 font-mono">BBFS-{selectedBBFSTier}</strong> ({selectedBBFSTier === 6 ? '30 Line Ekonomis' : selectedBBFSTier === 7 ? '42 Line Keseimbangan Utama' : selectedBBFSTier === 8 ? '56 Line Cakupan Luas' : '72 Line Proteksi Penuh'})
+          </div>
+          <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-500/30">
+            ✓ Evaluasi Khusus {selectedBBFSTier} Digit
+          </span>
+        </div>
+
+        {(() => {
+          const activeWeights = prediction.bbfsTierWeights?.[selectedBBFSTier] || {
+            'Densitas Pasangan': selectedBBFSTier === 6 ? 12 : (selectedBBFSTier === 7 ? 10 : 8),
+            'Transisi Markov': selectedBBFSTier === 6 ? 9 : 8,
+            'Momentum Posisi': selectedBBFSTier >= 8 ? 10 : 7,
+            'Coverage Proteksi': selectedBBFSTier === 9 ? 14 : (selectedBBFSTier === 8 ? 10 : 6)
+          };
+          const totalWeight = Object.values(activeWeights).reduce((a, b) => a + b, 0) || 1;
+          const factorColors: Record<string, { bar: string; text: string; bg: string; border: string }> = {
+            'Densitas Pasangan': { bar: 'bg-purple-400', text: 'text-purple-300', bg: 'bg-purple-950/40', border: 'border-purple-500/30' },
+            'Transisi Markov': { bar: 'bg-cyan-400', text: 'text-cyan-300', bg: 'bg-cyan-950/40', border: 'border-cyan-500/30' },
+            'Momentum Posisi': { bar: 'bg-emerald-400', text: 'text-emerald-300', bg: 'bg-emerald-950/40', border: 'border-emerald-500/30' },
+            'Coverage Proteksi': { bar: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-950/40', border: 'border-amber-500/30' }
+          };
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {Object.entries(activeWeights).map(([name, w]) => {
+                const pct = Math.round((w / totalWeight) * 100);
+                const style = factorColors[name] || { bar: 'bg-purple-400', text: 'text-purple-300', bg: 'bg-gray-950', border: 'border-gray-800' };
+                return (
+                  <div key={name} className={`${style.bg} p-3 rounded-xl border ${style.border} space-y-1.5`}>
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-gray-300 font-bold">{name}</span>
+                      <span className={`font-extrabold ${style.text}`}>{w.toFixed(1)}x ({pct}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden border border-gray-800/60">
+                      <div
+                        className={`h-full rounded-full ${style.bar}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="text-[10px] text-gray-500 leading-tight">
+                      {name === 'Densitas Pasangan' ? 'Frekuensi kemunculan pasangan 2D langsung' :
+                       name === 'Transisi Markov' ? 'Aliran transisi dari kepala-ekor sebelumnya' :
+                       name === 'Momentum Posisi' ? 'Peluruhan frekuensi kepala & ekor terkini' :
+                       'Proteksi eliminasi dead digits & perluasan set'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* 3. Kartu Prediksi BBFS (6 - 9 Digit) */}
       <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-gray-800 mb-5">
@@ -376,6 +472,33 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {/* Visualisasi Bobot Spesifik Parameter Tier BBFS Ini */}
+                {prediction.bbfsTierWeights?.[size] && (() => {
+                  const tWeights = prediction.bbfsTierWeights[size];
+                  const tTotal = Object.values(tWeights).reduce((a, b) => a + b, 0) || 1;
+                  return (
+                    <div className="mt-3 pt-2.5 border-t border-gray-800/80">
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-1.5">
+                        <span className="text-gray-300 font-bold">Bobot Parameter BBFS-{size}:</span>
+                        <span className="text-purple-400 font-semibold">Evaluasi Khusus {size} Digit ({lines} Line)</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 text-[9px] font-mono">
+                        {Object.entries(tWeights).map(([fName, fW]) => {
+                          const pct = Math.round((fW / tTotal) * 100);
+                          const shortName = fName.replace(' Pasangan', '').replace(' Posisi', '').replace(' Proteksi', '');
+                          return (
+                            <div key={fName} className="bg-gray-900/90 px-1.5 py-1 rounded border border-gray-800 flex flex-col items-center">
+                              <span className="text-gray-400 truncate max-w-full">{shortName}</span>
+                              <span className="font-extrabold text-white">{fW.toFixed(1)}x</span>
+                              <span className="text-[8px] text-purple-400 font-bold">({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <p className="text-[11px] text-gray-400 mt-3 pt-2 border-t border-gray-800/60 leading-relaxed">
                   {desc}

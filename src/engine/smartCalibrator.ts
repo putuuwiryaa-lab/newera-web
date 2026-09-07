@@ -69,6 +69,7 @@ export interface CalibrationAudit {
     recommendedTier: string;
     diagnosis: string;
     actionSummary: string;
+    tierFactorWeights: Record<number, Record<string, number>>;
   };
 }
 
@@ -454,7 +455,8 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
       regime: regimeBBFS,
       recommendedTier: recommendedTierBBFS,
       diagnosis: diagnosisBBFS,
-      actionSummary: actionSummaryBBFS
+      actionSummary: actionSummaryBBFS,
+      tierFactorWeights: predTMinus1.bbfsTierWeights || {}
     }
   };
 }
@@ -585,7 +587,8 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       rewardedFactor: allBBFSFrozenDay ? 'Seluruh Tier Tembus (Freeze Total)' : (trimmerZone === 'BOM_10' ? 'Top 10 BOM Hit' : (deadDigitsClean ? 'Dead Digits 100% Bersih' : 'Afinitas Pasangan')),
       penalizedFactor: allBBFSFrozenDay ? 'None' : (!deadDigitsClean ? 'Dead Digit Bocor' : (statusBBFS === 'LOSE' ? 'Dispersi Pasangan' : 'None')),
       recommendedTier: bbfsTierAudits[6].action === 'FREEZE' ? 'BBFS-6' : 'BBFS-7',
-      actionSummary: allBBFSFrozenDay ? 'Semua tier BBFS stabil (Freeze Total)' : `${Object.values(bbfsTierAudits).filter(t => t.action === 'CALIBRATED').map(t => t.name).join(', ')} dikalibrasi`
+      actionSummary: allBBFSFrozenDay ? 'Semua tier BBFS stabil (Freeze Total)' : `${Object.values(bbfsTierAudits).filter(t => t.action === 'CALIBRATED').map(t => t.name).join(', ')} dikalibrasi`,
+      tierFactorWeights: pred.bbfsTierWeights
     };
 
     logs.push({
