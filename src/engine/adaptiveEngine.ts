@@ -165,7 +165,8 @@ export class AdaptiveEnsemble {
 
   rankDigitsForTier(
     history2D: [number, number][],
-    tierSize = 4
+    tierSize = 4,
+    customWeights?: Record<string, number>
   ): {
     ranked: number[];
     weights: Record<string, number>;
@@ -180,18 +181,25 @@ export class AdaptiveEnsemble {
       Mistik: (h) => getAdaptiveMistikScores(h)
     };
 
-    const weights: Record<string, number> = {
-      Momentum: 1.0,
-      Markov: 1.0,
-      Delta: 1.0,
-      Mistik: 1.0
-    };
+    let weights: Record<string, number>;
 
-    // Evaluasi performa independen berdasarkan jendela rolling dan ambang tierSize (3, 4, 5, atau 6 digit)
-    if (history2D.length > this.rollingWindow + 5) {
-      const evalSlice = history2D.slice(-this.rollingWindow);
-      for (const [mName, mFunc] of Object.entries(methods)) {
-        let hitCount = 0;
+    // ATURAN ENGINE: Jika prediksi masuk (FREEZE) atau sudah dikalibrasi,
+    // TIDAK PERLU hitung bobot dari awal! Langsung pertahankan bobot pemenang.
+    if (customWeights && Object.keys(customWeights).length > 0) {
+      weights = { ...customWeights };
+    } else {
+      // HANYA 1x dihitung saat inisialisasi awal (cold-start / pertama kali)
+      weights = {
+        Momentum: 1.0,
+        Markov: 1.0,
+        Delta: 1.0,
+        Mistik: 1.0
+      };
+
+      if (history2D.length > this.rollingWindow + 5) {
+        const evalSlice = history2D.slice(-this.rollingWindow);
+        for (const [mName, mFunc] of Object.entries(methods)) {
+          let hitCount = 0;
         for (let step = 0; step < evalSlice.length - 1; step++) {
           const histUntilStep = history2D.slice(
             0,
@@ -212,6 +220,7 @@ export class AdaptiveEnsemble {
           }
         }
         weights[mName] = Math.max(0.5, hitCount + 1);
+        }
       }
     }
 
@@ -339,9 +348,14 @@ export function computeBBFSTierFactorWeights(
  */
 export function computeDedicatedBBFSTiers(
   history2D: [number, number][],
-  lookback = 50
+  lookback = 50,
+  customTierFactorWeights?: Record<number, Record<string, number>>
 ): DedicatedBBFSResult {
-  const tierFactorWeights = computeBBFSTierFactorWeights(history2D);
+  // ATURAN ENGINE: Jika tier BBFS tembus (FREEZE), jangan hitung ulang faktor dari awal!
+  const baseWeights = computeBBFSTierFactorWeights(history2D);
+  const tierFactorWeights: Record<number, Record<string, number>> = customTierFactorWeights
+    ? { ...baseWeights, ...customTierFactorWeights }
+    : baseWeights;
 
   const sub = history2D.slice(-lookback);
   const n = sub.length;
@@ -482,7 +496,20 @@ export function computeDedicatedBBFSTiers(
 /**
  * Hasilkan Prediksi AI (3-6) & BBFS (6-9) untuk Periode Mendatang
  */
-export function generatePrediction(results4D: string[]): PredictionResult | null {
+export function generatePrediction(
+  results4D: string[],
+  auditContext?: {
+    aiAudit?: {
+      tierAudits?: Record<number, { action: string }>;
+      calibratedWeights?: Record<string, number>;
+      tierMethodWeights?: Record<number, Record<string, number>>;
+    };
+    bbfsAudit?: {
+      tierAudits?: Record<number, { action: string }>;
+      tierFactorWeights?: Record<number, Record<string, number>>;
+    };
+  } | null
+): PredictionResult | null {
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length < 5) return null;
 
@@ -493,11 +520,24 @@ export function generatePrediction(results4D: string[]): PredictionResult | null
 
   const ensemble = new AdaptiveEnsemble(20);
   
-  // Kalkulasi & Evaluasi Bobot Independen Khusus Per-Tier Parameter AI (3, 4, 5, 6)
-  const res3 = ensemble.rankDigitsForTier(history2D, 3);
-  const res4 = ensemble.rankDigitsForTier(history2D, 4);
-  const res5 = ensemble.rankDigitsForTier(history2D, 5);
-  const res6 = ensemble.rankDigitsForTier(history2D, 6);
+  // ATURAN ENGINE: Jika prediksi sebelumnya masuk (FREEZE), pertahankan bobot pemenang.
+  // JANGAN hitung ulang bobot dari awal jika sudah menang!
+  // Hanya hitung dari awal jika ini pertama kali (cold start).
+  const getAIWeightsForTier = (sz: number): Record<string, number> | undefined => {
+    if (!auditContext?.aiAudit) return undefined;
+    const audit = auditContext.aiAudit.tierAudits?.[sz];
+    if (audit?.action === 'FREEZE') {
+      return auditContext.aiAudit.tierMethodWeights?.[sz] || auditContext.aiAudit.calibratedWeights;
+    } else if (audit?.action === 'CALIBRATED') {
+      return auditContext.aiAudit.calibratedWeights;
+    }
+    return undefined;
+  };
+
+  const res3 = ensemble.rankDigitsForTier(history2D, 3, getAIWeightsForTier(3));
+  const res4 = ensemble.rankDigitsForTier(history2D, 4, getAIWeightsForTier(4));
+  const res5 = ensemble.rankDigitsForTier(history2D, 5, getAIWeightsForTier(5));
+  const res6 = ensemble.rankDigitsForTier(history2D, 6, getAIWeightsForTier(6));
 
   const tierMethodWeights: Record<number, Record<string, number>> = {
     3: res3.weights,
@@ -513,8 +553,23 @@ export function generatePrediction(results4D: string[]): PredictionResult | null
     6: res6.ranked.slice(0, 6)
   };
 
+  // Tentukan bobot faktor BBFS (6, 7, 8, 9): jika FREEZE, pertahankan tanpa hitung ulang dari awal
+  let customBBFSTierWeights: Record<number, Record<string, number>> | undefined = undefined;
+  if (auditContext?.bbfsAudit?.tierFactorWeights) {
+    customBBFSTierWeights = {};
+    for (const sz of [6, 7, 8, 9] as const) {
+      const bbfsAudit = auditContext.bbfsAudit.tierAudits?.[sz];
+      if (bbfsAudit?.action === 'FREEZE' && auditContext.bbfsAudit.tierFactorWeights[sz]) {
+        customBBFSTierWeights[sz] = { ...auditContext.bbfsAudit.tierFactorWeights[sz] };
+      }
+    }
+    if (Object.keys(customBBFSTierWeights).length === 0) {
+      customBBFSTierWeights = undefined;
+    }
+  }
+
   // Kalkulasi independen untuk BBFS berbasis optimasi cakupan pasangan 2D & Dead Digits
-  const dedicatedBBFS = computeDedicatedBBFSTiers(history2D);
+  const dedicatedBBFS = computeDedicatedBBFSTiers(history2D, 50, customBBFSTierWeights);
 
   const lastFull = valid4D[valid4D.length - 1];
 

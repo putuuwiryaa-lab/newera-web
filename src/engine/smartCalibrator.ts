@@ -46,6 +46,7 @@ export interface CalibrationAudit {
     rewardedMethods: string[];
     penalizedMethods: string[];
     calibratedWeights: Record<string, number>;
+    tierMethodWeights?: Record<number, Record<string, number>>;
     streak: number;
     regime: 'NORMAL' | 'HIGH_MOMENTUM' | 'ANTI_STREAK_ALERT';
     recommendedTier: string;
@@ -433,6 +434,7 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
       rewardedMethods: rewardApplied,
       penalizedMethods: penaltyApplied,
       calibratedWeights,
+      tierMethodWeights: predTMinus1.tierMethodWeights,
       streak,
       regime: regimeAI,
       recommendedTier: recommendedTierAI,

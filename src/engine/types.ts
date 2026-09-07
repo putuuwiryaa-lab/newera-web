@@ -98,6 +98,7 @@ export interface AITuningDetail {
   rewardedMethods: string[];
   penalizedMethods: string[];
   calibratedWeights: Record<string, number>;
+  tierMethodWeights?: Record<number, Record<string, number>>;
   recoveredFromLoss?: boolean;
   streak: number;
   recommendedTier: string;

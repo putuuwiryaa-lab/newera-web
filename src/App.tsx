@@ -67,17 +67,17 @@ export function App() {
       .filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   }, [currentMarket]);
 
-  // Kalkulasi Prediksi Adaptif & Intelijen
-  const prediction = useMemo(() => {
-    if (currentResults4D.length < 10) return null;
-    return generatePrediction(currentResults4D);
-  }, [currentResults4D]);
-
   // Audit & Kalibrasi Cerdas pada Result Terakhir
   const calibrationAudit = useMemo(() => {
     if (currentResults4D.length < 15) return null;
     return auditAndCalibrate(currentResults4D);
   }, [currentResults4D]);
+
+  // Kalkulasi Prediksi Adaptif & Intelijen (Mempertahankan Bobot Menang / Freeze Tanpa Hitung Ulang dari Awal)
+  const prediction = useMemo(() => {
+    if (currentResults4D.length < 10) return null;
+    return generatePrediction(currentResults4D, calibrationAudit);
+  }, [currentResults4D, calibrationAudit]);
 
   // Rekonstruksi Riwayat Kalibrasi 7 Hari Terakhir
   const tuningLogs = useMemo(() => {
