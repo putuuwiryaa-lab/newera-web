@@ -15,7 +15,10 @@ import {
   TrendingUp,
   Sparkles,
   Layers2,
-  BarChart2
+  BarChart2,
+  ChevronDown,
+  ChevronUp,
+  Sliders
 } from 'lucide-react';
 
 interface BBFSDashboardProps {
@@ -35,6 +38,10 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedBBFSTier, setSelectedBBFSTier] = useState<6 | 7 | 8 | 9>(7);
+  const [showMobileAudit, setShowMobileAudit] = useState<boolean>(false);
+  const [showMobileDeadDigits, setShowMobileDeadDigits] = useState<boolean>(false);
+  const [showMobileWeights, setShowMobileWeights] = useState<boolean>(false);
+  const [showMobileEval, setShowMobileEval] = useState<boolean>(false);
 
 
   if (!prediction) {
@@ -122,10 +129,23 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Mobile Quick Info Bar */}
+            <div className="flex lg:hidden flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-gray-800/80">
+              <span className="text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/30">
+                ★ Rekomendasi Utama: BBFS-7
+              </span>
+              <span className="text-[10px] font-mono bg-rose-500/15 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30">
+                Mati: {deadDigits.join(', ')}
+              </span>
+              <span className="text-[10px] font-mono bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+                Twin Gap: {twinGap}x ({twinAnomaly})
+              </span>
+            </div>
           </div>
 
-          {/* 2 Widget: 2 Digit Terlemah (Dead Digits) & Indeks Twin Anomaly */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+          {/* 2 Widget: 2 Digit Terlemah (Dead Digits) & Indeks Twin Anomaly (Desktop View) */}
+          <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
             {/* Dead Digits Card (Elimination Chamber) */}
             <div className="bg-gray-950/90 border border-rose-500/30 rounded-xl p-3.5 shadow-inner">
               <div className="flex items-center justify-between mb-1.5">
@@ -212,11 +232,13 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
         </div>
       </div>
 
-      {/* 2. Smart Audit Khusus BBFS */}
-      <SmartCalibrationCard audit={audit} marketName={marketName} mode="bbfs" />
+      {/* 2. Smart Audit Khusus BBFS (Desktop View) */}
+      <div className="hidden lg:block">
+        <SmartCalibrationCard audit={audit} marketName={marketName} mode="bbfs" />
+      </div>
 
-      {/* 2.5. Bobot 4 Komponen Evaluasi BBFS (Independen Per-Tier Parameter) */}
-      <div className="bg-gray-900/90 border border-purple-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      {/* 2.5. Bobot 4 Komponen Evaluasi BBFS (Desktop View) */}
+      <div className="hidden lg:block bg-gray-900/90 border border-purple-500/30 rounded-2xl p-5 shadow-xl relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800 mb-4 relative z-10">
           <div className="flex items-center space-x-2.5">
@@ -660,9 +682,294 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
         </div>
       </div>
 
-      {/* 5. Mini Evaluasi Khusus BBFS */}
+      {/* Mobile-Only Collapsible Dropdowns Section */}
+      <div className="lg:hidden space-y-3">
+        {/* Accordion 1: 2 Digit Mati & Anomali Twin */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <button
+            onClick={() => setShowMobileDeadDigits(!showMobileDeadDigits)}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <Skull className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white tracking-wide">Digit Mati & Anomali Twin</div>
+                <div className="text-[10px] text-gray-400">Eliminasi 2 digit terlemah & status kembar</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30">
+                Mati: {deadDigits.join(', ')}
+              </span>
+              {showMobileDeadDigits ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+          </button>
+          {showMobileDeadDigits && (
+            <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+              {/* Dead Digits Card */}
+              <div className="bg-gray-950/90 border border-rose-500/30 rounded-xl p-3 shadow-inner">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-gray-200">
+                    <Skull className="w-3.5 h-3.5 text-rose-400" />
+                    <span>2 Digit Terlemah (Eliminasi)</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-2 py-0.2 rounded-full bg-rose-950/60 border border-rose-500/40 text-rose-300">
+                    DIISOLASI
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 my-1">
+                  {deadDigits.map((d, i) => (
+                    <span
+                      key={i}
+                      className="w-8 h-8 rounded-lg bg-rose-950/60 border border-rose-500/50 flex items-center justify-center font-mono font-extrabold text-rose-400 text-sm line-through"
+                    >
+                      {d}
+                    </span>
+                  ))}
+                  <span className="text-[11px] text-gray-400">Konektivitas terendah 14 putaran</span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                  Digit ini direkomendasikan untuk dimatikan pada racikan line.
+                </p>
+              </div>
+
+              {/* Twin Anomaly Card */}
+              <div className="bg-gray-950/90 border border-gray-800 rounded-xl p-3 shadow-inner">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center space-x-1.5 text-xs font-bold text-gray-200">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Anomali Kembar 2D</span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.2 rounded-full uppercase ${
+                      twinAnomaly === 'EKSTREM'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : twinAnomaly === 'MENINGKAT'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    }`}
+                  >
+                    {twinAnomaly}
+                  </span>
+                </div>
+                <div className="flex items-baseline space-x-2 my-1">
+                  <span className="text-xl font-extrabold font-mono text-white">{twinGap}</span>
+                  <span className="text-[10px] text-gray-400">Putaran tanpa kembar</span>
+                </div>
+                <div className="w-full bg-gray-900 rounded-full h-1 overflow-hidden border border-gray-800 mb-1">
+                  <div
+                    className={`h-full rounded-full ${
+                      twinGap >= 15 ? 'bg-rose-500' : twinGap >= 9 ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${Math.min(100, (twinGap / 20) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 leading-relaxed">
+                  {twinAnomaly === 'EKSTREM'
+                    ? 'Kemarau twin ekstrem (>15x)! Wajib proteksi +Twin.'
+                    : twinAnomaly === 'MENINGKAT'
+                    ? 'Peluang twin mulai meningkat.'
+                    : 'Probabilitas twin dalam ambang batas normal.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 2: Audit & Kalibrasi BBFS */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <button
+            onClick={() => setShowMobileAudit(!showMobileAudit)}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white tracking-wide">Audit & Kalibrasi BBFS</div>
+                <div className="text-[10px] text-gray-400">Self-healing status 4 tier BBFS</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                audit?.bbfsAudit?.tierAudits?.[7]?.action === 'FREEZE'
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+              }`}>
+                {audit?.bbfsAudit?.tierAudits?.[7]?.action === 'FREEZE' ? '🔒 FREEZE' : '⚡ KALIBRASI'}
+              </span>
+              {showMobileAudit ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+          </button>
+          {showMobileAudit && (
+            <div className="p-3 pt-0 border-t border-gray-800/80 mt-1">
+              <SmartCalibrationCard audit={audit} marketName={marketName} mode="bbfs" />
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 3: Bobot 4 Komponen BBFS (Multi-Tier) */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <button
+            onClick={() => setShowMobileWeights(!showMobileWeights)}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <BarChart2 className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white tracking-wide">Bobot 4 Komponen BBFS</div>
+                <div className="text-[10px] text-gray-400">Densitas, Markov, Momentum, Coverage</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+                BBFS-{selectedBBFSTier}
+              </span>
+              {showMobileWeights ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+          </button>
+          {showMobileWeights && (
+            <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+              {/* Selector Tier */}
+              <div className="flex items-center justify-between gap-1 bg-gray-950/80 p-1.5 rounded-lg border border-gray-800/80">
+                <span className="text-[10px] text-gray-400 font-sans pl-1">Tier BBFS:</span>
+                <div className="flex space-x-1 font-mono text-[10px]">
+                  {([6, 7, 8, 9] as const).map((sz) => (
+                    <button
+                      key={sz}
+                      onClick={() => setSelectedBBFSTier(sz)}
+                      className={`px-2.5 py-1 rounded transition-all ${
+                        selectedBBFSTier === sz
+                          ? 'bg-purple-600 text-white font-extrabold shadow-sm'
+                          : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      BBFS-{sz}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bars */}
+              {(() => {
+                const activeWeights = prediction.bbfsTierWeights?.[selectedBBFSTier] || {
+                  'Densitas Pasangan': selectedBBFSTier === 6 ? 12 : (selectedBBFSTier === 7 ? 10 : 8),
+                  'Transisi Markov': selectedBBFSTier === 6 ? 9 : 8,
+                  'Momentum Posisi': selectedBBFSTier >= 8 ? 10 : 7,
+                  'Coverage Proteksi': selectedBBFSTier === 9 ? 14 : (selectedBBFSTier === 8 ? 10 : 6)
+                };
+                const totalWeight = Object.values(activeWeights).reduce((a, b) => a + b, 0) || 1;
+                const factorColors: Record<string, { bar: string; text: string }> = {
+                  'Densitas Pasangan': { bar: 'bg-purple-400', text: 'text-purple-300' },
+                  'Transisi Markov': { bar: 'bg-cyan-400', text: 'text-cyan-300' },
+                  'Momentum Posisi': { bar: 'bg-emerald-400', text: 'text-emerald-300' },
+                  'Coverage Proteksi': { bar: 'bg-amber-400', text: 'text-amber-300' }
+                };
+                return (
+                  <div className="space-y-2">
+                    {Object.entries(activeWeights).map(([name, w]) => {
+                      const pct = Math.round((w / totalWeight) * 100);
+                      const style = factorColors[name] || { bar: 'bg-purple-400', text: 'text-purple-300' };
+                      return (
+                        <div key={name} className="space-y-1">
+                          <div className="flex justify-between text-xs font-mono text-gray-400">
+                            <span className="text-gray-300">{name}</span>
+                            <span className={`font-bold ${style.text}`}>{w.toFixed(1)}x ({pct}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-950 rounded-full h-1.5 overflow-hidden border border-gray-800/60">
+                            <div
+                              className={`h-full rounded-full ${style.bar}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 4: Performa & Evaluasi BBFS */}
+        {evaluation && (
+          <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+            <button
+              onClick={() => setShowMobileEval(!showMobileEval)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white tracking-wide">Performa & Evaluasi BBFS</div>
+                  <div className="text-[10px] text-gray-400">Walk-forward {evaluation.testDraws} putaran</div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+                  BBFS-7: {evaluation.bbfsStats[7]?.actualRate}%
+                </span>
+                {showMobileEval ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </div>
+            </button>
+            {showMobileEval && (
+              <div className="p-4 pt-0 border-t border-gray-800/80 mt-2">
+                <div className="overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-gray-950 text-gray-400 border-b border-gray-800 text-[10px] uppercase">
+                      <tr>
+                        <th className="p-2">Tier</th>
+                        <th className="p-2">Line</th>
+                        <th className="p-2">Hit</th>
+                        <th className="p-2">Miss</th>
+                        <th className="p-2">Akurasi</th>
+                        <th className="p-2">Edge</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/60 text-xs">
+                      {[6, 7, 8, 9].map((size) => {
+                        const stat = evaluation.bbfsStats[size];
+                        if (!stat) return null;
+                        const misses = evaluation.testDraws - stat.hitCount;
+                        const edge = stat.diff;
+                        const isPositive = edge >= 0;
+                        return (
+                          <tr key={size} className={size === 7 ? 'bg-purple-950/20 font-bold' : ''}>
+                            <td className="p-2 text-purple-300 font-bold">BBFS-{size}</td>
+                            <td className="p-2 text-gray-400">{stat.lines}L</td>
+                            <td className="p-2 text-emerald-400">{stat.hitCount}x</td>
+                            <td className="p-2 text-rose-400">{misses}x</td>
+                            <td className="p-2 text-purple-300">{stat.actualRate}%</td>
+                            <td className="p-2">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                isPositive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                              }`}>
+                                {isPositive ? `+${edge}%` : `${edge}%`}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 5. Mini Evaluasi Khusus BBFS (Desktop Only) */}
       {evaluation && (
-        <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-4">
+        <div className="hidden lg:block bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-800">
             <div className="flex items-center space-x-2 text-xs font-bold text-gray-300 uppercase tracking-wider">
               <TrendingUp className="w-4 h-4 text-purple-400" />

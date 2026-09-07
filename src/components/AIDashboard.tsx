@@ -12,7 +12,10 @@ import {
   Zap,
   AlertTriangle,
   TrendingUp,
-  Target
+  Target,
+  ChevronDown,
+  ChevronUp,
+  Sliders
 } from 'lucide-react';
 
 interface AIDashboardProps {
@@ -30,6 +33,10 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedWeightTier, setSelectedWeightTier] = useState<3 | 4 | 5 | 6>(4);
+  const [showMobileAudit, setShowMobileAudit] = useState<boolean>(false);
+  const [showMobileWeights, setShowMobileWeights] = useState<boolean>(false);
+  const [showMobileEval, setShowMobileEval] = useState<boolean>(false);
+
 
   if (!prediction) {
     return (
@@ -107,10 +114,20 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Mobile Quick Info Bar */}
+            <div className="flex lg:hidden flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-gray-800/80">
+              <span className="text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                ★ Rekomendasi Utama: AI-4
+              </span>
+              <span className="text-[10px] font-mono bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                {confidenceScore}% Konsensus Model
+              </span>
+            </div>
           </div>
 
-          {/* Model Confidence Meter & Bobot 4 Algoritma */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+          {/* Model Confidence Meter & Bobot 4 Algoritma (Desktop Only in Header) */}
+          <div className="hidden lg:grid grid-cols-2 gap-3 w-full lg:w-auto">
             {/* Confidence Meter */}
             <div className="bg-gray-950/90 border border-gray-800/90 rounded-xl p-3.5 shadow-inner">
               <div className="flex items-center justify-between mb-1.5">
@@ -219,8 +236,10 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
         </div>
       </div>
 
-      {/* 2. Smart Audit Khusus AI */}
-      <SmartCalibrationCard audit={audit} marketName={marketName} mode="ai" />
+      {/* 2. Smart Audit Khusus AI (Desktop View) */}
+      <div className="hidden lg:block">
+        <SmartCalibrationCard audit={audit} marketName={marketName} mode="ai" />
+      </div>
 
       {/* 3. Kartu Prediksi Angka Ikut (AI 3 - 6 Digit) */}
       <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-xl">
@@ -410,9 +429,223 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
         </div>
       </div>
 
-      {/* 4. Mini Evaluasi & Statistik Streak Khusus AI */}
+      {/* Mobile-Only Collapsible Dropdowns Section */}
+      <div className="lg:hidden space-y-3">
+        {/* Accordion 1: Audit & Kalibrasi AI */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <button
+            onClick={() => setShowMobileAudit(!showMobileAudit)}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white tracking-wide">Audit & Kalibrasi AI Engine</div>
+                <div className="text-[10px] text-gray-400">Status kalibrasi & proteksi anti-overfit</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                audit?.aiAudit?.tierAudits?.[4]?.action === 'FREEZE'
+                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {audit?.aiAudit?.tierAudits?.[4]?.action === 'FREEZE' ? '🔒 FREEZE' : '⚡ KALIBRASI'}
+              </span>
+              {showMobileAudit ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+          </button>
+          {showMobileAudit && (
+            <div className="p-3 pt-0 border-t border-gray-800/80 mt-1">
+              <SmartCalibrationCard audit={audit} marketName={marketName} mode="ai" />
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 2: Bobot 4 Algoritma AI (Multi-Tier) */}
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <button
+            onClick={() => setShowMobileWeights(!showMobileWeights)}
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <BarChart2 className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white tracking-wide">Bobot 4 Metode AI (Multi-Tier)</div>
+                <div className="text-[10px] text-gray-400">Momentum, Markov, Delta, Mistik per Tier</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                AI-{selectedWeightTier}
+              </span>
+              {showMobileWeights ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+          </button>
+          {showMobileWeights && (
+            <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+              {/* Selector Tier */}
+              <div className="flex items-center justify-between gap-1 bg-gray-950/80 p-1.5 rounded-lg border border-gray-800/80">
+                <span className="text-[10px] text-gray-400 font-sans pl-1">Tier AI:</span>
+                <div className="flex space-x-1 font-mono text-[10px]">
+                  {([3, 4, 5, 6] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setSelectedWeightTier(t)}
+                      className={`px-2.5 py-1 rounded transition-all ${
+                        selectedWeightTier === t
+                          ? 'bg-cyan-500 text-black font-extrabold shadow-sm'
+                          : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      AI-{t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bars */}
+              {(() => {
+                const activeWeights = prediction.tierMethodWeights?.[selectedWeightTier] || methodWeights;
+                const totalWeight = Object.values(activeWeights).reduce((a, b) => a + b, 0) || 1;
+                const colors = {
+                  Momentum: 'bg-cyan-400',
+                  Markov: 'bg-emerald-400',
+                  Delta: 'bg-blue-400',
+                  Mistik: 'bg-purple-400'
+                };
+                return (
+                  <div className="space-y-2">
+                    {Object.entries(activeWeights).map(([name, w]) => {
+                      const pct = Math.round((w / totalWeight) * 100);
+                      const barColor = colors[name as keyof typeof colors] || 'bg-emerald-400';
+                      return (
+                        <div key={name} className="space-y-1">
+                          <div className="flex justify-between text-xs font-mono text-gray-400">
+                            <span className="text-gray-300">{name}</span>
+                            <span className="font-bold text-emerald-400">{w.toFixed(1)}x ({pct}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-950 rounded-full h-1.5 overflow-hidden border border-gray-800/60">
+                            <div
+                              className={`h-full rounded-full ${barColor}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 3: Performa & Evaluasi Streak AI */}
+        {evaluation && (
+          <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+            <button
+              onClick={() => setShowMobileEval(!showMobileEval)}
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center space-x-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white tracking-wide">Performa & Evaluasi AI</div>
+                  <div className="text-[10px] text-gray-400">Walk-forward {evaluation.testDraws} putaran & streak</div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Streak {evaluation.ai4Streak.maxWin}x
+                </span>
+                {showMobileEval ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </div>
+            </button>
+            {showMobileEval && (
+              <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+                {/* Streak Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                    <Award className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="text-[10px] text-gray-400">Win-Streak Max AI-4</div>
+                      <div className="text-sm font-bold font-mono text-emerald-400">{evaluation.ai4Streak.maxWin}x berturut</div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <div>
+                      <div className="text-[10px] text-gray-400">Miss Maksimal AI-4</div>
+                      <div className="text-sm font-bold font-mono text-rose-400">{evaluation.ai4Streak.maxLose}x berturut</div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                    <Zap className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div>
+                      <div className="text-[10px] text-gray-400">Streak Saat Ini AI-4</div>
+                      <div className="text-sm font-bold font-mono text-cyan-400">
+                        {evaluation.ai4Streak.current > 0
+                          ? `+${evaluation.ai4Streak.current} Menang`
+                          : `${evaluation.ai4Streak.current} Kalah`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto rounded-lg border border-gray-800">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-gray-950 text-gray-400 border-b border-gray-800 text-[10px] uppercase">
+                      <tr>
+                        <th className="p-2">Tier</th>
+                        <th className="p-2">Hit</th>
+                        <th className="p-2">Miss</th>
+                        <th className="p-2">Akurasi</th>
+                        <th className="p-2">Edge</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800/60 text-xs">
+                      {([3, 4, 5, 6] as const).map((size) => {
+                        const stat = evaluation.aiStats[size];
+                        if (!stat) return null;
+                        const misses = evaluation.testDraws - stat.hitCount;
+                        const isPositive = stat.diff >= 0;
+                        const edge = isPositive ? `+${stat.diff}` : `${stat.diff}`;
+                        return (
+                          <tr key={size} className={size === 4 ? 'bg-cyan-950/20 font-bold' : ''}>
+                            <td className="p-2 text-white font-bold">AI-{size}</td>
+                            <td className="p-2 text-emerald-400">{stat.hitCount}x</td>
+                            <td className="p-2 text-rose-400">{misses}x</td>
+                            <td className="p-2 text-emerald-400">{stat.actualRate}%</td>
+                            <td className="p-2">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                isPositive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                              }`}>
+                                {edge}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Mini Evaluasi & Statistik Streak Khusus AI (Desktop Only) */}
       {evaluation && (
-        <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-4">
+        <div className="hidden lg:block bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-800">
             <div className="flex items-center space-x-2 text-xs font-bold text-gray-300 uppercase tracking-wider">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
