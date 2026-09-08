@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Market } from '../engine/types';
-import { Search, ChevronDown, Check, Sparkles, X } from 'lucide-react';
+import { Search, ChevronDown, Check, X } from 'lucide-react';
 
 interface MarketSelectorProps {
   markets: Market[];
@@ -50,7 +50,9 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
     );
   }, [markets, search]);
 
-  // Keyboard shortcut [/] to focus search
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  // Keyboard shortcut [/] to focus search, and arrow key navigation
   useEffect(() => {
     const handleGlobalKey = (e: KeyboardEvent) => {
       if (e.key === '/' && !isOpen && document.activeElement?.tagName !== 'INPUT') {
@@ -62,6 +64,29 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
   }, [isOpen]);
+
+  // Arrow key navigation inside dropdown
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown') {
+        setIsOpen(true);
+        return;
+      }
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev + 1) % Math.max(1, filteredMarkets.length));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev - 1 + filteredMarkets.length) % Math.max(1, filteredMarkets.length));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filteredMarkets[highlightedIndex]) {
+        onSelectMarket(filteredMarkets[highlightedIndex].id);
+        setIsOpen(false);
+      }
+    }
+  };
 
   // Close on click outside or escape key
   useEffect(() => {
@@ -87,19 +112,13 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
   }, [isOpen]);
 
   return (
-    <div className="space-y-3" ref={dropdownRef}>
+    <div className="space-y-2.5" ref={dropdownRef}>
       {/* Quick Market Chips */}
       <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center text-xs font-semibold text-slate-400 mr-1.5 shrink-0">
-          <Sparkles className="w-3.5 h-3.5 mr-1 text-emerald-400" />
-          <span>Pasaran:</span>
-        </div>
-
-        {/* Filter Toggle */}
-        <div className="flex bg-slate-900/90 p-0.5 rounded-lg border border-white/[0.08] shrink-0 mr-2">
+        <div className="flex bg-slate-900 p-0.5 rounded-lg border border-white/[0.08] shrink-0 mr-1.5">
           <button
             onClick={() => setActiveFilter('populer')}
-            className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
               activeFilter === 'populer'
                 ? 'bg-slate-800 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -112,7 +131,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
               setActiveFilter('all');
               setIsOpen(true);
             }}
-            className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
               activeFilter === 'all'
                 ? 'bg-slate-800 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -127,17 +146,18 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
           const m = markets.find((item) => item.id === id);
           if (!m) return null;
           const isSelected = m.id === selectedMarketId;
+          const shortName = m.name.split(' | ')[0].replace(/ Pools$/i, '');
           return (
             <button
               key={m.id}
               onClick={() => onSelectMarket(m.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 shrink-0 ${
                 isSelected
-                  ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm shadow-emerald-500/20'
+                  ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm'
                   : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800/80 border border-white/[0.06]'
               }`}
             >
-              {m.name}
+              {shortName}
             </button>
           );
         })}
@@ -153,7 +173,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-500/10 shrink-0" />
             <div>
               <span className="text-[10px] font-medium tracking-wider text-slate-400 uppercase">
-                Pasaran Terpilih
+                Pasaran Aktif
               </span>
               <div className="font-semibold text-slate-100 text-base tracking-tight group-hover:text-emerald-300 transition-colors">
                 {selectedMarket ? selectedMarket.name : 'Pilih Pasaran'}
@@ -164,7 +184,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
           <div className="flex items-center space-x-2.5 sm:space-x-3">
             {lastResultInfo && (
               <div className="hidden sm:flex items-center space-x-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-white/[0.06]">
-                <span className="text-[11px] text-slate-400">Result Terakhir:</span>
+                <span className="text-[11px] text-slate-400">Result:</span>
                 <span className="font-mono text-xs font-bold text-slate-200">
                   {lastResultInfo.latest4D.slice(0, 2)}
                   <span className="text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded ml-0.5">
@@ -175,7 +195,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
             )}
 
             <span className="text-xs px-2.5 py-1 bg-slate-950/80 border border-white/[0.06] rounded-lg text-slate-300 font-mono">
-              {lastResultInfo ? lastResultInfo.count : 0} Result
+              {lastResultInfo ? lastResultInfo.count : 0} Putaran
             </span>
 
             <div className={`p-1 rounded-md text-slate-400 group-hover:text-slate-200 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
@@ -193,9 +213,13 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder={`Cari dari ${markets.length} pasaran resmi...`}
+                  placeholder={`Cari dari ${markets.length} pasaran resmi (ketik atau tekan panah)...`}
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setHighlightedIndex(0);
+                  }}
+                  onKeyDown={handleInputKeyDown}
                   className="w-full pl-9 pr-8 py-2 bg-slate-900 border border-white/[0.1] rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                   autoFocus
                 />
@@ -209,7 +233,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
                 )}
               </div>
               <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded border border-white/[0.06]">
-                Esc untuk tutup
+                Esc tutup
               </span>
             </div>
 
@@ -219,8 +243,9 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
                   Pasaran "{search}" tidak ditemukan
                 </div>
               ) : (
-                filteredMarkets.map((m) => {
+                filteredMarkets.map((m, idx) => {
                   const isSelected = m.id === selectedMarketId;
+                  const isHighlighted = idx === highlightedIndex;
                   const count = m.history_data.trim().split(/\s+/).filter(Boolean).length;
                   return (
                     <button
@@ -229,10 +254,13 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
                         onSelectMarket(m.id);
                         setIsOpen(false);
                       }}
-                      className={`w-full px-4 py-2.5 flex items-center justify-between text-left hover:bg-slate-800/70 transition-colors ${
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      className={`w-full px-4 py-2.5 flex items-center justify-between text-left transition-colors ${
                         isSelected
-                          ? 'bg-emerald-500/10 text-emerald-400 font-medium'
-                          : 'text-slate-300'
+                          ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
+                          : isHighlighted
+                          ? 'bg-white/[0.06] text-white'
+                          : 'text-slate-300 hover:bg-slate-800/70'
                       }`}
                     >
                       <div className="flex items-center space-x-2.5">
