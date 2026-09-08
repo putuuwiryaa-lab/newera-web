@@ -20,16 +20,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [timeStr, setTimeStr] = useState<string>('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isStandalone, setIsStandalone] = useState<boolean>(false);
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    );
+  });
   const [showIosModal, setShowIosModal] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if running as standalone PWA
-    const standaloneCheck =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-    setIsStandalone(standaloneCheck);
-
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -87,67 +87,65 @@ export const Navbar: React.FC<NavbarProps> = ({
 
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0B0F19]/90 backdrop-blur-md border-b border-gray-800">
+    <header className="sticky top-0 z-40 bg-[#070A13]/85 backdrop-blur-xl border-b border-white/[0.08]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 p-0.5 shadow-lg shadow-emerald-500/20">
-            <div className="w-full h-full bg-gray-950 rounded-[10px] flex items-center justify-center">
-              <Cpu className="w-5 h-5 text-emerald-400" />
-            </div>
+          <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/[0.12] flex items-center justify-center shadow-sm">
+            <Cpu className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-cyan-200 to-emerald-400 bg-clip-text text-transparent">
-                VORTEX <span className="text-emerald-400 font-mono">2D</span>
+              <span className="font-bold text-base sm:text-lg tracking-tight text-white font-sans">
+                VORTEX <span className="text-emerald-400 font-mono font-extrabold">2D</span>
               </span>
-              <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                DYNAMIC AI
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                PRO
               </span>
             </div>
-            <p className="text-xs text-gray-400 hidden sm:block">
-              Dynamic & Adaptive Intelligence & Walk-Forward Evaluator
+            <p className="text-[11px] text-slate-400 hidden sm:block">
+              Dynamic AI Ensemble & Quantitative 2D Engine
             </p>
           </div>
         </div>
 
         {/* Status Center / Clock */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="hidden lg:flex items-center space-x-2 text-xs text-gray-400 bg-gray-900/90 px-3 py-1.5 rounded-xl border border-gray-800 shadow-inner">
+          <div className="hidden lg:flex items-center space-x-2 text-xs text-slate-400 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-white/[0.08]">
             <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>Aktif: <strong className="text-white font-medium">{activeMarketName}</strong></span>
-            <span className="text-gray-700">|</span>
-            <span className="font-mono text-emerald-400 font-bold">{timeStr}</span>
+            <span>Aktif: <strong className="text-slate-200 font-medium">{activeMarketName}</strong></span>
+            <span className="text-slate-700">|</span>
+            <span className="font-mono text-emerald-400 font-medium tabular-nums">{timeStr}</span>
           </div>
 
           {/* Mobile active market pill */}
-          <div className="flex lg:hidden items-center space-x-1.5 text-[11px] text-gray-300 bg-gray-900/80 px-2.5 py-1 rounded-xl border border-gray-800">
+          <div className="flex lg:hidden items-center space-x-1.5 text-[11px] text-slate-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-white/[0.08]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <span className="truncate max-w-[110px] font-bold text-white">{activeMarketName}</span>
+            <span className="truncate max-w-[120px] font-medium text-slate-200">{activeMarketName}</span>
           </div>
 
           {/* Data Source Badge */}
           <div
-            className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
+            className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
               dataSource === 'live'
-                ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30 shadow-sm shadow-cyan-500/10'
-                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25'
+                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
             }`}
-            title={dataSource === 'live' ? 'Terhubung langsung ke Cloud Firestore' : 'Menggunakan dataset 64 pasaran'}
+            title={dataSource === 'live' ? 'Terhubung langsung ke Cloud Firestore' : 'Menggunakan dataset tersinkronisasi'}
           >
             <Database className="w-3.5 h-3.5 text-cyan-400" />
             <span>{dataSource === 'live' ? 'Live DB' : 'Synced'}</span>
-            <span className="font-mono text-[10px] opacity-75">({marketCount})</span>
+            <span className="font-mono text-[10px] opacity-80">({marketCount})</span>
           </div>
 
           {/* PWA Install Button */}
           {!isStandalone && (
             <button
               onClick={handleInstallClick}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-cyan-500/20 active:scale-95 border border-cyan-400/30 animate-pulse hover:animate-none"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 text-xs font-medium border border-white/[0.1] transition-all active:scale-95"
               title="Pasang aplikasi VORTEX 2D di layar HP / Desktop"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-200" />
+              <Download className="w-3.5 h-3.5 text-cyan-300" />
               <span className="hidden sm:inline">Install App</span>
               <span className="sm:hidden">Install</span>
             </button>
@@ -156,11 +154,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Share Prediction Button */}
           <button
             onClick={onOpenShare}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white text-xs font-extrabold transition-all shadow-md shadow-emerald-500/20 active:scale-95 border border-emerald-400/30"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold transition-all active:scale-95 shadow-sm shadow-emerald-500/20"
             title="Menu Bagikan Prediksi Multi-Pasaran"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Share Prediksi</span>
+            <Share2 className="w-3.5 h-3.5 text-slate-950" />
+            <span className="hidden sm:inline">Bagikan</span>
             <span className="sm:hidden">Share</span>
           </button>
 
@@ -168,7 +166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-2 text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-sm"
+            className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-white/[0.08] hover:border-white/[0.15] rounded-lg transition-all disabled:opacity-50 active:scale-95"
             title="Sinkronisasi ulang data"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
@@ -179,41 +177,38 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* iOS Safari PWA Instruction Modal */}
       {showIosModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+          <div className="bg-slate-900 border border-white/[0.12] rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Smartphone className="w-5 h-5 text-cyan-400" />
-                <h3 className="font-bold text-white text-sm">Install di iPhone / iPad</h3>
+                <h3 className="font-semibold text-white text-sm">Install di iPhone / iPad</h3>
               </div>
               <button
                 onClick={() => setShowIosModal(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white bg-gray-800"
+                className="p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="text-xs text-gray-300 space-y-2.5">
+            <div className="text-xs text-slate-300 space-y-2.5">
               <p>Untuk menginstall aplikasi VORTEX 2D di Safari iOS:</p>
-              <ol className="list-decimal list-inside space-y-1.5 text-gray-200 bg-gray-950/60 p-3 rounded-xl border border-gray-800/80">
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-200 bg-slate-950/80 p-3 rounded-xl border border-white/[0.08]">
                 <li>
-                  Tekan tombol <strong className="text-cyan-400">Bagikan (Share / ⎙)</strong> di menu bawah Safari.
+                  Tekan tombol <strong className="text-cyan-400">Bagikan (Share)</strong> di menu bawah Safari.
                 </li>
                 <li>
-                  Gulir ke bawah lalu pilih menu <strong className="text-emerald-400">"Tambahkan ke Layar Utama" (Add to Home Screen)</strong>.
+                  Pilih <strong className="text-emerald-400">"Tambahkan ke Layar Utama"</strong>.
                 </li>
                 <li>
-                  Tekan <strong className="text-white">"Tambah" (Add)</strong> di pojok kanan atas.
+                  Tekan <strong className="text-white">"Tambah"</strong> di pojok kanan atas.
                 </li>
               </ol>
-              <p className="text-[11px] text-gray-400">
-                Aplikasi VORTEX 2D akan langsung muncul sebagai ikon di beranda HP Anda dan dapat dibuka fullscreen tanpa bar browser!
-              </p>
             </div>
             <button
               onClick={() => setShowIosModal(false)}
-              className="w-full py-2 bg-gradient-to-r from-emerald-600 to-cyan-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20"
+              className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-semibold shadow-sm"
             >
-              Mengerti & Tutup
+              Selesai
             </button>
           </div>
         </div>

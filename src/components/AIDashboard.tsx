@@ -40,7 +40,7 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
   if (!prediction) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center text-gray-500 text-sm">
+      <div className="bg-slate-900/60 border border-white/[0.08] rounded-2xl p-8 text-center text-slate-400 text-sm">
         Memuat kalkulasi Engine AI...
       </div>
     );
@@ -55,93 +55,90 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Hero AI: Result 2D Target & Model Confidence */}
-      <div className="bg-gradient-to-br from-gray-900 via-gray-900/95 to-gray-950 border border-emerald-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-52 h-52 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="bg-slate-900/70 border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           {/* Result Terakhir dengan Fokus Target Posisi AI (Kepala/Ekor) */}
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 tracking-wide uppercase">
-                <Target className="w-3.5 h-3.5 mr-1 text-emerald-400 animate-pulse" />
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wide uppercase">
+                <Target className="w-3.5 h-3.5 mr-1 text-emerald-400" />
                 Target Posisi AI 2D
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-slate-400">
                 Min. 1 digit prediksi wajib hadir di Kepala atau Ekor
               </span>
             </div>
 
-            <div className="mt-3 flex items-center space-x-3">
+            <div className="mt-3.5 flex items-center space-x-3">
               <div className="flex items-center space-x-2 font-mono">
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] text-gray-500 uppercase font-sans font-semibold tracking-wider">As</span>
-                  <span className="w-11 h-12 bg-gray-950 border border-gray-800 rounded-xl flex items-center justify-center text-lg font-bold text-gray-400">
+                  <span className="text-[10px] text-slate-500 uppercase font-sans font-medium">As</span>
+                  <span className="w-11 h-12 bg-slate-950/80 border border-white/[0.08] rounded-xl flex items-center justify-center text-lg font-bold text-slate-400">
                     {lastDraw.as}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] text-gray-500 uppercase font-sans font-semibold tracking-wider">Kop</span>
-                  <span className="w-11 h-12 bg-gray-950 border border-gray-800 rounded-xl flex items-center justify-center text-lg font-bold text-gray-400">
+                  <span className="text-[10px] text-slate-500 uppercase font-sans font-medium">Kop</span>
+                  <span className="w-11 h-12 bg-slate-950/80 border border-white/[0.08] rounded-xl flex items-center justify-center text-lg font-bold text-slate-400">
                     {lastDraw.kop}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase font-sans tracking-wider flex items-center">
-                    Kepala 🎯
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase font-sans flex items-center">
+                    Kepala
                   </span>
-                  <span className="w-11 h-12 bg-emerald-950/50 border-2 border-emerald-500/70 rounded-xl flex items-center justify-center text-xl font-extrabold text-emerald-300 shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/30">
+                  <span className="w-11 h-12 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-xl flex items-center justify-center text-xl font-extrabold text-emerald-300 shadow-sm ring-2 ring-emerald-500/20">
                     {lastDraw.kepala}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase font-sans tracking-wider flex items-center">
-                    Ekor 🎯
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase font-sans flex items-center">
+                    Ekor
                   </span>
-                  <span className="w-11 h-12 bg-emerald-950/50 border-2 border-emerald-500/70 rounded-xl flex items-center justify-center text-xl font-extrabold text-emerald-300 shadow-lg shadow-emerald-500/20 ring-2 ring-emerald-500/30">
+                  <span className="w-11 h-12 bg-emerald-500/10 border-2 border-emerald-500/50 rounded-xl flex items-center justify-center text-xl font-extrabold text-emerald-300 shadow-sm ring-2 ring-emerald-500/20">
                     {lastDraw.ekor}
                   </span>
                 </div>
               </div>
 
               {/* 2D Summary Badge */}
-              <div className="pl-3 border-l border-gray-800 flex flex-col justify-center space-y-1">
-                <div className="text-[11px] text-gray-400">Target 2D:</div>
-                <div className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 font-mono font-extrabold text-emerald-300 text-sm tracking-wider">
+              <div className="pl-3.5 border-l border-white/[0.08] flex flex-col justify-center space-y-1">
+                <div className="text-[11px] text-slate-400 font-medium">Target 2D:</div>
+                <div className="px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 font-mono font-bold text-emerald-300 text-sm tracking-wider">
                   [{lastDraw.kepala}{lastDraw.ekor}]
                 </div>
               </div>
             </div>
 
             {/* Mobile Quick Info Bar */}
-            <div className="flex lg:hidden flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-gray-800/80">
-              <span className="text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
-                ★ Rekomendasi Utama: AI-4
+            <div className="flex lg:hidden flex-wrap items-center gap-2 mt-3.5 pt-2.5 border-t border-white/[0.06]">
+              <span className="text-[10px] font-mono font-semibold bg-cyan-500/10 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/20">
+                ★ Rekomendasi: AI-4
               </span>
-              <span className="text-[10px] font-mono bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                {confidenceScore}% Konsensus Model
+              <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                {confidenceScore}% Konsensus
               </span>
             </div>
           </div>
 
           {/* Model Confidence Meter & Bobot 4 Algoritma (Desktop Only in Header) */}
-          <div className="hidden lg:grid grid-cols-2 gap-3 w-full lg:w-auto">
+          <div className="hidden lg:grid grid-cols-2 gap-3.5 w-full lg:w-auto">
             {/* Confidence Meter */}
-            <div className="bg-gray-950/90 border border-gray-800/90 rounded-xl p-3.5 shadow-inner">
+            <div className="bg-slate-950/80 border border-white/[0.08] rounded-xl p-3.5 shadow-inner">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold text-gray-300 flex items-center space-x-1.5">
+                <span className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
                   <Gauge className="w-4 h-4 text-cyan-400" />
                   <span>Keyakinan Model AI</span>
                 </span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                     convergenceStatus === 'TINGGI'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                       : convergenceStatus === 'SEDANG'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                      ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                      : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                   }`}
                 >
                   {convergenceStatus}
@@ -149,20 +146,20 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
               </div>
 
               <div className="flex items-baseline space-x-2 my-1">
-                <span className="text-2xl font-extrabold font-mono text-white tracking-tight">
+                <span className="text-2xl font-bold font-mono text-white tabular-nums">
                   {confidenceScore}%
                 </span>
-                <span className="text-[11px] text-gray-400">Konsensus 4 Metode</span>
+                <span className="text-[11px] text-slate-400">Konsensus 4 Metode</span>
               </div>
 
-              <div className="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800 mt-1">
+              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-white/[0.06] mt-1.5">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${
+                  className={`h-full rounded-full transition-all duration-500 ${
                     confidenceScore >= 80
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm shadow-emerald-500/50'
+                      ? 'bg-emerald-400'
                       : confidenceScore >= 68
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-400 shadow-sm shadow-cyan-500/50'
-                      : 'bg-gradient-to-r from-amber-500 to-yellow-400 shadow-sm shadow-amber-500/50'
+                      ? 'bg-cyan-400'
+                      : 'bg-amber-400'
                   }`}
                   style={{ width: `${confidenceScore}%` }}
                 />
@@ -170,22 +167,22 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
             </div>
 
             {/* Bobot Ensemble Rolling Window dengan Visual Progress Bar & Selector Tier Parameter */}
-            <div className="bg-gray-950/90 border border-gray-800/90 rounded-xl p-3.5 shadow-inner">
-              <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
-                <span className="flex items-center space-x-1.5 text-[11px] font-bold text-gray-300">
+            <div className="bg-slate-950/80 border border-white/[0.08] rounded-xl p-3.5 shadow-inner">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                <span className="flex items-center space-x-1.5 text-[11px] font-semibold text-slate-300">
                   <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Bobot Metode Parameter:</span>
+                  <span>Bobot Metode:</span>
                 </span>
                 {/* Selector Parameter Tier */}
-                <div className="flex items-center space-x-1 bg-gray-900 p-0.5 rounded-lg border border-gray-800">
+                <div className="flex items-center space-x-1 bg-slate-900 p-0.5 rounded-lg border border-white/[0.08]">
                   {[3, 4, 5, 6].map((sz) => (
                     <button
                       key={sz}
                       onClick={() => setSelectedWeightTier(sz as 3 | 4 | 5 | 6)}
-                      className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded transition-all ${
+                      className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded transition-colors ${
                         selectedWeightTier === sz
-                          ? 'bg-cyan-500 text-gray-950 shadow-sm'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-slate-800 text-cyan-300 shadow-sm border border-white/[0.1]'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       AI-{sz}
@@ -194,12 +191,9 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="text-[10px] text-gray-400 font-sans mb-2 bg-gray-900/60 px-2.5 py-1 rounded border border-gray-800/80 flex items-center justify-between">
-                <span>Evaluasi Akurasi: <strong className="text-cyan-400 font-mono">Parameter AI-{selectedWeightTier} ({selectedWeightTier} Digit)</strong></span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] text-cyan-400 font-mono bg-cyan-950/50 px-1.5 py-0.5 rounded border border-cyan-800/40">🛡️ Anti-Osilasi</span>
-                  <span className="text-[9px] text-emerald-400 font-mono">Independen</span>
-                </div>
+              <div className="text-[10px] text-slate-400 font-sans mb-2 bg-slate-900/60 px-2.5 py-1 rounded border border-white/[0.06] flex items-center justify-between">
+                <span>Evaluasi Akurasi: <strong className="text-cyan-300 font-mono">AI-{selectedWeightTier} ({selectedWeightTier} Digit)</strong></span>
+                <span className="text-[9px] text-cyan-300 font-mono bg-cyan-950/50 px-1.5 py-0.5 rounded border border-cyan-800/40">Anti-Osilasi</span>
               </div>
 
               {(() => {
@@ -218,11 +212,11 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                       const barColor = colors[name as keyof typeof colors] || 'bg-emerald-400';
                       return (
                         <div key={name} className="space-y-0.5">
-                          <div className="flex justify-between text-[11px] font-mono text-gray-400">
-                            <span className="text-gray-300">{name}</span>
-                            <span className="font-bold text-emerald-400">{w.toFixed(1)}x ({pct}%)</span>
+                          <div className="flex justify-between text-[11px] font-mono text-slate-400">
+                            <span className="text-slate-300">{name}</span>
+                            <span className="font-semibold text-slate-200 tabular-nums">{w.toFixed(1)}x ({pct}%)</span>
                           </div>
-                          <div className="w-full bg-gray-900 rounded-full h-1 overflow-hidden border border-gray-800/60">
+                          <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden border border-white/[0.04]">
                             <div
                               className={`h-full rounded-full ${barColor}`}
                               style={{ width: `${pct}%` }}
@@ -245,18 +239,18 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
       </div>
 
       {/* 3. Kartu Prediksi Angka Ikut (AI 3 - 6 Digit) */}
-      <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-gray-800 mb-5">
+      <div className="bg-slate-900/70 border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-white/[0.08] mb-5">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-wide">
-                PREDIKSI ANGKA IKUT (AI) 2D TERKALIBRASI
+              <h3 className="text-base font-bold text-white tracking-tight">
+                Prediksi Angka Ikut (AI) 2D Terkalibrasi
               </h3>
-              <p className="text-xs text-gray-400">
-                Pilih tier sesuai profil risiko: Ketat (AI-3), Komunitas (AI-4), atau Proteksi (AI-5/6)
+              <p className="text-xs text-slate-400">
+                Pilih formasi sesuai profil risiko: Ketat (AI-3), Utama (AI-4), Seimbang (AI-5), atau Proteksi (AI-6)
               </p>
             </div>
           </div>
@@ -303,70 +297,70 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                 key={size}
                 className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
                   star
-                    ? 'bg-gradient-to-br from-cyan-950/40 via-gray-900 to-gray-950 border-cyan-500/50 shadow-xl shadow-cyan-500/10 ring-1 ring-cyan-500/30'
-                    : 'bg-gray-950/70 border-gray-800/90 hover:border-gray-700/90 shadow-md'
+                    ? 'bg-slate-900/90 border-cyan-500/40 shadow-lg shadow-cyan-500/5 ring-1 ring-cyan-500/20'
+                    : 'bg-slate-950/60 border-white/[0.08] hover:border-white/[0.14]'
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
                   <div className="flex items-center space-x-2">
                     <span
-                      className={`text-sm font-bold tracking-wide ${
-                        star ? 'text-cyan-300 font-extrabold' : 'text-white'
+                      className={`text-sm font-bold tracking-tight ${
+                        star ? 'text-cyan-300 font-extrabold' : 'text-slate-100'
                       }`}
                     >
                       {label}
                     </span>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold tracking-wide ${
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium tracking-wide ${
                         star
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                          : 'bg-gray-800 text-gray-400 border border-gray-700/50'
+                          ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-white/[0.06]'
                       }`}
                     >
                       {badge}
                     </span>
                     {audit?.aiAudit?.tierAudits?.[size] && (
                       <span
-                        className={`text-[9px] px-2 py-0.5 rounded-full font-bold font-mono tracking-wider ${
+                        className={`text-[9px] px-2 py-0.5 rounded-full font-mono font-medium tracking-wider ${
                           audit.aiAudit.tierAudits[size].action === 'FREEZE'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse'
+                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
+                            : 'bg-rose-500/15 text-rose-300 border border-rose-500/25'
                         }`}
                         title={audit.aiAudit.tierAudits[size].marginalNote}
                       >
                         {audit.aiAudit.tierAudits[size].action === 'FREEZE'
-                          ? `🔒 FREEZE (AI-${size} HIT)`
-                          : `⚡ KALIBRASI (AI-${size} ZONK)`}
+                          ? `FREEZE (HIT)`
+                          : `KALIBRASI`}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-gray-900 border border-gray-800 font-mono text-gray-400">
-                    Baseline: <strong className="text-gray-300">{baseline}</strong>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-900 border border-white/[0.06] font-mono text-slate-400">
+                    Baseline: <strong className="text-slate-200">{baseline}</strong>
                   </span>
                 </div>
 
                 {audit?.aiAudit?.tierAudits?.[size] && (
-                  <div className="mb-2 text-[10px] font-mono flex items-center justify-between">
-                    <span className={audit.aiAudit.tierAudits[size].action === 'FREEZE' ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                  <div className="mb-3 text-[10px] font-mono flex items-center justify-between bg-slate-900/50 px-2.5 py-1 rounded border border-white/[0.04]">
+                    <span className={audit.aiAudit.tierAudits[size].action === 'FREEZE' ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
                       {audit.aiAudit.tierAudits[size].action === 'FREEZE'
-                        ? `✓ Parameter AI-${size} Dipertahankan (Freeze)`
-                        : `✗ Parameter AI-${size} Direset/Dikalibrasi Ulang`}
+                        ? `✓ Parameter AI-${size} Terkunci (Hit Kemarin)`
+                        : `Penyesuaian Adaptif Terkendali`}
                     </span>
-                    <span className="text-gray-500 truncate ml-2">
+                    <span className="text-slate-400 truncate ml-2">
                       {audit.aiAudit.tierAudits[size].marginalNote}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between mt-1 pt-1">
+                <div className="flex items-center justify-between mt-2 pt-1">
                   <div className="flex items-center space-x-2">
                     {digits.map((d, i) => (
                       <span
                         key={i}
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-extrabold text-base transition-all duration-150 hover:-translate-y-0.5 shadow-sm ${
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-mono font-bold text-lg sm:text-xl transition-all duration-150 hover:-translate-y-0.5 shadow-sm ${
                           star
-                            ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/50 shadow-cyan-500/20 ring-1 ring-cyan-500/20'
-                            : 'bg-gray-900 text-white border border-gray-700/80 hover:border-gray-600'
+                            ? 'bg-cyan-500/15 text-cyan-200 border border-cyan-500/40 shadow-sm shadow-cyan-500/10'
+                            : 'bg-slate-900 text-white border border-white/[0.1] hover:border-white/[0.2]'
                         }`}
                       >
                         {d}
@@ -376,17 +370,17 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
                   <button
                     onClick={() => handleCopy(digitStr, `ai-${size}`)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition-all active:scale-95 border ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-medium flex items-center space-x-1.5 transition-all active:scale-95 border ${
                       isCopied
-                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                        : 'bg-gray-800 hover:bg-gray-700/90 text-gray-300 hover:text-white border-gray-700/60 shadow-sm'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                        : 'bg-slate-800 hover:bg-slate-700/90 text-slate-200 hover:text-white border-white/[0.08] shadow-sm'
                     }`}
                     title="Salin Angka AI ke Clipboard"
                   >
                     {isCopied ? (
                       <>
                         <Check className="w-4 h-4 text-emerald-400" />
-                        <span className="text-emerald-400 font-bold">Tersalin!</span>
+                        <span className="text-emerald-400 font-semibold">Tersalin!</span>
                       </>
                     ) : (
                       <>
@@ -402,19 +396,19 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                   const tWeights = prediction.tierMethodWeights[size];
                   const tTotal = Object.values(tWeights).reduce((a, b) => a + b, 0) || 1;
                   return (
-                    <div className="mt-3 pt-2.5 border-t border-gray-800/80">
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono mb-1.5">
-                        <span className="text-gray-300 font-bold">Bobot Parameter AI-{size}:</span>
-                        <span className="text-cyan-400 font-semibold">Evaluasi Khusus {size} Digit</span>
+                    <div className="mt-3.5 pt-2.5 border-t border-white/[0.06]">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono mb-1.5">
+                        <span className="text-slate-300 font-medium">Bobot Parameter AI-{size}:</span>
+                        <span className="text-cyan-400 font-medium">Evaluasi {size} Digit</span>
                       </div>
                       <div className="grid grid-cols-4 gap-1.5 text-[9px] font-mono">
                         {Object.entries(tWeights).map(([mName, mW]) => {
                           const pct = Math.round((mW / tTotal) * 100);
                           return (
-                            <div key={mName} className="bg-gray-900/90 px-1.5 py-1 rounded border border-gray-800 flex flex-col items-center">
-                              <span className="text-gray-400">{mName}</span>
-                              <span className="font-extrabold text-white">{mW.toFixed(1)}x</span>
-                              <span className="text-[8px] text-cyan-400 font-bold">({pct}%)</span>
+                            <div key={mName} className="bg-slate-900/90 px-1.5 py-1 rounded border border-white/[0.06] flex flex-col items-center">
+                              <span className="text-slate-400">{mName}</span>
+                              <span className="font-bold text-white tabular-nums">{mW.toFixed(1)}x</span>
+                              <span className="text-[8px] text-cyan-400 font-semibold tabular-nums">({pct}%)</span>
                             </div>
                           );
                         })}
@@ -423,7 +417,7 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                   );
                 })()}
 
-                <p className="text-[11px] text-gray-400 mt-2.5 pt-2 border-t border-gray-800/60 leading-relaxed">
+                <p className="text-[11px] text-slate-400 mt-2.5 pt-2 border-t border-white/[0.06] leading-relaxed">
                   {desc}
                 </p>
               </div>
@@ -435,74 +429,74 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
       {/* Mobile-Only Collapsible Dropdowns Section */}
       <div className="lg:hidden space-y-3">
         {/* Accordion 1: Audit & Kalibrasi AI */}
-        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+        <div className="bg-slate-900/80 border border-white/[0.08] rounded-xl overflow-hidden shadow-lg">
           <button
             onClick={() => setShowMobileAudit(!showMobileAudit)}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition-colors"
           >
             <div className="flex items-center space-x-2.5">
               <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 <Sliders className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white tracking-wide">Audit & Kalibrasi AI Engine</div>
-                <div className="text-[10px] text-gray-400">Status kalibrasi & proteksi anti-overfit</div>
+                <div className="text-xs font-semibold text-white tracking-wide">Audit & Kalibrasi AI Engine</div>
+                <div className="text-[10px] text-slate-400">Status kalibrasi & proteksi anti-osilasi</div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+              <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border ${
                 audit?.aiAudit?.tierAudits?.[4]?.action === 'FREEZE'
-                  ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' 
-                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' 
+                  : 'bg-amber-500/15 text-amber-300 border-amber-500/25'
               }`}>
-                {audit?.aiAudit?.tierAudits?.[4]?.action === 'FREEZE' ? '🔒 FREEZE' : '⚡ KALIBRASI'}
+                {audit?.aiAudit?.tierAudits?.[4]?.action === 'FREEZE' ? 'FREEZE' : 'TUNE'}
               </span>
-              {showMobileAudit ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              {showMobileAudit ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </div>
           </button>
           {showMobileAudit && (
-            <div className="p-3 pt-0 border-t border-gray-800/80 mt-1">
+            <div className="p-3 pt-0 border-t border-white/[0.08] mt-1">
               <SmartCalibrationCard audit={audit} marketName={marketName} mode="ai" />
             </div>
           )}
         </div>
 
         {/* Accordion 2: Bobot 4 Algoritma AI (Multi-Tier) */}
-        <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+        <div className="bg-slate-900/80 border border-white/[0.08] rounded-xl overflow-hidden shadow-lg">
           <button
             onClick={() => setShowMobileWeights(!showMobileWeights)}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+            className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition-colors"
           >
             <div className="flex items-center space-x-2.5">
               <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <BarChart2 className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white tracking-wide">Bobot 4 Metode AI (Multi-Tier)</div>
-                <div className="text-[10px] text-gray-400">Momentum, Markov, Delta, Mistik per Tier</div>
+                <div className="text-xs font-semibold text-white tracking-wide">Bobot 4 Metode AI (Multi-Tier)</div>
+                <div className="text-[10px] text-slate-400">Momentum, Markov, Delta, Mistik per Tier</div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30">
+              <span className="text-[10px] font-mono font-medium bg-cyan-500/15 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/20">
                 AI-{selectedWeightTier}
               </span>
-              {showMobileWeights ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              {showMobileWeights ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </div>
           </button>
           {showMobileWeights && (
-            <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+            <div className="p-4 pt-0 border-t border-white/[0.08] mt-2 space-y-3">
               {/* Selector Tier */}
-              <div className="flex items-center justify-between gap-1 bg-gray-950/80 p-1.5 rounded-lg border border-gray-800/80">
-                <span className="text-[10px] text-gray-400 font-sans pl-1">Tier AI:</span>
+              <div className="flex items-center justify-between gap-1 bg-slate-950/80 p-1.5 rounded-lg border border-white/[0.08]">
+                <span className="text-[10px] text-slate-400 font-sans pl-1">Tier AI:</span>
                 <div className="flex space-x-1 font-mono text-[10px]">
                   {([3, 4, 5, 6] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setSelectedWeightTier(t)}
-                      className={`px-2.5 py-1 rounded transition-all ${
+                      className={`px-2.5 py-1 rounded transition-colors ${
                         selectedWeightTier === t
-                          ? 'bg-cyan-500 text-black font-extrabold shadow-sm'
-                          : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700'
+                          ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                          : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
                       }`}
                     >
                       AI-{t}
@@ -528,11 +522,11 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                       const barColor = colors[name as keyof typeof colors] || 'bg-emerald-400';
                       return (
                         <div key={name} className="space-y-1">
-                          <div className="flex justify-between text-xs font-mono text-gray-400">
-                            <span className="text-gray-300">{name}</span>
-                            <span className="font-bold text-emerald-400">{w.toFixed(1)}x ({pct}%)</span>
+                          <div className="flex justify-between text-xs font-mono text-slate-400">
+                            <span className="text-slate-300">{name}</span>
+                            <span className="font-semibold text-slate-200 tabular-nums">{w.toFixed(1)}x ({pct}%)</span>
                           </div>
-                          <div className="w-full bg-gray-950 rounded-full h-1.5 overflow-hidden border border-gray-800/60">
+                          <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-white/[0.06]">
                             <div
                               className={`h-full rounded-full ${barColor}`}
                               style={{ width: `${pct}%` }}
@@ -550,50 +544,50 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
         {/* Accordion 3: Performa & Evaluasi Streak AI */}
         {evaluation && (
-          <div className="bg-gray-900/90 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+          <div className="bg-slate-900/80 border border-white/[0.08] rounded-xl overflow-hidden shadow-lg">
             <button
               onClick={() => setShowMobileEval(!showMobileEval)}
-              className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-800/50 transition-colors"
+              className="w-full p-4 flex items-center justify-between text-left hover:bg-slate-800/50 transition-colors"
             >
               <div className="flex items-center space-x-2.5">
                 <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   <TrendingUp className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white tracking-wide">Performa & Evaluasi AI</div>
-                  <div className="text-[10px] text-gray-400">Walk-forward {evaluation.testDraws} putaran & streak</div>
+                  <div className="text-xs font-semibold text-white tracking-wide">Performa & Evaluasi AI</div>
+                  <div className="text-[10px] text-slate-400">Walk-forward {evaluation.testDraws} putaran & streak</div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                <span className="text-[10px] font-mono font-medium bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/25">
                   Streak {evaluation.ai4Streak.maxWin}x
                 </span>
-                {showMobileEval ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                {showMobileEval ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
             </button>
             {showMobileEval && (
-              <div className="p-4 pt-0 border-t border-gray-800/80 mt-2 space-y-3">
+              <div className="p-4 pt-0 border-t border-white/[0.08] mt-2 space-y-3">
                 {/* Streak Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                  <div className="bg-slate-950/80 border border-white/[0.08] rounded-lg p-2.5 flex items-center space-x-2.5">
                     <Award className="w-4 h-4 text-emerald-400 shrink-0" />
                     <div>
-                      <div className="text-[10px] text-gray-400">Win-Streak Max AI-4</div>
-                      <div className="text-sm font-bold font-mono text-emerald-400">{evaluation.ai4Streak.maxWin}x berturut</div>
+                      <div className="text-[10px] text-slate-400">Win-Streak Max AI-4</div>
+                      <div className="text-sm font-bold font-mono text-emerald-400 tabular-nums">{evaluation.ai4Streak.maxWin}x berturut</div>
                     </div>
                   </div>
-                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                  <div className="bg-slate-950/80 border border-white/[0.08] rounded-lg p-2.5 flex items-center space-x-2.5">
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                     <div>
-                      <div className="text-[10px] text-gray-400">Miss Maksimal AI-4</div>
-                      <div className="text-sm font-bold font-mono text-rose-400">{evaluation.ai4Streak.maxLose}x berturut</div>
+                      <div className="text-[10px] text-slate-400">Miss Maksimal AI-4</div>
+                      <div className="text-sm font-bold font-mono text-rose-400 tabular-nums">{evaluation.ai4Streak.maxLose}x berturut</div>
                     </div>
                   </div>
-                  <div className="bg-gray-950/70 border border-gray-800/80 rounded-lg p-2.5 flex items-center space-x-2.5">
+                  <div className="bg-slate-950/80 border border-white/[0.08] rounded-lg p-2.5 flex items-center space-x-2.5">
                     <Zap className="w-4 h-4 text-cyan-400 shrink-0" />
                     <div>
-                      <div className="text-[10px] text-gray-400">Streak Saat Ini AI-4</div>
-                      <div className="text-sm font-bold font-mono text-cyan-400">
+                      <div className="text-[10px] text-slate-400">Streak Saat Ini AI-4</div>
+                      <div className="text-sm font-bold font-mono text-cyan-400 tabular-nums">
                         {evaluation.ai4Streak.current > 0
                           ? `+${evaluation.ai4Streak.current} Menang`
                           : `${evaluation.ai4Streak.current} Kalah`}
@@ -603,9 +597,9 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                 </div>
 
                 {/* Table */}
-                <div className="overflow-x-auto rounded-lg border border-gray-800">
+                <div className="overflow-x-auto rounded-lg border border-white/[0.08]">
                   <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-gray-950 text-gray-400 border-b border-gray-800 text-[10px] uppercase">
+                    <thead className="bg-slate-950 text-slate-400 border-b border-white/[0.08] text-[10px] uppercase">
                       <tr>
                         <th className="p-2">Tier</th>
                         <th className="p-2">Hit</th>
@@ -614,7 +608,7 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                         <th className="p-2">Edge</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800/60 text-xs">
+                    <tbody className="divide-y divide-white/[0.06] text-xs">
                       {([3, 4, 5, 6] as const).map((size) => {
                         const stat = evaluation.aiStats[size];
                         if (!stat) return null;
@@ -624,11 +618,11 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                         return (
                           <tr key={size} className={size === 4 ? 'bg-cyan-950/20 font-bold' : ''}>
                             <td className="p-2 text-white font-bold">AI-{size}</td>
-                            <td className="p-2 text-emerald-400">{stat.hitCount}x</td>
-                            <td className="p-2 text-rose-400">{misses}x</td>
-                            <td className="p-2 text-emerald-400">{stat.actualRate}%</td>
+                            <td className="p-2 text-emerald-400 tabular-nums">{stat.hitCount}x</td>
+                            <td className="p-2 text-rose-400 tabular-nums">{misses}x</td>
+                            <td className="p-2 text-emerald-400 tabular-nums">{stat.actualRate}%</td>
                             <td className="p-2">
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] tabular-nums ${
                                 isPositive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
                               }`}>
                                 {edge}%
@@ -648,52 +642,52 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
       {/* 4. Mini Evaluasi & Statistik Streak Khusus AI (Desktop Only) */}
       {evaluation && (
-        <div className="hidden lg:block bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-800">
-            <div className="flex items-center space-x-2 text-xs font-bold text-gray-300 uppercase tracking-wider">
+        <div className="hidden lg:block bg-slate-900/70 border border-white/[0.08] rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-md space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.08]">
+            <div className="flex items-center space-x-2 text-xs font-semibold text-slate-300 uppercase tracking-wider">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
               <span>Performa Walk-Forward AI ({evaluation.testDraws} Putaran Terakhir)</span>
             </div>
-            <span className="text-xs text-gray-400 font-mono">
+            <span className="text-xs text-slate-400 font-mono">
               Target Evaluasi: <strong className="text-emerald-400">Min 1 Digit Masuk di 2D</strong>
             </span>
           </div>
 
           {/* Streak Stat Highlight */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-gray-950/70 border border-gray-800/80 rounded-xl p-3 flex items-center space-x-3">
+            <div className="bg-slate-950/70 border border-white/[0.08] rounded-xl p-3.5 flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[11px] text-gray-400">Win-Streak Maksimal AI-4</div>
-                <div className="text-lg font-bold font-mono text-emerald-400">
+                <div className="text-[11px] text-slate-400">Win-Streak Maksimal AI-4</div>
+                <div className="text-lg font-bold font-mono text-emerald-400 tabular-nums">
                   {evaluation.ai4Streak.maxWin}x{' '}
-                  <span className="text-xs font-normal text-gray-500">berturut</span>
+                  <span className="text-xs font-normal text-slate-500">berturut</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-950/70 border border-gray-800/80 rounded-xl p-3 flex items-center space-x-3">
+            <div className="bg-slate-950/70 border border-white/[0.08] rounded-xl p-3.5 flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[11px] text-gray-400">Lose-Streak Maksimal AI-4</div>
-                <div className="text-lg font-bold font-mono text-rose-400">
+                <div className="text-[11px] text-slate-400">Lose-Streak Maksimal AI-4</div>
+                <div className="text-lg font-bold font-mono text-rose-400 tabular-nums">
                   {evaluation.ai4Streak.maxLose}x{' '}
-                  <span className="text-xs font-normal text-gray-500">berturut</span>
+                  <span className="text-xs font-normal text-slate-500">berturut</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-950/70 border border-gray-800/80 rounded-xl p-3 flex items-center space-x-3">
+            <div className="bg-slate-950/70 border border-white/[0.08] rounded-xl p-3.5 flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 <Zap className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-[11px] text-gray-400">Status Streak Terkini</div>
-                <div className="text-lg font-bold font-mono text-cyan-400">
+                <div className="text-[11px] text-slate-400">Status Streak Terkini</div>
+                <div className="text-lg font-bold font-mono text-cyan-400 tabular-nums">
                   {evaluation.ai4Streak.current > 0
                     ? `+${evaluation.ai4Streak.current}x Menang`
                     : `${evaluation.ai4Streak.current}x Kalah`}
@@ -703,19 +697,19 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
           </div>
 
           {/* Tabel Akurasi AI */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
             <table className="w-full text-xs text-left">
-              <thead className="bg-gray-950/90 text-gray-400 font-mono text-[11px] uppercase">
+              <thead className="bg-slate-950/90 text-slate-400 font-mono text-[11px] uppercase">
                 <tr>
-                  <th className="p-2.5 rounded-l-lg">Tier AI</th>
-                  <th className="p-2.5">Tembus (Hits)</th>
-                  <th className="p-2.5">Gagal (Miss)</th>
-                  <th className="p-2.5">Akurasi Empiris</th>
-                  <th className="p-2.5">Baseline Teori</th>
-                  <th className="p-2.5 rounded-r-lg text-right">Edge (Keunggulan)</th>
+                  <th className="p-3">Tier AI</th>
+                  <th className="p-3">Tembus (Hits)</th>
+                  <th className="p-3">Gagal (Miss)</th>
+                  <th className="p-3">Akurasi Empiris</th>
+                  <th className="p-3">Baseline Teori</th>
+                  <th className="p-3 text-right">Edge (Keunggulan)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800/50 font-mono text-gray-300">
+              <tbody className="divide-y divide-white/[0.06] font-mono text-slate-300">
                 {[3, 4, 5, 6].map((size) => {
                   const stat = evaluation.aiStats[size];
                   if (!stat) return null;
@@ -725,30 +719,30 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
                   return (
                     <tr
                       key={size}
-                      className={`hover:bg-gray-800/30 transition-colors ${
-                        size === 4 ? 'bg-cyan-950/25 font-bold' : ''
+                      className={`hover:bg-white/[0.02] transition-colors ${
+                        size === 4 ? 'bg-cyan-950/20 font-bold' : ''
                       }`}
                     >
-                      <td className="p-2.5 text-white font-bold flex items-center space-x-1.5">
+                      <td className="p-3 text-white font-bold flex items-center space-x-1.5">
                         <span>AI-{size}</span>
                         {size === 4 && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                             Utama
                           </span>
                         )}
                       </td>
-                      <td className="p-2.5 text-emerald-400">{stat.hitCount}x</td>
-                      <td className="p-2.5 text-rose-400">{misses}x</td>
-                      <td className="p-2.5 font-bold text-white">
-                        <span className="text-emerald-400 font-mono text-sm">{stat.actualRate}%</span>
+                      <td className="p-3 text-emerald-400 tabular-nums">{stat.hitCount}x</td>
+                      <td className="p-3 text-rose-400 tabular-nums">{misses}x</td>
+                      <td className="p-3 font-bold text-white">
+                        <span className="text-emerald-400 font-mono text-sm tabular-nums">{stat.actualRate}%</span>
                       </td>
-                      <td className="p-2.5 text-gray-400">{stat.baselineRate}%</td>
-                      <td className="p-2.5 text-right font-bold">
+                      <td className="p-3 text-slate-400 tabular-nums">{stat.baselineRate}%</td>
+                      <td className="p-3 text-right font-bold">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] tabular-nums ${
                             isPositive
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/25'
                           }`}
                         >
                           {isPositive ? `+${edge}%` : `${edge}%`}

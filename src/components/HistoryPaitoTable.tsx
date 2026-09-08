@@ -48,19 +48,24 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   }, [displayed]);
 
   return (
-    <div className="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-xl space-y-4 animate-in fade-in duration-300">
+    <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4 animate-in fade-in duration-300">
       {/* Header & Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-800/80">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
         <div className="flex items-center space-x-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
             <ListFilter className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-base font-bold text-white tracking-wide">
-              RIWAYAT PAITO & PENGELUARAN 2D: {marketName}
-            </h4>
-            <p className="text-xs text-gray-400">
-              Menampilkan {displayed.length} dari {filtered.length} putaran ({historyItems.length} total tercatat)
+            <div className="flex items-center space-x-2">
+              <h4 className="text-base font-semibold text-white tracking-tight">
+                Riwayat Paito & Pengeluaran 2D
+              </h4>
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 font-mono border border-white/[0.08]">
+                {marketName}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Menampilkan {displayed.length} dari {filtered.length} putaran ({historyItems.length} total putaran tercatat)
             </p>
           </div>
         </div>
@@ -69,18 +74,18 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {/* Search by digit */}
           <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari digit / 2D..."
               value={searchDigit}
               onChange={(e) => setSearchDigit(e.target.value)}
-              className="pl-8 pr-7 py-1.5 bg-gray-950 border border-gray-800 rounded-xl text-gray-200 text-xs w-36 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
+              className="pl-8 pr-7 py-1.5 bg-slate-950/80 border border-white/[0.08] rounded-xl text-slate-200 text-xs w-36 sm:w-44 focus:outline-none focus:border-emerald-500/50 font-mono transition-colors"
             />
             {searchDigit && (
               <button
                 onClick={() => setSearchDigit('')}
-                className="absolute right-2 text-gray-500 hover:text-white"
+                className="absolute right-2 text-slate-500 hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -89,19 +94,19 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
 
           <button
             onClick={() => setFilterTwinOnly(!filterTwinOnly)}
-            className={`px-3 py-1.5 rounded-xl border transition-all ${
+            className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
               filterTwinOnly
-                ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 font-bold shadow-sm'
-                : 'bg-gray-950 border-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-rose-500/15 border-rose-500/30 text-rose-300 font-semibold shadow-sm'
+                : 'bg-slate-950/80 border-white/[0.08] text-slate-400 hover:text-white'
             }`}
           >
-            {filterTwinOnly ? '✓ Filter Twin Saja' : 'Filter Twin Saja'}
+            {filterTwinOnly ? 'Filter Twin Aktif' : 'Filter Twin Saja'}
           </button>
 
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="px-3 py-1.5 bg-gray-950 border border-gray-800 rounded-xl text-gray-300 text-xs focus:outline-none focus:border-emerald-500 font-mono cursor-pointer"
+            className="px-3 py-1.5 bg-slate-950/80 border border-white/[0.08] rounded-xl text-slate-300 text-xs focus:outline-none focus:border-emerald-500/50 font-mono cursor-pointer"
           >
             <option value={15}>15 Data</option>
             <option value={25}>25 Data</option>
@@ -112,15 +117,15 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       </div>
 
       {/* Mini Stat Summary Chips */}
-      <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-        <span className="text-gray-400 font-sans text-[11px] mr-1">Statistik Sampel:</span>
-        <span className="px-2.5 py-1 rounded-lg bg-gray-950 border border-gray-800 text-gray-300">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-mono bg-slate-950/50 p-3 rounded-xl border border-white/[0.06]">
+        <span className="text-slate-400 font-sans text-[11px] mr-1">Statistik Sampel:</span>
+        <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/[0.06] text-slate-300">
           Twin: <strong className="text-rose-400">{stats.twinPct}%</strong>
         </span>
-        <span className="px-2.5 py-1 rounded-lg bg-gray-950 border border-gray-800 text-gray-300">
-          Besar: <strong className="text-amber-400">{stats.besarPct}%</strong> | Kecil: <strong className="text-blue-400">{100 - stats.besarPct}%</strong>
+        <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/[0.06] text-slate-300">
+          Besar: <strong className="text-amber-400">{stats.besarPct}%</strong> | Kecil: <strong className="text-cyan-400">{100 - stats.besarPct}%</strong>
         </span>
-        <span className="px-2.5 py-1 rounded-lg bg-gray-950 border border-gray-800 text-gray-300">
+        <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/[0.06] text-slate-300">
           Genap: <strong className="text-emerald-400">{stats.genapPct}%</strong> | Ganjil: <strong className="text-purple-400">{100 - stats.genapPct}%</strong>
         </span>
       </div>
@@ -129,42 +134,42 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-gray-800 text-gray-400 font-mono uppercase text-[10px]">
-              <th className="pb-2.5">No</th>
-              <th className="pb-2.5">Result 4D</th>
-              <th className="pb-2.5">Target 2D</th>
-              <th className="pb-2.5">Status Twin</th>
-              <th className="pb-2.5">Biji 2D</th>
-              <th className="pb-2.5">Kategori</th>
-              <th className="pb-2.5 text-right">Pola</th>
+            <tr className="border-b border-white/[0.06] text-slate-400 font-mono uppercase text-[10px] tracking-wider">
+              <th className="pb-2.5 font-medium">No</th>
+              <th className="pb-2.5 font-medium">Result 4D</th>
+              <th className="pb-2.5 font-medium">Target 2D</th>
+              <th className="pb-2.5 font-medium">Status Twin</th>
+              <th className="pb-2.5 font-medium">Biji 2D</th>
+              <th className="pb-2.5 font-medium">Kategori</th>
+              <th className="pb-2.5 text-right font-medium">Pola</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/40 font-mono">
+          <tbody className="divide-y divide-white/[0.04] font-mono">
             {displayed.map((item, idx) => (
-              <tr key={idx} className="hover:bg-gray-800/30 transition-colors">
-                <td className="py-2.5 text-gray-500 text-[11px]">
+              <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                <td className="py-2.5 text-slate-500 text-[11px]">
                   #{item.index}
                 </td>
                 <td className="py-2.5">
                   <div className="flex items-center space-x-1">
-                    <span className="text-gray-500">{item.as}</span>
-                    <span className="text-gray-500">{item.kop}</span>
+                    <span className="text-slate-500">{item.as}</span>
+                    <span className="text-slate-500">{item.kop}</span>
                     <span className="font-bold text-emerald-400">{item.kepala}</span>
                     <span className="font-bold text-emerald-400">{item.ekor}</span>
                   </div>
                 </td>
                 <td className="py-2.5">
-                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-500/40 font-bold tracking-wider shadow-sm">
+                  <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 font-bold tracking-wider shadow-sm">
                     {item.kepala}{item.ekor}
                   </span>
                 </td>
                 <td className="py-2.5">
                   {item.isTwin ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold animate-pulse">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] bg-rose-500/15 text-rose-300 border border-rose-500/30 font-semibold">
                       TWIN ({item.kepala}{item.ekor})
                     </span>
                   ) : (
-                    <span className="text-gray-600 text-[11px]">-</span>
+                    <span className="text-slate-600 text-[11px]">-</span>
                   )}
                 </td>
                 <td className="py-2.5 font-bold text-cyan-400">
@@ -172,16 +177,16 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
                 </td>
                 <td className="py-2.5">
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                       item.besarKecil === 'Besar'
-                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                        : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25'
+                        : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/25'
                     }`}
                   >
                     {item.besarKecil}
                   </span>
                 </td>
-                <td className="py-2.5 text-right text-gray-400 text-[11px]">
+                <td className="py-2.5 text-right text-slate-400 text-[11px]">
                   {item.ganjilGenap}
                 </td>
               </tr>
@@ -192,4 +197,5 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
     </div>
   );
 };
+
 

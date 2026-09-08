@@ -329,23 +329,23 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150"
       >
         {/* Header Modal */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800 bg-gray-950/80">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 text-emerald-400 border border-emerald-500/30">
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06] bg-slate-950/60">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0">
               <Share2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">
-                Menu Bagikan Prediksi (Share)
+              <h3 className="font-semibold text-white text-base">
+                Bagikan Prediksi Multi-Pasaran
               </h3>
-              <p className="text-xs text-gray-400">
-                Pilih jenis prediksi & tandai pasaran untuk diexport instan
+              <p className="text-xs text-slate-400 mt-0.5">
+                Pilih format & pasaran untuk ekspor instan ke WhatsApp atau Telegram
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -355,36 +355,36 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         <div className="p-4 sm:p-5 overflow-y-auto space-y-5">
           {/* 1. Pilih Jenis Prediksi */}
           <div>
-            <label className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>1. Pilih Jenis Prediksi:</span>
-              <span className="text-[11px] text-emerald-400 font-mono font-semibold">
+            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>1. Format Prediksi:</span>
+              <span className="text-[11px] text-cyan-400 font-mono font-medium">
                 Aktif: {predType.toUpperCase()}
               </span>
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
               {[
                 { id: 'ai3', label: 'AI 3' },
-                { id: 'ai4', label: 'AI 4 (Recom)', star: true },
+                { id: 'ai4', label: 'AI 4 (Utama)', star: true },
                 { id: 'ai5', label: 'AI 5' },
                 { id: 'ai6', label: 'AI 6' },
                 { id: 'bbfs6', label: 'BBFS 6' },
                 { id: 'bbfs7', label: 'BBFS 7 (Best)', star: true },
                 { id: 'bbfs8', label: 'BBFS 8' },
                 { id: 'bbfs9', label: 'BBFS 9' },
-                { id: 'dead', label: 'Angka Mati 2D' }
+                { id: 'dead', label: 'Angka Mati' }
               ].map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setPredType(item.id as PredictionType)}
-                  className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all text-center relative ${
+                  className={`py-2 px-2 text-xs font-medium rounded-xl border transition-all text-center relative ${
                     predType === item.id
-                      ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white border-cyan-400 shadow-sm shadow-emerald-500/20 scale-[1.02]'
-                      : 'bg-gray-950/70 border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
+                      ? 'bg-cyan-500 text-slate-950 font-semibold border-cyan-400 shadow-sm'
+                      : 'bg-slate-950/70 border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/20'
                   }`}
                 >
                   {item.label}
                   {item.star && (
-                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400" />
                   )}
                 </button>
               ))}
@@ -392,58 +392,58 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
           </div>
 
           {/* 2. Format Teks & Separator */}
-          <div className="bg-gray-950/50 p-3.5 rounded-xl border border-gray-800/80 space-y-3">
-            <span className="block text-xs font-bold text-gray-300 uppercase tracking-wider">
+          <div className="bg-slate-950/50 p-4 rounded-xl border border-white/[0.06] space-y-3">
+            <span className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
               2. Kustomisasi Format Output:
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {/* Layout Mode */}
               <div>
-                <span className="text-[11px] text-gray-500 block mb-1">Gaya Teks:</span>
-                <div className="flex bg-gray-900 p-1 rounded-lg border border-gray-800">
+                <span className="text-[11px] text-slate-400 block mb-1">Tata Letak:</span>
+                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-white/[0.08]">
                   <button
                     onClick={() => setLayout('inline')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       layout === 'inline'
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Satu Baris (Inline)
+                    Inline (1 Baris)
                   </button>
                   <button
                     onClick={() => setLayout('list')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       layout === 'list'
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Per Baris (List)
+                    List (Per Baris)
                   </button>
                 </div>
               </div>
 
               {/* Format Nama Pasaran */}
               <div>
-                <span className="text-[11px] text-gray-500 block mb-1">Format Nama:</span>
-                <div className="flex bg-gray-900 p-1 rounded-lg border border-gray-800">
+                <span className="text-[11px] text-slate-400 block mb-1">Format Nama:</span>
+                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-white/[0.08]">
                   <button
                     onClick={() => setNameFormat('official')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       nameFormat === 'official'
-                        ? 'bg-cyan-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Nama Web Asli
+                    Nama Asli
                   </button>
                   <button
                     onClick={() => setNameFormat('short')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       nameFormat === 'short'
-                        ? 'bg-cyan-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     Kode Singkat
@@ -453,16 +453,16 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
               {/* Separator / Delimiter */}
               <div>
-                <span className="text-[11px] text-gray-500 block mb-1">Pemisah Angka:</span>
+                <span className="text-[11px] text-slate-400 block mb-1">Pemisah Angka:</span>
                 <div className="flex space-x-1.5">
                   {['#', ':', '-', '='].map((sep) => (
                     <button
                       key={sep}
                       onClick={() => setDelimiter(sep)}
-                      className={`flex-1 py-1 font-mono font-bold text-xs rounded-lg border transition-colors ${
+                      className={`flex-1 py-1 font-mono font-medium text-xs rounded-lg border transition-colors ${
                         delimiter === sep
-                          ? 'bg-cyan-500/20 border-cyan-500 text-cyan-300'
-                          : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white'
+                          ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300 font-semibold'
+                          : 'bg-slate-900/80 border-white/[0.08] text-slate-400 hover:text-white'
                       }`}
                     >
                       {sep}
@@ -473,34 +473,34 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
               {/* Huruf Kecil vs Besar vs Asli */}
               <div>
-                <span className="text-[11px] text-gray-500 block mb-1">Huruf Pasaran:</span>
-                <div className="flex bg-gray-900 p-1 rounded-lg border border-gray-800">
+                <span className="text-[11px] text-slate-400 block mb-1">Format Huruf:</span>
+                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-white/[0.08]">
                   <button
                     onClick={() => setLetterCase('lowercase')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       letterCase === 'lowercase'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     kecil
                   </button>
                   <button
                     onClick={() => setLetterCase('uppercase')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       letterCase === 'uppercase'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     KAPITAL
                   </button>
                   <button
                     onClick={() => setLetterCase('original')}
-                    className={`flex-1 py-1 rounded font-bold text-[11px] transition-colors ${
+                    className={`flex-1 py-1 rounded font-medium text-[11px] transition-colors ${
                       letterCase === 'original'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-white/[0.1] text-white font-semibold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     Asli
@@ -513,9 +513,9 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
           {/* 3. Tandai Pasaran */}
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center space-x-2">
+              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
                 <span>3. Tandai Pasaran:</span>
-                <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
+                <span className="text-xs font-mono font-medium text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
                   {selectedIds.size} terpilih
                 </span>
               </label>
@@ -524,19 +524,19 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
               <div className="flex items-center space-x-1.5 text-[11px]">
                 <button
                   onClick={selectPopular}
-                  className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors border border-white/[0.06]"
                 >
-                  ⭐ Top 5
+                  Top 5 Populer
                 </button>
                 <button
                   onClick={() => toggleSelectAll(true)}
-                  className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors border border-white/[0.06]"
                 >
                   Semua ({markets.length})
                 </button>
                 <button
                   onClick={() => toggleSelectAll(false)}
-                  className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-rose-300 transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-rose-300 transition-colors border border-white/[0.06]"
                 >
                   Kosongkan
                 </button>
@@ -545,18 +545,18 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
             {/* Input Filter Pasaran */}
             <div className="relative mb-2.5">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari pasaran (misal: SGP, HK, BULLSEYE, dll)..."
-                className="w-full bg-gray-950 border border-gray-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
               />
             </div>
 
             {/* Grid Checkbox Pasaran */}
-            <div className="max-h-56 overflow-y-auto p-2 rounded-xl bg-gray-950/80 border border-gray-800 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <div className="max-h-56 overflow-y-auto p-2 rounded-xl bg-slate-950/80 border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {filteredMarkets.map((m) => {
                 const isSelected = selectedIds.has(m.id);
                 const shortCode =
@@ -568,20 +568,20 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                     onClick={() => toggleMarket(m.id)}
                     className={`flex items-center space-x-2.5 px-3 py-2 rounded-lg border text-left text-xs transition-all ${
                       isSelected
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold'
-                        : 'bg-gray-900/60 border-gray-800/80 text-gray-300 hover:border-gray-700 hover:text-white'
+                        ? 'bg-cyan-500/[0.08] border-cyan-500/30 text-cyan-200 font-medium'
+                        : 'bg-slate-900/60 border-white/[0.06] text-slate-300 hover:border-white/20 hover:text-white'
                     }`}
                   >
                     {isSelected ? (
-                      <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckSquare className="w-4 h-4 text-cyan-400 shrink-0" />
                     ) : (
-                      <Square className="w-4 h-4 text-gray-600 shrink-0" />
+                      <Square className="w-4 h-4 text-slate-600 shrink-0" />
                     )}
                     <div className="flex-1 min-w-0 flex items-center justify-between">
-                      <span className="truncate text-xs font-semibold text-gray-200">
+                      <span className="truncate text-xs text-slate-200">
                         {m.name}
                       </span>
-                      <span className="text-[10px] font-mono text-gray-400 ml-2 px-1.5 py-0.5 bg-gray-800/80 rounded shrink-0 border border-gray-700/50">
+                      <span className="text-[10px] font-mono text-slate-400 ml-2 px-1.5 py-0.5 bg-slate-800/80 rounded shrink-0 border border-white/[0.06]">
                         {shortCode}
                       </span>
                     </div>
@@ -594,11 +594,11 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
           {/* 4. Live Output Box */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center space-x-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Hasil Teks Siap Bagikan:</span>
+              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Hasil Format Prediksi:</span>
               </span>
-              <span className="text-[10px] text-gray-500 font-mono">
+              <span className="text-[10px] text-slate-500 font-mono">
                 {generatedText.length} karakter
               </span>
             </div>
@@ -608,26 +608,26 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                 readOnly
                 rows={layout === 'inline' ? 3 : 6}
                 value={generatedText}
-                className="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-xs font-mono font-bold text-emerald-400 leading-relaxed focus:outline-none resize-none selection:bg-emerald-500/30 selection:text-white shadow-inner"
+                className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 text-xs font-mono font-medium text-emerald-400 leading-relaxed focus:outline-none resize-none selection:bg-emerald-500/30 selection:text-white shadow-inner"
               />
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-gray-800 bg-gray-950 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-          <div className="text-[11px] text-gray-500 text-center sm:text-left">
-            Siap disalin atau langsung dibuka di grup WhatsApp & Telegram
+        <div className="p-4 border-t border-white/[0.06] bg-slate-950/80 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="text-[11px] text-slate-500 text-center sm:text-left">
+            Siap disalin atau langsung diteruskan ke WhatsApp & Telegram
           </div>
 
           <div className="flex items-center space-x-2 w-full sm:w-auto">
             <button
               onClick={handleCopy}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs flex items-center justify-center space-x-1.5 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
             >
               {isCopied ? (
                 <>
-                  <Check className="w-4 h-4 text-white" />
+                  <Check className="w-4 h-4 text-slate-950" />
                   <span>Tersalin!</span>
                 </>
               ) : (
@@ -640,7 +640,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
             <button
               onClick={handleShareWhatsApp}
-              className="px-3 py-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center space-x-1 transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-medium flex items-center space-x-1.5 transition-colors"
               title="Kirim ke WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />
@@ -649,7 +649,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
             <button
               onClick={handleShareTelegram}
-              className="px-3 py-2 rounded-xl bg-sky-700/80 hover:bg-sky-600 text-white text-xs font-semibold flex items-center space-x-1 transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 text-xs font-medium flex items-center space-x-1.5 transition-colors"
               title="Kirim ke Telegram"
             >
               <Send className="w-4 h-4" />

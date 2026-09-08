@@ -9,9 +9,9 @@ export default {
     extend: {
       colors: {
         cyber: {
-          bg: '#0B0F19',
-          card: '#111827',
-          border: '#1F2937',
+          bg: '#070A13',
+          card: '#0F172A',
+          border: '#1E293B',
           accent: '#10B981', // Emerald
           cyan: '#06B6D4',
           purple: '#8B5CF6',
@@ -20,8 +20,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Fira Code', 'monospace']
       }
     },
   },

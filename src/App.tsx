@@ -107,7 +107,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#070A13] text-slate-100 flex flex-col font-sans">
       {/* Navbar */}
       <Navbar
         marketCount={markets.length}
@@ -128,72 +128,72 @@ export function App() {
         />
 
         {/* Unified Premium Tab Navigation */}
-        <div className="bg-gray-900/80 p-1.5 rounded-2xl border border-gray-800/90 shadow-xl backdrop-blur-md">
-          <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-thin">
+        <div className="bg-slate-900/80 p-1.5 rounded-xl border border-white/[0.08] shadow-lg backdrop-blur-md">
+          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none">
             <button
               onClick={() => setActiveTab('ai')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all shrink-0 ${
                 activeTab === 'ai'
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-gray-950 shadow-lg shadow-emerald-500/25 scale-[1.02]'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                  ? 'bg-emerald-500 text-slate-950 font-semibold shadow-sm shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span>🎯 Dashboard AI</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${activeTab === 'ai' ? 'bg-gray-950/20 text-gray-900' : 'bg-gray-800 text-gray-400'}`}>
+              <Sparkles className="w-4 h-4" />
+              <span>Prediksi AI</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${activeTab === 'ai' ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400'}`}>
                 1D
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('bbfs')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all shrink-0 ${
                 activeTab === 'bbfs'
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 scale-[1.02]'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                  ? 'bg-purple-600 text-white font-semibold shadow-sm shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              <Layers className="w-4 h-4 text-purple-300" />
-              <span>⚡ Dashboard BBFS</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${activeTab === 'bbfs' ? 'bg-black/30 text-purple-200' : 'bg-gray-800 text-gray-400'}`}>
-                2D Set
+              <Layers className="w-4 h-4" />
+              <span>BBFS 2D</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${activeTab === 'bbfs' ? 'bg-black/30 text-purple-200 font-bold' : 'bg-slate-800 text-slate-400'}`}>
+                Set
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('tuning')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all shrink-0 ${
                 activeTab === 'tuning'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/25 scale-[1.02]'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                  ? 'bg-slate-800 text-cyan-300 font-semibold border border-white/[0.1] shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               <Sliders className="w-4 h-4" />
-              <span>Memori Tuning 7 Hari</span>
+              <span>Log Tuning (7 Hari)</span>
             </button>
 
             <button
               onClick={() => setActiveTab('evaluation')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all shrink-0 ${
                 activeTab === 'evaluation'
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-gray-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                  ? 'bg-slate-800 text-amber-300 font-semibold border border-white/[0.1] shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               <TrendingUp className="w-4 h-4" />
-              <span>Evaluasi Backtest (450x)</span>
+              <span>Evaluasi Akurasi</span>
             </button>
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all shrink-0 ${
                 activeTab === 'history'
-                  ? 'bg-gradient-to-r from-gray-800 to-gray-700 text-white shadow-md border border-gray-600 scale-[1.02]'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                  ? 'bg-slate-800 text-slate-100 font-semibold border border-white/[0.1] shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
               <History className="w-4 h-4" />
-              <span>Paito Riwayat 2D</span>
+              <span>Paito 2D</span>
             </button>
           </div>
         </div>
@@ -221,43 +221,43 @@ export function App() {
         {activeTab === 'tuning' && (
           <div className="space-y-6">
             {/* Tuning Mode Switcher Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/70 border border-white/[0.08] p-4 rounded-2xl shadow-xl backdrop-blur-md">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   <Sliders className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white tracking-wide">
-                    MEMORI KALIBRASI & LOG PENYETELAN
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    Memori Kalibrasi & Log Penyetelan
                   </h3>
-                  <p className="text-xs text-gray-400">
-                    Pilih domain yang ingin ditinjau: Peluang marginal AI atau densitas pasangan BBFS
+                  <p className="text-xs text-slate-400">
+                    Pilih domain: Peluang marginal Angka Ikut (AI) atau densitas pasangan BBFS
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center bg-gray-950 p-1 rounded-xl border border-gray-800">
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-white/[0.08]">
                 <button
                   onClick={() => setTuningSubTab('ai')}
-                  className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     tuningSubTab === 'ai'
-                      ? 'bg-cyan-500 text-gray-950 shadow-md'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-cyan-500 text-slate-950 font-semibold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>🎯 Tuning AI</span>
+                  <span>Tuning AI</span>
                 </button>
                 <button
                   onClick={() => setTuningSubTab('bbfs')}
-                  className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     tuningSubTab === 'bbfs'
-                      ? 'bg-purple-600 text-white shadow-md'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-purple-600 text-white font-semibold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>⚡ Tuning BBFS</span>
+                  <span>Tuning BBFS</span>
                 </button>
               </div>
             </div>
@@ -291,12 +291,12 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-800/80 py-6 bg-gray-950/60 mt-12 text-center text-xs text-gray-500">
+      <footer className="border-t border-white/[0.06] py-6 bg-slate-950/60 mt-12 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
             VORTEX 2D Dynamic & Adaptive Intelligence &bull; Auto-Tuning Closed Loop Pipeline &bull; Cloud Firestore Synced
           </p>
-          <p className="font-mono text-[11px] text-gray-600">
+          <p className="font-mono text-[11px] text-slate-600">
             Confidence Convergence &bull; Twin Anomaly Index &bull; Multiplicative Weights Update
           </p>
         </div>
