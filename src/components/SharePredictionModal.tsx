@@ -66,6 +66,7 @@ const MARKET_SHORT_CODES: Record<string, string> = {
   'Mongolia': 'MONGOLIA',
   'New Mexico Day': 'NM-DAY',
   'New Mexico Eve': 'NM-EVE',
+  'Nusantara Pools': 'NUSANTARA',
 };
 
 const POPULAR_MARKET_IDS = [
