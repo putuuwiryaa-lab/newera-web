@@ -63,6 +63,9 @@ const MARKET_SHORT_CODES: Record<string, string> = {
   'Morocco Quatro 21:00 Wib': 'MOROCCO-21',
   'Morocco Quatro 23:59 Wib': 'MOROCCO-23',
   'Morocco Quatro 03:00 Wib': 'MOROCCO-03',
+  'Mongolia': 'MONGOLIA',
+  'New Mexico Day': 'NM-DAY',
+  'New Mexico Eve': 'NM-EVE',
 };
 
 const POPULAR_MARKET_IDS = [
