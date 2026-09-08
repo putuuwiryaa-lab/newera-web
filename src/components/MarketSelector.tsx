@@ -17,8 +17,7 @@ const POPULAR_IDS = [
   'Chinapools',
   'Japan',
   'Pcso',
-  'Taiwan',
-  'Toto Macau 23'
+  'Taiwan'
 ];
 
 export const MarketSelector: React.FC<MarketSelectorProps> = ({
