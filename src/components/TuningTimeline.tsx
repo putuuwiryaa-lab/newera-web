@@ -1,20 +1,43 @@
 import React, { useState } from 'react';
 import type { DayTuningLog } from '../engine/types';
-import { History, RotateCcw, Award, Layers, Sparkles, ShieldCheck, Lock, Sliders, AlertTriangle } from 'lucide-react';
+import {
+  History,
+  RotateCcw,
+  Award,
+  Layers,
+  Sparkles,
+  ShieldCheck,
+  Lock,
+  Sliders,
+  AlertTriangle,
+  Compass,
+  Target,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react';
 
 interface TuningTimelineProps {
   logs: DayTuningLog[];
   marketName: string;
-  initialMode?: 'ai' | 'bbfs';
+  mode?: 'ai' | 'bbfs' | 'paito';
+  initialMode?: 'ai' | 'bbfs' | 'paito';
+  onModeChange?: (newMode: 'ai' | 'bbfs' | 'paito') => void;
 }
 
 export const TuningTimeline: React.FC<TuningTimelineProps> = ({
   logs,
   marketName,
-  initialMode = 'ai'
+  mode,
+  initialMode = 'ai',
+  onModeChange
 }) => {
-  const [userMode, setUserMode] = useState<'ai' | 'bbfs' | null>(null);
-  const activeMode = userMode ?? initialMode;
+  const [internalMode, setInternalMode] = useState<'ai' | 'bbfs' | 'paito'>(initialMode);
+  const activeMode = mode ?? internalMode;
+
+  const handleModeChange = (nextMode: 'ai' | 'bbfs' | 'paito') => {
+    setInternalMode(nextMode);
+    onModeChange?.(nextMode);
+  };
 
   if (logs.length === 0) return null;
 
@@ -40,6 +63,11 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
   const deadDigitsCleanCount = logs.filter((l) => l.bbfs?.deadDigitsClean ?? true).length;
   const bomHits = logs.filter((l) => l.bbfs?.trimmerZone === 'BOM_10').length;
 
+  // Paito Metrics
+  const paitoHits = logs.filter((l) => (l.paito?.strikeCount ?? 0) >= 2).length;
+  const paitoStrikeRate = Math.round((paitoHits / logs.length) * 100);
+  const paitoBomHits = logs.filter((l) => l.paito?.sniperZone === 'BOM_SNIPER').length;
+
   return (
     <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4">
       {/* Header & Sub-Switcher */}
@@ -63,10 +91,10 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
           </div>
         </div>
 
-        {/* Toggle Switcher Mode AI vs Mode BBFS */}
+        {/* Toggle Switcher Mode AI vs Mode BBFS vs Mode Paito */}
         <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-white/[0.08] self-start md:self-auto">
           <button
-            onClick={() => setUserMode('ai')}
+            onClick={() => handleModeChange('ai')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeMode === 'ai'
                 ? 'bg-cyan-500 text-slate-950 font-semibold shadow-sm'
@@ -77,7 +105,7 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
             <span>Tuning AI</span>
           </button>
           <button
-            onClick={() => setUserMode('bbfs')}
+            onClick={() => handleModeChange('bbfs')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               activeMode === 'bbfs'
                 ? 'bg-purple-600 text-white font-semibold shadow-sm'
@@ -87,6 +115,17 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
             <Layers className="w-3.5 h-3.5" />
             <span>Tuning BBFS</span>
           </button>
+          <button
+            onClick={() => handleModeChange('paito')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              activeMode === 'paito'
+                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Audit Paito</span>
+          </button>
         </div>
       </div>
 
@@ -95,8 +134,10 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
         <div className="text-slate-400 text-xs">
           {activeMode === 'ai' ? (
             <span>Fokus Metrik: <strong className="text-cyan-300 font-medium">Peluang Marginal Kepala/Ekor & Penyetelan MWU</strong></span>
-          ) : (
+          ) : activeMode === 'bbfs' ? (
             <span>Fokus Metrik: <strong className="text-purple-300 font-medium">Densitas Pasangan 2D, Dead Digits & Efektivitas Trimmer</strong></span>
+          ) : (
+            <span>Fokus Metrik: <strong className="text-amber-300 font-medium">Siklus Biji 2D, Paritas 4-Kuadran & Efisiensi Sniper BOM</strong></span>
           )}
         </div>
 
@@ -114,7 +155,7 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                 <strong className="text-emerald-400">{recoveryRate}%</strong>
               </div>
             </>
-          ) : (
+          ) : activeMode === 'bbfs' ? (
             <>
               <div className="px-2.5 py-1 bg-slate-900/80 border border-purple-500/25 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
                 <Award className="w-3.5 h-3.5 text-purple-400" />
@@ -131,6 +172,19 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                 <strong className="text-amber-300">{bomHits}x</strong>
               </div>
             </>
+          ) : (
+            <>
+              <div className="px-2.5 py-1 bg-slate-900/80 border border-amber-500/25 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-slate-400">Strike &ge;2/3:</span>
+                <strong className="text-amber-300">{paitoStrikeRate}% ({paitoHits}/{logs.length})</strong>
+              </div>
+              <div className="px-2.5 py-1 bg-slate-900/80 border border-emerald-500/25 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
+                <Target className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-slate-400">BOM Sniper:</span>
+                <strong className="text-emerald-400">{paitoBomHits}x Tembus</strong>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -140,19 +194,22 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
         {[...logs].reverse().map((log, idx) => {
           const isHitAI = log.statusAI === 'HIT';
           const isHitBBFS = log.statusBBFS === 'HIT';
+          const isHitPaito = (log.paito?.strikeCount ?? 0) >= 2;
           const dayLabel = idx === 0 ? 'Kemarin' : `H-${idx + 1}`;
 
           const isAIView = activeMode === 'ai';
-          const isCardHit = isAIView ? isHitAI : isHitBBFS;
+          const isCardHit = activeMode === 'ai' ? isHitAI : activeMode === 'bbfs' ? isHitBBFS : isHitPaito;
 
           return (
             <div
               key={log.periodIndex}
               className={`p-3 rounded-xl border flex flex-col justify-between transition-all backdrop-blur-sm ${
                 isCardHit
-                  ? isAIView
+                  ? activeMode === 'ai'
                     ? 'bg-slate-900/60 border-emerald-500/30 hover:border-emerald-500/50'
-                    : 'bg-slate-900/60 border-purple-500/30 hover:border-purple-500/50'
+                    : activeMode === 'bbfs'
+                    ? 'bg-slate-900/60 border-purple-500/30 hover:border-purple-500/50'
+                    : 'bg-slate-900/60 border-amber-500/30 hover:border-amber-500/50'
                   : 'bg-slate-900/60 border-rose-500/25 hover:border-rose-500/40'
               }`}
             >
@@ -165,13 +222,19 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                   <span
                     className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded ${
                       isCardHit
-                        ? isAIView
+                        ? activeMode === 'ai'
                           ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                          : activeMode === 'bbfs'
+                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                          : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                         : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                     }`}
                   >
-                    {isAIView ? (isHitAI ? 'AI: HIT' : 'AI: LOSE') : (isHitBBFS ? 'BBFS: HIT' : log.isTwin ? 'TWIN LOSE' : 'LOSE')}
+                    {activeMode === 'ai'
+                      ? (isHitAI ? 'AI: HIT' : 'AI: LOSE')
+                      : activeMode === 'bbfs'
+                      ? (isHitBBFS ? 'BBFS: HIT' : log.isTwin ? 'TWIN LOSE' : 'LOSE')
+                      : `${log.paito?.strikeCount ?? 0}/3 HIT`}
                   </span>
                 </div>
 
@@ -234,7 +297,7 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                 )}
 
                 {/* MODE BBFS: Tebakan, Dead Digits & Status Per-Tier BBFS-6..9 */}
-                {!isAIView && (
+                {activeMode === 'bbfs' && (
                   <div className="space-y-2 my-2">
                     <div className="text-[10px] font-mono">
                       <span className="text-purple-400 text-[9px] block">BBFS-7 Set:</span>
@@ -289,11 +352,82 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                     )}
                   </div>
                 )}
+
+                {/* MODE PAITO: Biji, Paritas, Besar/Kecil & Sniper BOM */}
+                {activeMode === 'paito' && log.paito && (
+                  <div className="space-y-1.5 my-2 text-[10px] font-mono">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Biji {log.paito.actualBiji}:</span>
+                      <span className={log.paito.hitBiji ? 'text-emerald-400 font-semibold flex items-center space-x-0.5' : 'text-slate-500 flex items-center space-x-0.5'}>
+                        {log.paito.hitBiji ? <CheckCircle2 className="w-3 h-3 inline text-emerald-400" /> : <XCircle className="w-3 h-3 inline text-slate-500" />}
+                        <span>{log.paito.hitBiji ? 'Top 3' : 'Miss'}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Pola:</span>
+                      <span className={log.paito.hitParity ? 'text-emerald-400 font-semibold flex items-center space-x-0.5' : 'text-slate-500 flex items-center space-x-0.5'}>
+                        {log.paito.hitParity ? <CheckCircle2 className="w-3 h-3 inline text-emerald-400" /> : <XCircle className="w-3 h-3 inline text-slate-500" />}
+                        <span>{log.paito.actualParity.split('-').map((p) => p[0]).join('')}</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Ukuran:</span>
+                      <span className={log.paito.hitMagnitude ? 'text-emerald-400 font-semibold flex items-center space-x-0.5' : 'text-slate-500 flex items-center space-x-0.5'}>
+                        {log.paito.hitMagnitude ? <CheckCircle2 className="w-3 h-3 inline text-emerald-400" /> : <XCircle className="w-3 h-3 inline text-slate-500" />}
+                        <span>{log.paito.actualMagnitude}</span>
+                      </span>
+                    </div>
+                    <div className="pt-1.5 border-t border-white/[0.06] flex justify-between items-center">
+                      <span className="text-slate-400">Sniper:</span>
+                      <span
+                        className={
+                          log.paito.sniperZone === 'BOM_SNIPER'
+                            ? 'text-amber-300 font-bold bg-amber-500/20 px-1 rounded'
+                            : log.paito.sniperZone === 'SEKUNDER'
+                            ? 'text-purple-300'
+                            : 'text-slate-500'
+                        }
+                      >
+                        {log.paito.sniperZone === 'BOM_SNIPER'
+                          ? '🎯 BOM HIT'
+                          : log.paito.sniperZone === 'SEKUNDER'
+                          ? 'Sekunder'
+                          : 'Miss'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Tindakan Tuning Sesuai Mode */}
               <div className="mt-2 pt-2 border-t border-white/[0.06] text-[10px] space-y-1">
-                {isAIView ? (
+                {activeMode === 'paito' ? (
+                  <div className="text-[9px] font-mono leading-tight space-y-1">
+                    <div className="flex justify-between items-center text-slate-400">
+                      <span>Evaluasi Paito:</span>
+                      <span
+                        className={
+                          log.paito?.strikeCount === 3
+                            ? 'text-emerald-400 font-bold'
+                            : (log.paito?.strikeCount ?? 0) >= 2
+                            ? 'text-amber-300 font-semibold'
+                            : 'text-slate-500'
+                        }
+                      >
+                        {log.paito?.strikeCount === 3 ? 'PERFECT' : `${log.paito?.strikeCount ?? 0}/3 Hit`}
+                      </span>
+                    </div>
+                    <div className="text-[8px] text-center pt-1 border-t border-white/[0.04] text-slate-400">
+                      {log.paito?.sniperZone === 'BOM_SNIPER' ? (
+                        <span className="text-amber-300 font-bold">🎯 BOM 100% TEMBUS</span>
+                      ) : log.paito?.hitBiji ? (
+                        <span className="text-cyan-300">Biji 2D Sesuai Siklus</span>
+                      ) : (
+                        <span className="text-slate-500">Pola Siklus Variatif</span>
+                      )}
+                    </div>
+                  </div>
+                ) : isAIView ? (
                   (() => {
                     const calibrated = Object.values(log.ai?.tierAudits || {})
                       .filter((t) => t.action === 'CALIBRATED')

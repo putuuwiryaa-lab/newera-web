@@ -1,0 +1,352 @@
+import React, { useMemo } from 'react';
+import type { PaitoMacroPrediction, HistoryItem } from '../engine/types';
+import { predictPaitoMacro, computeBiji, getParity } from '../engine/paitoPredictor';
+import {
+  Sparkles,
+  Compass,
+  AlertTriangle,
+  TrendingUp,
+  Hash,
+  Award,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react';
+
+interface PaitoPredictionCardProps {
+  prediction: PaitoMacroPrediction;
+  marketName: string;
+  historyItems?: HistoryItem[];
+}
+
+// Representasi kombinasi 2D untuk setiap biji (0-9)
+const BIJI_2D_MAP: Record<number, string[]> = {
+  0: ['00'],
+  1: ['01', '10', '29', '92', '38', '83', '47', '74', '56', '65'],
+  2: ['02', '20', '11', '39', '93', '48', '84', '57', '75', '66'],
+  3: ['03', '30', '12', '21', '49', '94', '58', '85', '67', '76'],
+  4: ['04', '40', '13', '31', '22', '59', '95', '68', '86', '77'],
+  5: ['05', '50', '14', '41', '23', '32', '69', '96', '78', '87'],
+  6: ['06', '60', '15', '51', '24', '42', '33', '79', '97', '88'],
+  7: ['07', '70', '16', '61', '25', '52', '34', '43', '89', '98'],
+  8: ['08', '80', '17', '71', '26', '62', '35', '53', '44', '99'],
+  9: ['09', '90', '18', '81', '27', '72', '36', '63', '45', '54']
+};
+
+export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
+  prediction,
+  marketName,
+  historyItems
+}) => {
+  const {
+    topBiji,
+    bijiProbabilities,
+    primaryParity,
+    parityProbabilities,
+    primaryMagnitude,
+    magnitudeProbabilities,
+    overdueAlerts,
+    confidenceScore
+  } = prediction;
+
+  // Verifikasi Audit Draw Kemarin
+  const lastDrawAudit = useMemo(() => {
+    if (!historyItems || historyItems.length < 5) return null;
+    const pastItems = historyItems.slice(0, historyItems.length - 1);
+    const lastItem = historyItems[historyItems.length - 1];
+    const past2D: [number, number][] = pastItems.map((h) => [h.kepala, h.ekor]);
+    const prevPred = predictPaitoMacro(past2D);
+
+    const actualK = lastItem.kepala;
+    const actualE = lastItem.ekor;
+    const actualBiji = computeBiji(actualK, actualE);
+    const actualParity = getParity(actualK, actualE);
+    const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
+
+    const hitBiji = prevPred.topBiji.includes(actualBiji);
+    const hitParity = actualParity === prevPred.primaryParity;
+    const hitMag = actualMag === prevPred.primaryMagnitude;
+    const hitCount = (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0);
+
+    return {
+      lastFull: lastItem.full,
+      target2D: `${actualK}${actualE}`,
+      actualBiji,
+      actualParity,
+      actualMag,
+      predictedTopBiji: prevPred.topBiji,
+      predictedParity: prevPred.primaryParity,
+      predictedMag: prevPred.primaryMagnitude,
+      hitBiji,
+      hitParity,
+      hitMag,
+      hitCount
+    };
+  }, [historyItems]);
+
+  return (
+    <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/[0.1] bg-slate-900/80 shadow-xl space-y-4 animate-in fade-in duration-300">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-white/[0.08]">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+            <Compass className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h4 className="text-sm font-semibold text-white tracking-tight">
+                Prediksi Makro Paito 2D
+              </h4>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                {marketName}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Analisis siklus Biji, Transisi Paritas 4-Kuadran, dan Fluktuasi Nilai
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 self-start sm:self-auto">
+          <span className="text-[11px] text-slate-400 font-mono">Keyakinan Model:</span>
+          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs flex items-center space-x-1">
+            <Sparkles className="w-3 h-3" />
+            <span>{confidenceScore}%</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Verifikasi Audit Result Kemarin */}
+      {lastDrawAudit && (
+        <div className="p-3 rounded-xl bg-slate-950/70 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+              <Award className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-slate-200">
+                  Audit Result Kemarin ({lastDrawAudit.lastFull} &rarr; 2D: {lastDrawAudit.target2D}):
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                    lastDrawAudit.hitCount === 3
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : lastDrawAudit.hitCount >= 1
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                      : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                  }`}
+                >
+                  {lastDrawAudit.hitCount === 3
+                    ? '🎯 3/3 HIT - STRIKE SEMPURNA'
+                    : `${lastDrawAudit.hitCount}/3 ELEMEN HIT`}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-1 font-mono">
+                <span className="flex items-center space-x-1">
+                  <span>Biji {lastDrawAudit.actualBiji}:</span>
+                  {lastDrawAudit.hitBiji ? (
+                    <span className="text-emerald-400 font-bold flex items-center">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5 inline" /> HIT (Top 3)
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 flex items-center">
+                      <XCircle className="w-3 h-3 mr-0.5 inline" /> Miss
+                    </span>
+                  )}
+                </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="flex items-center space-x-1">
+                  <span>Pola {lastDrawAudit.actualParity}:</span>
+                  {lastDrawAudit.hitParity ? (
+                    <span className="text-emerald-400 font-bold flex items-center">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5 inline" /> HIT
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 flex items-center">
+                      <XCircle className="w-3 h-3 mr-0.5 inline" /> Miss
+                    </span>
+                  )}
+                </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="flex items-center space-x-1">
+                  <span>Ukuran {lastDrawAudit.actualMag}:</span>
+                  {lastDrawAudit.hitMag ? (
+                    <span className="text-emerald-400 font-bold flex items-center">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5 inline" /> HIT
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 flex items-center">
+                      <XCircle className="w-3 h-3 mr-0.5 inline" /> Miss
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3 Grid Pillars: Biji, Ganjil-Genap, Besar-Kecil */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        {/* Pilar 1: Top 3 Biji 2D */}
+        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-slate-200 flex items-center space-x-1.5">
+              <Hash className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Top 3 Biji 2D</span>
+            </span>
+            <span className="text-[10px] font-mono text-cyan-400">Digital Root</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {topBiji.map((biji, rank) => {
+              const prob = bijiProbabilities[biji]
+                ? Math.round(bijiProbabilities[biji] * 100)
+                : 15;
+              return (
+                <div
+                  key={biji}
+                  className={`flex-1 flex flex-col items-center py-2 px-1.5 rounded-xl border transition-all ${
+                    rank === 0
+                      ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 shadow-sm'
+                      : 'bg-white/[0.03] border-white/[0.08] text-slate-300'
+                  }`}
+                  title={`Angka 2D Biji ${biji}: ${(BIJI_2D_MAP[biji] || []).join(', ')}`}
+                >
+                  <span className="text-xl font-bold font-mono tracking-tight">{biji}</span>
+                  <span className="text-[10px] font-mono text-slate-400 mt-0.5">{prob}%</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500 font-semibold">
+                    {rank === 0 ? 'Utama' : rank === 1 ? 'Kedua' : 'Ketiga'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-tight">
+            Prioritas: Biji <strong className="text-cyan-300">{topBiji[0]}</strong> memuat kombinasi{' '}
+            <span className="font-mono text-slate-300 text-[10px]">
+              {(BIJI_2D_MAP[topBiji[0]] || []).slice(0, 5).join(', ')}...
+            </span>
+          </p>
+        </div>
+
+        {/* Pilar 2: Pola Ganjil-Genap (Paritas) */}
+        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-slate-200 flex items-center space-x-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
+              <span>Pola Ganjil-Genap</span>
+            </span>
+            <span className="text-[10px] font-mono text-purple-400">4-Kuadran</span>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-slate-400">Kecenderungan:</span>
+              <span className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono font-bold text-xs">
+                {primaryParity}
+              </span>
+            </div>
+
+            {/* Mini distribution bars */}
+            <div className="space-y-1 mt-2 font-mono text-[10px]">
+              {(['Genap-Genap', 'Genap-Ganjil', 'Ganjil-Genap', 'Ganjil-Ganjil'] as const).map(
+                (state) => {
+                  const prob = Math.round((parityProbabilities[state] || 0.25) * 100);
+                  const isPrimary = state === primaryParity;
+                  return (
+                    <div key={state} className="flex items-center justify-between">
+                      <span className={isPrimary ? 'text-purple-300 font-semibold' : 'text-slate-500'}>
+                        {state}
+                      </span>
+                      <div className="flex items-center space-x-1.5 w-24">
+                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${isPrimary ? 'bg-purple-500' : 'bg-slate-600'}`}
+                            style={{ width: `${prob}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400 w-7 text-right">{prob}%</span>
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Pilar 3: Kategori Besar-Kecil (Magnitude) */}
+        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="font-semibold text-slate-200 flex items-center space-x-1.5">
+              <Compass className="w-3.5 h-3.5 text-amber-400" />
+              <span>Kategori Nilai 2D</span>
+            </span>
+            <span className="text-[10px] font-mono text-amber-400">00-49 vs 50-99</span>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-slate-400">Kecenderungan:</span>
+              <span
+                className={`px-2.5 py-0.5 rounded font-mono font-bold text-xs border ${
+                  primaryMagnitude === 'Besar'
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                }`}
+              >
+                {primaryMagnitude} ({primaryMagnitude === 'Besar' ? '50-99' : '00-49'})
+              </span>
+            </div>
+
+            {/* Visual ratio bar */}
+            <div className="space-y-1.5 mt-2">
+              <div className="h-3 w-full bg-slate-800 rounded-lg overflow-hidden flex border border-white/[0.04]">
+                <div
+                  className="bg-cyan-500/70 h-full flex items-center justify-center text-[9px] font-mono font-bold text-white transition-all"
+                  style={{ width: `${Math.round((magnitudeProbabilities.Kecil || 0.5) * 100)}%` }}
+                >
+                  Kecil {Math.round((magnitudeProbabilities.Kecil || 0.5) * 100)}%
+                </div>
+                <div
+                  className="bg-amber-500/70 h-full flex items-center justify-center text-[9px] font-mono font-bold text-white transition-all"
+                  style={{ width: `${Math.round((magnitudeProbabilities.Besar || 0.5) * 100)}%` }}
+                >
+                  Besar {Math.round((magnitudeProbabilities.Besar || 0.5) * 100)}%
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center font-mono">
+                Rasio: {Math.round((magnitudeProbabilities.Kecil || 0.5) * 100)}% Kecil vs{' '}
+                {Math.round((magnitudeProbabilities.Besar || 0.5) * 100)}% Besar
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Overdue Alert Banner (jika ada pola/biji yang terlambat) */}
+      {overdueAlerts.length > 0 && (
+        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start space-x-2.5 animate-in slide-in-from-top-1">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-xs space-y-0.5">
+            <span className="font-semibold text-amber-300">Deteksi Pola Overdue (Anomali Gap):</span>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              {overdueAlerts.map((a, idx) => (
+                <span key={idx} className="mr-2">
+                  <strong className="font-mono text-amber-200">{a.label}</strong> (absen {a.gap}{' '}
+                  putaran)
+                  {idx < overdueAlerts.length - 1 ? ',' : '.'}
+                </span>
+              ))}
+              <span className="text-slate-400 italic">
+                Waspada tekanan pembalikan rata-rata (mean-reversion rebound).
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

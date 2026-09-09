@@ -28,6 +28,7 @@ export interface PredictionResult {
   confidenceScore: number;
   convergenceStatus: 'TINGGI' | 'SEDANG' | 'RENDAH';
   deadDigits: number[]; // 2 Digit paling lemah
+  paitoPrediction?: PaitoMacroPrediction;
   lastDraw: {
     full: string;
     as: number;
@@ -53,6 +54,22 @@ export interface BBFSStat {
   pnlNet: number;
 }
 
+export interface PaitoEvaluationStats {
+  bijiHits: number;
+  bijiRate: number;
+  bijiBaseline: number;
+  parityHits: number;
+  parityRate: number;
+  parityBaseline: number;
+  magnitudeHits: number;
+  magnitudeRate: number;
+  magnitudeBaseline: number;
+  sniperBomHits: number;
+  sniperBomRate: number;
+  avgSniperLines: number;
+  sniperPnlNet: number;
+}
+
 export interface EvaluationMetrics {
   totalDraws: number;
   testDraws: number;
@@ -60,6 +77,7 @@ export interface EvaluationMetrics {
   twinRate: number;
   aiStats: Record<number, AIStat>;
   bbfsStats: Record<number, BBFSStat>;
+  paitoStats?: PaitoEvaluationStats;
   ai4Streak: {
     maxWin: number;
     maxLose: number;
@@ -121,6 +139,20 @@ export interface BBFSTuningDetail {
   tierFactorWeights?: Record<number, Record<string, number>>;
 }
 
+export interface PaitoTuningDetail {
+  predictedTopBiji: number[];
+  actualBiji: number;
+  hitBiji: boolean;
+  predictedParity: string;
+  actualParity: string;
+  hitParity: boolean;
+  predictedMagnitude: string;
+  actualMagnitude: string;
+  hitMagnitude: boolean;
+  sniperZone: 'BOM_SNIPER' | 'SEKUNDER' | 'CADANGAN' | 'MISSED';
+  strikeCount: number;
+}
+
 export interface DayTuningLog {
   periodIndex: number;
   fullResult: string;
@@ -128,6 +160,7 @@ export interface DayTuningLog {
   isTwin: boolean;
   ai: AITuningDetail;
   bbfs: BBFSTuningDetail;
+  paito?: PaitoTuningDetail;
 
   // Backward compatibility fields
   predictedAI4: number[];
@@ -139,3 +172,22 @@ export interface DayTuningLog {
   penalizedMethod: string;
   recoveredFromPreviousLoss?: boolean;
 }
+
+export interface OverdueAlert {
+  type: 'biji' | 'parity' | 'magnitude';
+  label: string;
+  gap: number;
+  alertLevel: 'NORMAL' | 'WASPADA' | 'EKSTREM';
+}
+
+export interface PaitoMacroPrediction {
+  topBiji: number[];
+  bijiProbabilities: Record<number, number>;
+  primaryParity: 'Genap-Genap' | 'Genap-Ganjil' | 'Ganjil-Genap' | 'Ganjil-Ganjil';
+  parityProbabilities: Record<string, number>;
+  primaryMagnitude: 'Besar' | 'Kecil';
+  magnitudeProbabilities: Record<string, number>;
+  overdueAlerts: OverdueAlert[];
+  confidenceScore: number;
+}
+

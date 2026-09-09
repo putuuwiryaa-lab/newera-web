@@ -1,19 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import type { HistoryItem } from '../engine/types';
-import { ListFilter, Search, X } from 'lucide-react';
+import type { HistoryItem, PaitoMacroPrediction } from '../engine/types';
+import { predictPaitoMacro } from '../engine/paitoPredictor';
+import { PaitoPredictionCard } from './PaitoPredictionCard';
+import { ListFilter, Search, X, Copy, Check, Star } from 'lucide-react';
 
 interface HistoryPaitoTableProps {
   historyItems: HistoryItem[];
   marketName: string;
+  paitoPrediction?: PaitoMacroPrediction | null;
 }
 
 export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   historyItems,
-  marketName
+  marketName,
+  paitoPrediction
 }) => {
   const [filterTwinOnly, setFilterTwinOnly] = useState(false);
+  const [filterBiji, setFilterBiji] = useState<'all' | 'top3' | number>('all');
+  const [filterParity, setFilterParity] = useState<string>('all');
   const [searchDigit, setSearchDigit] = useState<string>('');
   const [limit, setLimit] = useState<number>(25);
+  const [copied, setCopied] = useState(false);
+
+  const computedPrediction = useMemo(() => {
+    if (paitoPrediction) return paitoPrediction;
+    const h2D: [number, number][] = historyItems.map((item) => [item.kepala, item.ekor]);
+    return predictPaitoMacro(h2D);
+  }, [paitoPrediction, historyItems]);
 
   // Ambil dari yang paling baru (paling belakang)
   const reversed = useMemo(() => [...historyItems].reverse(), [historyItems]);
@@ -21,6 +34,14 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   const filtered = useMemo(() => {
     return reversed.filter((item) => {
       if (filterTwinOnly && !item.isTwin) return false;
+      if (filterBiji === 'top3') {
+        if (!computedPrediction.topBiji.includes(item.biji)) return false;
+      } else if (typeof filterBiji === 'number') {
+        if (item.biji !== filterBiji) return false;
+      }
+      if (filterParity !== 'all') {
+        if (item.ganjilGenap !== filterParity) return false;
+      }
       if (searchDigit.trim()) {
         const query = searchDigit.trim();
         const comb2D = `${item.kepala}${item.ekor}`;
@@ -29,9 +50,20 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       }
       return true;
     });
-  }, [reversed, filterTwinOnly, searchDigit]);
+  }, [reversed, filterTwinOnly, filterBiji, filterParity, searchDigit, computedPrediction]);
 
   const displayed = useMemo(() => filtered.slice(0, limit), [filtered, limit]);
+
+  const handleCopyPaito = () => {
+    const lines = displayed.map(
+      (d) =>
+        `#${d.index}\t${d.full}\t${d.kepala}${d.ekor}\t${d.isTwin ? 'TWIN' : '-'}\tBiji:${d.biji}\t${d.besarKecil}\t${d.ganjilGenap}`
+    );
+    const header = `=== REKAP PAITO ${marketName} (${displayed.length} PUTARAN) ===\nNo\tResult 4D\tTarget 2D\tTwin\tBiji\tKategori\tPola`;
+    navigator.clipboard.writeText([header, ...lines].join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Statistik cepat dari data yang sedang ditampilkan
   const stats = useMemo(() => {
@@ -48,7 +80,16 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   }, [displayed]);
 
   return (
-    <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* Kartu Prediksi Makro Paito */}
+      <PaitoPredictionCard
+        prediction={computedPrediction}
+        marketName={marketName}
+        historyItems={historyItems}
+      />
+
+      {/* Tabel Riwayat Paito & Filter */}
+      <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4">
       {/* Header & Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
         <div className="flex items-center space-x-3">
@@ -92,6 +133,36 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
             )}
           </div>
 
+          <select
+            value={typeof filterBiji === 'number' ? filterBiji : filterBiji}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'all' || val === 'top3') setFilterBiji(val);
+              else setFilterBiji(Number(val));
+            }}
+            className="px-3 py-1.5 bg-slate-950/80 border border-white/[0.08] rounded-xl text-slate-300 text-xs focus:outline-none focus:border-emerald-500/50 font-mono cursor-pointer"
+          >
+            <option value="all">Semua Biji</option>
+            <option value="top3">★ Top 3 Biji ({computedPrediction.topBiji.join(',')})</option>
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((b) => (
+              <option key={b} value={b}>
+                Biji {b}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterParity}
+            onChange={(e) => setFilterParity(e.target.value)}
+            className="px-3 py-1.5 bg-slate-950/80 border border-white/[0.08] rounded-xl text-slate-300 text-xs focus:outline-none focus:border-emerald-500/50 font-mono cursor-pointer"
+          >
+            <option value="all">Semua Pola</option>
+            <option value="Genap-Genap">Genap-Genap</option>
+            <option value="Genap-Ganjil">Genap-Ganjil</option>
+            <option value="Ganjil-Genap">Ganjil-Genap</option>
+            <option value="Ganjil-Ganjil">Ganjil-Ganjil</option>
+          </select>
+
           <button
             onClick={() => setFilterTwinOnly(!filterTwinOnly)}
             className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
@@ -100,7 +171,7 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
                 : 'bg-slate-950/80 border-white/[0.08] text-slate-400 hover:text-white'
             }`}
           >
-            {filterTwinOnly ? 'Filter Twin Aktif' : 'Filter Twin Saja'}
+            {filterTwinOnly ? 'Twin Aktif' : 'Twin Saja'}
           </button>
 
           <select
@@ -113,6 +184,15 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
             <option value={50}>50 Data</option>
             <option value={100}>100 Data</option>
           </select>
+
+          <button
+            onClick={handleCopyPaito}
+            className="px-3 py-1.5 rounded-xl border border-white/[0.08] bg-slate-950/80 text-slate-300 hover:text-white flex items-center space-x-1.5 text-xs font-medium transition-colors"
+            title="Salin data tabel paito yang tampil"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copied ? 'Tersalin' : 'Salin'}</span>
+          </button>
         </div>
       </div>
 
@@ -172,8 +252,15 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
                     <span className="text-slate-600 text-[11px]">-</span>
                   )}
                 </td>
-                <td className="py-2.5 font-bold text-cyan-400">
-                  {item.biji}
+                <td className="py-2.5 font-bold">
+                  {computedPrediction.topBiji.includes(item.biji) ? (
+                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[11px] shadow-sm font-bold">
+                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                      <span>{item.biji}</span>
+                    </span>
+                  ) : (
+                    <span className="text-cyan-400">{item.biji}</span>
+                  )}
                 </td>
                 <td className="py-2.5">
                   <span
@@ -181,13 +268,24 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
                       item.besarKecil === 'Besar'
                         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25'
                         : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/25'
+                    } ${
+                      item.besarKecil === computedPrediction.primaryMagnitude
+                        ? 'ring-1 ring-white/20'
+                        : ''
                     }`}
                   >
                     {item.besarKecil}
                   </span>
                 </td>
-                <td className="py-2.5 text-right text-slate-400 text-[11px]">
-                  {item.ganjilGenap}
+                <td className="py-2.5 text-right text-[11px]">
+                  {item.ganjilGenap === computedPrediction.primaryParity ? (
+                    <span className="text-emerald-400 font-semibold inline-flex items-center space-x-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                      <span>{item.ganjilGenap}</span>
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">{item.ganjilGenap}</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -195,6 +293,7 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
         </table>
       </div>
     </div>
+  </div>
   );
 };
 

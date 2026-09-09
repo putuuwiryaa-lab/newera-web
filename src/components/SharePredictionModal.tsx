@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { Market } from '../engine/types';
 import { generatePrediction } from '../engine/adaptiveEngine';
+import { generateSniperTrim } from '../engine/generator';
 import {
   Share2,
   Copy,
@@ -29,7 +30,9 @@ export type PredictionType =
   | 'bbfs7'
   | 'bbfs8'
   | 'bbfs9'
-  | 'dead';
+  | 'dead'
+  | 'sniper'
+  | 'paito';
 
 export type LetterCaseMode = 'uppercase' | 'lowercase' | 'original';
 
@@ -193,6 +196,16 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         return pred.bbfs[9].join('');
       case 'dead':
         return pred.deadDigits.join('');
+      case 'sniper': {
+        if (!pred.paitoPrediction || !pred.bbfs[7]) return '----';
+        const sn = generateSniperTrim(pred.bbfs[7], pred.paitoPrediction, false);
+        return sn.sniperTop.length > 0 ? sn.sniperTop.join(' ') : '----';
+      }
+      case 'paito': {
+        if (!pred.paitoPrediction) return '----';
+        const p = pred.paitoPrediction;
+        return `Biji:[${p.topBiji.join(',')}] ${p.primaryParity} (${p.primaryMagnitude})`;
+      }
       default:
         return pred.ai[4].join('');
     }
@@ -228,6 +241,12 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         break;
       case 'dead':
         label = 'angka mati';
+        break;
+      case 'sniper':
+        label = 'bom sniper 2d';
+        break;
+      case 'paito':
+        label = 'paito makro 2d';
         break;
     }
     return lower ? label.toLowerCase() : label.toUpperCase();
@@ -359,7 +378,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                 Aktif: {predType.toUpperCase()}
               </span>
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
               {[
                 { id: 'ai3', label: 'AI 3' },
                 { id: 'ai4', label: 'AI 4 (Utama)', star: true },
@@ -369,7 +388,9 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                 { id: 'bbfs7', label: 'BBFS 7 (Best)', star: true },
                 { id: 'bbfs8', label: 'BBFS 8' },
                 { id: 'bbfs9', label: 'BBFS 9' },
-                { id: 'dead', label: 'Angka Mati' }
+                { id: 'dead', label: 'Angka Mati' },
+                { id: 'sniper', label: '🎯 Sniper BOM', star: true },
+                { id: 'paito', label: 'Paito Makro' }
               ].map((item) => (
                 <button
                   key={item.id}

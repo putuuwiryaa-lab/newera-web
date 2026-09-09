@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import type { EvaluationMetrics } from '../engine/types';
-import { TrendingUp, Award, Zap, AlertTriangle, HelpCircle, Sparkles, Layers } from 'lucide-react';
+import {
+  TrendingUp,
+  Award,
+  Zap,
+  AlertTriangle,
+  HelpCircle,
+  Sparkles,
+  Layers,
+  Compass,
+  Target
+} from 'lucide-react';
 
 interface EvaluationPanelProps {
   metrics: EvaluationMetrics | null;
@@ -11,7 +21,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   metrics,
   marketName
 }) => {
-  const [filterMode, setFilterMode] = useState<'all' | 'ai' | 'bbfs'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'ai' | 'bbfs' | 'paito'>('all');
 
   if (!metrics) {
     return (
@@ -21,7 +31,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     );
   }
 
-  const { totalDraws, testDraws, twinCount, twinRate, aiStats, bbfsStats, ai4Streak } = metrics;
+  const {
+    totalDraws,
+    testDraws,
+    twinCount,
+    twinRate,
+    aiStats,
+    bbfsStats,
+    paitoStats,
+    ai4Streak
+  } = metrics;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -119,7 +138,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Semua (AI & BBFS)
+            Semua Domain
           </button>
           <button
             onClick={() => setFilterMode('ai')}
@@ -142,6 +161,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           >
             <Layers className="w-3.5 h-3.5" />
             <span>BBFS 2D</span>
+          </button>
+          <button
+            onClick={() => setFilterMode('paito')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              filterMode === 'paito'
+                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span>Paito & Sniper</span>
           </button>
         </div>
       </div>
@@ -311,6 +341,136 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* KARTU EVALUASI PAITO MAKRO & SNIPER BOM */}
+      {(filterMode === 'all' || filterMode === 'paito') && paitoStats && (
+        <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <Target className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-white">
+                  Akurasi Prediksi Paito Makro & Finansial Sniper BOM
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Performa out-of-sample penyaring paito dan simulasi taruhan hemat ~90% modal
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/25 self-start sm:self-auto">
+              Simulasi Modal 1.000 / Line (Payout 70x)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Top 3 Biji */}
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Top 3 Biji 2D</span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: 30.0%</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-cyan-300">
+                  {paitoStats.bijiRate}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit {paitoStats.bijiHits} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.04] text-[11px]">
+                <span
+                  className={`font-semibold ${
+                    paitoStats.bijiRate >= paitoStats.bijiBaseline ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {paitoStats.bijiRate >= paitoStats.bijiBaseline ? '+' : ''}
+                  {(paitoStats.bijiRate - paitoStats.bijiBaseline).toFixed(1)}% Edge
+                </span>
+              </div>
+            </div>
+
+            {/* Pola Paritas */}
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Paritas 4-Kuadran</span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: 25.0%</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-purple-300">
+                  {paitoStats.parityRate}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit {paitoStats.parityHits} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.04] text-[11px]">
+                <span
+                  className={`font-semibold ${
+                    paitoStats.parityRate >= paitoStats.parityBaseline ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {paitoStats.parityRate >= paitoStats.parityBaseline ? '+' : ''}
+                  {(paitoStats.parityRate - paitoStats.parityBaseline).toFixed(1)}% Edge
+                </span>
+              </div>
+            </div>
+
+            {/* Kategori Besar/Kecil */}
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Kategori Besar / Kecil</span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: 50.0%</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-emerald-300">
+                  {paitoStats.magnitudeRate}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit {paitoStats.magnitudeHits} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.04] text-[11px]">
+                <span
+                  className={`font-semibold ${
+                    paitoStats.magnitudeRate >= paitoStats.magnitudeBaseline ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {paitoStats.magnitudeRate >= paitoStats.magnitudeBaseline ? '+' : ''}
+                  {(paitoStats.magnitudeRate - paitoStats.magnitudeBaseline).toFixed(1)}% Edge
+                </span>
+              </div>
+            </div>
+
+            {/* Sniper BOM (Modal Hemat 90%) */}
+            <div className="p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
+                <span>🎯 Sniper BOM (BBFS-7 Irisan)</span>
+                <span className="text-[10px] font-mono text-amber-400">~{paitoStats.avgSniperLines} Line</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-white">
+                  {paitoStats.sniperBomRate}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit BOM: {paitoStats.sniperBomHits}x tembus
+                </div>
+              </div>
+              <div className="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span
+                  className={`font-bold ${
+                    paitoStats.sniperPnlNet >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  Rp {paitoStats.sniperPnlNet.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Catatan Ilmiah / Alert Edukatif */}
       <div className="bg-slate-950/70 border border-emerald-500/20 rounded-2xl p-4 sm:p-5 flex items-start space-x-3.5 text-xs text-slate-400 shadow-xl backdrop-blur-sm">

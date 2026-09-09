@@ -2,7 +2,8 @@ import type {
   DayTuningLog,
   TierAuditStatus,
   AITuningDetail,
-  BBFSTuningDetail
+  BBFSTuningDetail,
+  PaitoTuningDetail
 } from './types';
 import {
   getMomentumScores,
@@ -11,7 +12,8 @@ import {
   getAdaptiveMistikScores,
   generatePrediction
 } from './adaptiveEngine';
-import { generateSmartTrim } from './generator';
+import { generateSmartTrim, generateSniperTrim } from './generator';
+import { computeBiji, getParity } from './paitoPredictor';
 
 export interface CalibrationAudit {
   marketId?: string;
@@ -290,11 +292,9 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
       const hitMethod = top3.includes(actualK) || top3.includes(actualE);
       const prevW = calibratedWeights[mName] || 10.0;
 
-      // Hitung panjang streak (berapa kali beruntun dalam arah yang sama)
-      const prevStreak = methodStreaks[mName] || 0;
-      const currentStreakLen = hitMethod
-        ? (prevStreak > 0 ? prevStreak + 1 : 1)
-        : (prevStreak < 0 ? Math.abs(prevStreak) + 1 : 1);
+      // methodStreaks[mName] sudah mencakup evaluasi draw T (aktual)
+      const streakVal = methodStreaks[mName] || (hitMethod ? 1 : -1);
+      const currentStreakLen = Math.max(1, Math.abs(streakVal));
 
       // 1. Streak-Aware Learning Rate (η):
       // Streak 1 (fluktuasi harian biasa / noise): η = 0.08 (±8%)
@@ -528,6 +528,7 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
   const startIdx = Math.max(10, valid4D.length - 7);
 
   let previousWasLoss = false;
+  let runningStreak = 0;
 
   for (let i = startIdx; i < valid4D.length; i++) {
     const rFull = valid4D[i];
@@ -544,6 +545,14 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
     const hitDigits = ai4.filter((d) => d === k || d === e);
     const statusAI: 'HIT' | 'LOSE' = hitDigits.length > 0 ? 'HIT' : 'LOSE';
 
+    if (runningStreak > 0 && statusAI === 'HIT') {
+      runningStreak++;
+    } else if (runningStreak < 0 && statusAI === 'LOSE') {
+      runningStreak--;
+    } else {
+      runningStreak = statusAI === 'HIT' ? 1 : -1;
+    }
+
     const bbfsSet = new Set(bbfs7);
     const statusBBFS: 'HIT' | 'LOSE' = isTwin
       ? bbfsSet.has(k) ? 'HIT' : 'LOSE'
@@ -552,9 +561,27 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
     const recovered = previousWasLoss && statusAI === 'HIT';
     previousWasLoss = statusAI === 'LOSE';
 
-    const sortedMethods = Object.entries(pred.methodWeights).sort((a, b) => b[1] - a[1]);
-    const rewardedMethod = sortedMethods[0] ? sortedMethods[0][0] : 'Momentum';
-    const penalizedMethod = sortedMethods[sortedMethods.length - 1] ? sortedMethods[sortedMethods.length - 1][0] : 'Markov';
+    // Evaluasi riil metode mana yang kena / meleset pada draw ini
+    const hSub2D: [number, number][] = histBefore.map((r) => [
+      parseInt(r[2], 10),
+      parseInt(r[3], 10)
+    ]);
+    const methodScoresDay: Record<string, Record<number, number>> = {
+      Momentum: getMomentumScores(hSub2D),
+      Markov: getMarkovScores(hSub2D),
+      Delta: getDeltaScores(hSub2D),
+      Mistik: getAdaptiveMistikScores(hSub2D)
+    };
+    const dayHits: string[] = [];
+    const dayMisses: string[] = [];
+    for (const [mName, sMap] of Object.entries(methodScoresDay)) {
+      const top3 = Object.keys(sMap).map(Number).sort((a, b) => sMap[b] - sMap[a]).slice(0, 3);
+      if (top3.includes(k) || top3.includes(e)) {
+        dayHits.push(mName);
+      } else {
+        dayMisses.push(mName);
+      }
+    }
 
     // AI Tier Audits
     const aiTierAudits: Record<number, TierAuditStatus> = {};
@@ -622,11 +649,11 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       tierAudits: aiTierAudits,
       hitDigits,
       statusAI4: statusAI,
-      rewardedMethods: allAIFrozenDay ? [] : [rewardedMethod],
-      penalizedMethods: allAIFrozenDay ? [] : [penalizedMethod],
+      rewardedMethods: allAIFrozenDay ? [] : dayHits,
+      penalizedMethods: allAIFrozenDay ? [] : dayMisses,
       calibratedWeights: pred.methodWeights,
       recoveredFromLoss: recovered,
-      streak: statusAI === 'HIT' ? 1 : -1,
+      streak: runningStreak,
       recommendedTier: aiTierAudits[3].action === 'FREEZE' ? 'AI-3' : 'AI-4',
       actionSummary: allAIFrozenDay ? 'Semua tier stabil (Freeze Total)' : `${Object.values(aiTierAudits).filter(t => t.action === 'CALIBRATED').map(t => t.name).join(', ')} dikalibrasi`
     };
@@ -647,6 +674,36 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       tierFactorWeights: pred.bbfsTierWeights
     };
 
+    let paitoTuning: PaitoTuningDetail | undefined;
+    if (pred.paitoPrediction) {
+      const actualBiji = computeBiji(k, e);
+      const actualParity = getParity(k, e);
+      const actualMag = k * 10 + e >= 50 ? 'Besar' : 'Kecil';
+      const hitBiji = pred.paitoPrediction.topBiji.includes(actualBiji);
+      const hitParity = actualParity === pred.paitoPrediction.primaryParity;
+      const hitMag = actualMag === pred.paitoPrediction.primaryMagnitude;
+
+      const sn = generateSniperTrim(bbfs7, pred.paitoPrediction, false);
+      let sniperZone: 'BOM_SNIPER' | 'SEKUNDER' | 'CADANGAN' | 'MISSED' = 'MISSED';
+      if (!isTwin && sn.sniperTop.includes(target2D)) sniperZone = 'BOM_SNIPER';
+      else if (!isTwin && sn.sniperSecondary.includes(target2D)) sniperZone = 'SEKUNDER';
+      else if (!isTwin && sn.cadangan.includes(target2D)) sniperZone = 'CADANGAN';
+
+      paitoTuning = {
+        predictedTopBiji: pred.paitoPrediction.topBiji,
+        actualBiji,
+        hitBiji,
+        predictedParity: pred.paitoPrediction.primaryParity,
+        actualParity,
+        hitParity,
+        predictedMagnitude: pred.paitoPrediction.primaryMagnitude,
+        actualMagnitude: actualMag,
+        hitMagnitude: hitMag,
+        sniperZone,
+        strikeCount: (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0)
+      };
+    }
+
     logs.push({
       periodIndex: i + 1,
       fullResult: rFull,
@@ -654,6 +711,7 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       isTwin,
       ai: aiTuning,
       bbfs: bbfsTuning,
+      paito: paitoTuning,
 
       // Compatibility
       predictedAI4: ai4,
@@ -661,8 +719,8 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       statusAI,
       statusBBFS,
       hitDigits,
-      rewardedMethod: allAIFrozenDay ? 'Freeze' : rewardedMethod,
-      penalizedMethod: allAIFrozenDay ? 'None' : penalizedMethod,
+      rewardedMethod: allAIFrozenDay ? 'Freeze' : (dayHits.join(', ') || 'None'),
+      penalizedMethod: allAIFrozenDay ? 'None' : (dayMisses.join(', ') || 'None'),
       recoveredFromPreviousLoss: recovered
     });
   }

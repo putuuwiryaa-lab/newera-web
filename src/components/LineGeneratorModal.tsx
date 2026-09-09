@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { generate2DLines, formatLines, generateSmartTrim } from '../engine/generator';
-import { X, Copy, Check, ToggleLeft, ToggleRight, Bomb, Shield, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  generate2DLines,
+  formatLines,
+  generateSmartTrim,
+  generateSniperTrim
+} from '../engine/generator';
+import type { PaitoMacroPrediction } from '../engine/types';
+import { X, Copy, Check, ToggleLeft, ToggleRight, Bomb, Shield, Sparkles, Target } from 'lucide-react';
 
 interface LineGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   digits: number[];
   tierName: string;
-  initialMode?: 'full' | 'trimmer';
+  initialMode?: 'full' | 'trimmer' | 'sniper';
+  paitoPrediction?: PaitoMacroPrediction | null;
 }
 
 export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
@@ -15,9 +22,10 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   onClose,
   digits,
   tierName,
-  initialMode = 'full'
+  initialMode = 'full',
+  paitoPrediction
 }) => {
-  const [userMode, setUserMode] = useState<'full' | 'trimmer' | null>(null);
+  const [userMode, setUserMode] = useState<'full' | 'trimmer' | 'sniper' | null>(null);
   const mode = userMode ?? initialMode;
   const [includeTwins, setIncludeTwins] = useState(false);
   const [delimiter, setDelimiter] = useState<'space' | 'comma' | 'newline'>('space');
@@ -33,6 +41,12 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Sniper Paito Trimmer
+  const sniper = useMemo(() => {
+    if (!paitoPrediction) return null;
+    return generateSniperTrim(digits, paitoPrediction, includeTwins);
+  }, [digits, paitoPrediction, includeTwins]);
+
   if (!isOpen) return null;
 
   const lines = generate2DLines(digits, includeTwins);
@@ -43,6 +57,10 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   const top10Text = formatLines(trimmed.top10, delimiter);
   const medium15Text = formatLines(trimmed.medium15, delimiter);
   const cadanganText = formatLines(trimmed.cadangan, delimiter);
+
+  const sniperTopText = sniper ? formatLines(sniper.sniperTop, delimiter) : '';
+  const sniperSecText = sniper ? formatLines(sniper.sniperSecondary, delimiter) : '';
+  const sniperCadText = sniper ? formatLines(sniper.cadangan, delimiter) : '';
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -93,7 +111,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Kombinasi Penuh ({lines.length} Line)</span>
+            <span>Penuh ({lines.length})</span>
           </button>
 
           <button
@@ -105,8 +123,22 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
             }`}
           >
             <Bomb className="w-3.5 h-3.5 text-amber-300" />
-            <span>Pemangkas Cerdas (Top 10 Bom & Medium)</span>
+            <span>Smart Trim</span>
           </button>
+
+          {paitoPrediction && (
+            <button
+              onClick={() => setUserMode('sniper')}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+                mode === 'sniper'
+                  ? 'bg-cyan-600 text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5 text-cyan-200" />
+              <span>🎯 Sniper Paito</span>
+            </button>
+          )}
         </div>
 
         {/* Controls */}
@@ -178,7 +210,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : mode === 'trimmer' ? (
             <div className="space-y-4">
               {/* Top 10 Bom */}
               <div className="bg-emerald-500/[0.04] border border-emerald-500/25 rounded-xl p-3.5">
@@ -257,7 +289,103 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 </div>
               )}
             </div>
-          )}
+          ) : sniper ? (
+            <div className="space-y-4">
+              {/* Efisiensi Banner */}
+              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-semibold text-cyan-300">Target Filter Sniper Paito:</span>
+                  <p className="text-slate-400 text-[11px] mt-0.5">
+                    Memfilter dengan Biji <strong className="text-cyan-200">[{paitoPrediction?.topBiji.join(', ')}]</strong> & Pola <strong className="text-purple-300">{paitoPrediction?.primaryParity}</strong>
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono font-bold text-xs border border-cyan-500/30">
+                  Hemat {sniper.efficiencyPct}% Modal
+                </span>
+              </div>
+
+              {/* Sniper Top BOM */}
+              <div className="bg-cyan-500/[0.05] border border-cyan-500/30 rounded-xl p-3.5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Target className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-semibold text-cyan-300">
+                      🎯 BOM SNIPER UTAMA ({sniper.sniperTop.length} Line)
+                    </span>
+                  </div>
+                  {sniper.sniperTop.length > 0 && (
+                    <button
+                      onClick={() => handleCopy(sniperTopText, 'sniperTop')}
+                      className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95 shadow-sm shadow-cyan-600/30"
+                    >
+                      {copiedKey === 'sniperTop' ? (
+                        <Check className="w-3 h-3 text-cyan-200" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>Salin Sniper BOM</span>
+                    </button>
+                  )}
+                </div>
+                <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-cyan-300 tracking-wider border border-white/[0.04] min-h-[36px]">
+                  {sniperTopText || <span className="text-slate-500 italic text-[11px]">Tidak ada line yang memenuhi irisan 100% pola</span>}
+                </div>
+              </div>
+
+              {/* Sniper Sekunder */}
+              {sniper.sniperSecondary.length > 0 && (
+                <div className="bg-purple-500/[0.04] border border-purple-500/25 rounded-xl p-3.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-1.5">
+                      <Shield className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs font-semibold text-purple-300">
+                        🛡️ SNIPER SEKUNDER ({sniper.sniperSecondary.length} Line - Lolos Biji)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(sniperSecText, 'sniperSec')}
+                      className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
+                    >
+                      {copiedKey === 'sniperSec' ? (
+                        <Check className="w-3 h-3 text-purple-200" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>Salin Sekunder</span>
+                    </button>
+                  </div>
+                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-purple-300 tracking-wider border border-white/[0.04]">
+                    {sniperSecText}
+                  </div>
+                </div>
+              )}
+
+              {/* Cadangan */}
+              {sniper.cadangan.length > 0 && (
+                <div className="bg-slate-950/50 border border-white/[0.06] rounded-xl p-3.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-400">
+                      LINE DILUAR FILTER ({sniper.cadangan.length} Line)
+                    </span>
+                    <button
+                      onClick={() => handleCopy(sniperCadText, 'sniperCad')}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium flex items-center space-x-1 transition-all"
+                    >
+                      {copiedKey === 'sniperCad' ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>Salin Cadangan</span>
+                    </button>
+                  </div>
+                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-slate-400 tracking-wider border border-white/[0.04]">
+                    {sniperCadText}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}

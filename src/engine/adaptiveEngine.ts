@@ -1,4 +1,5 @@
 import type { PredictionResult } from './types';
+import { predictPaitoMacro } from './paitoPredictor';
 
 // Tabel Transformasi Komunitas Tradisional
 export const INDEX_MAP: Record<number, number> = {
@@ -133,7 +134,7 @@ export function getAdaptiveMistikScores(
     const [nk, ne] = subHist[i + 1];
     const actualSet = new Set([nk, ne]);
 
-    [pk, pe].forEach((d) => {
+    Array.from(new Set([pk, pe])).forEach((d) => {
       if (actualSet.has(d)) branchHits.asli++;
       if (actualSet.has(INDEX_MAP[d])) branchHits.indeks++;
       if (actualSet.has(MISTIK_LAMA[d])) branchHits.mistik_lama++;
@@ -142,7 +143,7 @@ export function getAdaptiveMistikScores(
   }
 
   const [lastK, lastE] = subHist[subHist.length - 1];
-  [lastK, lastE].forEach((d) => {
+  Array.from(new Set([lastK, lastE])).forEach((d) => {
     scores[d] += branchHits.asli;
     scores[INDEX_MAP[d]] += branchHits.indeks;
     scores[MISTIK_LAMA[d]] += branchHits.mistik_lama;
@@ -197,29 +198,27 @@ export class AdaptiveEnsemble {
       };
 
       if (history2D.length > this.rollingWindow + 5) {
-        const evalSlice = history2D.slice(-this.rollingWindow);
+        const totalLen = history2D.length;
+        const startIdx = totalLen - this.rollingWindow;
         for (const [mName, mFunc] of Object.entries(methods)) {
           let hitCount = 0;
-        for (let step = 0; step < evalSlice.length - 1; step++) {
-          const histUntilStep = history2D.slice(
-            0,
-            -(this.rollingWindow - step)
-          );
-          const [nk, ne] = evalSlice[step + 1];
-          const actualNext = new Set([nk, ne]);
+          for (let targetIdx = startIdx; targetIdx < totalLen; targetIdx++) {
+            const histUntilStep = history2D.slice(0, targetIdx);
+            const [nk, ne] = history2D[targetIdx];
+            const actualNext = new Set([nk, ne]);
 
-          const mScores = mFunc(histUntilStep);
-          // Evaluasi spesifik untuk ukuran parameter tierSize
-          const topCandidates = Object.keys(mScores)
-            .map(Number)
-            .sort((a, b) => mScores[b] - mScores[a])
-            .slice(0, tierSize);
+            const mScores = mFunc(histUntilStep);
+            // Evaluasi spesifik untuk ukuran parameter tierSize
+            const topCandidates = Object.keys(mScores)
+              .map(Number)
+              .sort((a, b) => mScores[b] - mScores[a])
+              .slice(0, tierSize);
 
-          if (topCandidates.some((d) => actualNext.has(d))) {
-            hitCount++;
+            if (topCandidates.some((d) => actualNext.has(d))) {
+              hitCount++;
+            }
           }
-        }
-        weights[mName] = Math.max(0.5, hitCount + 1);
+          weights[mName] = Math.max(0.5, hitCount + 1);
         }
       }
     }
@@ -443,7 +442,9 @@ export function computeDedicatedBBFSTiers(
       let score = 0;
       for (let i = 0; i < size; i++) {
         for (let j = 0; j < size; j++) {
-          score += joint_size[comb[i]][comb[j]];
+          if (i !== j) {
+            score += joint_size[comb[i]][comb[j]];
+          }
         }
       }
       if (score > bestScore) {
@@ -457,7 +458,9 @@ export function computeDedicatedBBFSTiers(
     for (const d of bestComb) {
       let c = 0;
       for (const other of bestComb) {
-        c += joint_size[d][other] + joint_size[other][d];
+        if (other !== d) {
+          c += joint_size[d][other] + joint_size[other][d];
+        }
       }
       digitContrib[d] = c;
     }
@@ -477,7 +480,9 @@ export function computeDedicatedBBFSTiers(
   for (let d = 0; d < 10; d++) {
     let s = 0;
     for (let x = 0; x < 10; x++) {
-      s += baseJoint[d][x] + baseJoint[x][d];
+      if (x !== d) {
+        s += baseJoint[d][x] + baseJoint[x][d];
+      }
     }
     bbfsDigitScores[d] = s;
   }
@@ -604,6 +609,8 @@ export function generatePrediction(
   if (confidenceScore >= 80) convergenceStatus = 'TINGGI';
   else if (confidenceScore < 68) convergenceStatus = 'RENDAH';
 
+  const paitoPrediction = predictPaitoMacro(history2D);
+
   return {
     rankedDigits: res4.ranked,
     ai: aiResults,
@@ -614,6 +621,7 @@ export function generatePrediction(
     confidenceScore,
     convergenceStatus,
     deadDigits: dedicatedBBFS.deadDigits, // 2 Digit terlemah berbasis skor BBFS 2D!
+    paitoPrediction,
     lastDraw: {
       full: lastFull,
       as: parseInt(lastFull[0], 10),

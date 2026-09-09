@@ -1,5 +1,7 @@
 import type { EvaluationMetrics } from './types';
 import { AdaptiveEnsemble, computeDedicatedBBFSTiers } from './adaptiveEngine';
+import { predictPaitoMacro, computeBiji, getParity } from './paitoPredictor';
+import { generateSniperTrim } from './generator';
 
 export const AI_BASELINES: Record<number, number> = {
   3: 51.0,
@@ -48,6 +50,14 @@ export function runWalkForwardEvaluation(
   // PnL: Asumsi 2D payout 70x, cost 1x per line
   const pnl: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
 
+  // Paito & Sniper BOM Tracking
+  let paitoBijiHits = 0;
+  let paitoParityHits = 0;
+  let paitoMagHits = 0;
+  let sniperBomHits = 0;
+  let totalSniperLines = 0;
+  let sniperPnl = 0;
+
   for (let t = warmup; t < totalDraws; t++) {
     const pastData = history2D.slice(0, t);
     const [actualK, actualE] = history2D[t];
@@ -80,9 +90,9 @@ export function runWalkForwardEvaluation(
     [6, 7, 8, 9].forEach((size) => {
       const bbfsSet = new Set(bbfsResult.tiers[size as 6 | 7 | 8 | 9]);
       const lines = size * (size - 1);
-      const isHitBBFS = isTwin
-        ? bbfsSet.has(actualK)
-        : (bbfsSet.has(actualK) && bbfsSet.has(actualE));
+      // BBFS standar memainkan lines = size * (size - 1) non-twin.
+      // Jika terjadi result angka kembar (isTwin), taruhan non-twin tidak mencakup angka kembar tersebut.
+      const isHitBBFS = !isTwin && bbfsSet.has(actualK) && bbfsSet.has(actualE);
 
       if (isHitBBFS) {
         bbfsHits[size]++;
@@ -91,6 +101,36 @@ export function runWalkForwardEvaluation(
         pnl[size] -= lines;
       }
     });
+
+    // 3. Evaluasi Prediksi Makro Paito & Sniper BOM
+    const paitoPred = predictPaitoMacro(pastData);
+    const actualBiji = computeBiji(actualK, actualE);
+    const actualParity = getParity(actualK, actualE);
+    const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
+
+    if (paitoPred.topBiji.includes(actualBiji)) {
+      paitoBijiHits++;
+    }
+    if (actualParity === paitoPred.primaryParity) {
+      paitoParityHits++;
+    }
+    if (actualMag === paitoPred.primaryMagnitude) {
+      paitoMagHits++;
+    }
+
+    // Evaluasi Sniper BOM dari BBFS-7
+    const sniperResult = generateSniperTrim(bbfsResult.tiers[7], paitoPred, false);
+    const actual2DStr = `${actualK}${actualE}`;
+    const isHitSniperBom = !isTwin && sniperResult.sniperTop.includes(actual2DStr);
+    const sniperLinesCount = sniperResult.sniperTop.length;
+    totalSniperLines += sniperLinesCount;
+
+    if (isHitSniperBom) {
+      sniperBomHits++;
+      sniperPnl += (70 - sniperLinesCount);
+    } else {
+      sniperPnl -= sniperLinesCount;
+    }
   }
 
   // Format statistik AI
@@ -121,6 +161,23 @@ export function runWalkForwardEvaluation(
     };
   });
 
+  // Format statistik Paito & Sniper BOM
+  const paitoStats: EvaluationMetrics['paitoStats'] = {
+    bijiHits: paitoBijiHits,
+    bijiRate: Number(((paitoBijiHits / testDraws) * 100).toFixed(2)),
+    bijiBaseline: 30.0,
+    parityHits: paitoParityHits,
+    parityRate: Number(((paitoParityHits / testDraws) * 100).toFixed(2)),
+    parityBaseline: 25.0,
+    magnitudeHits: paitoMagHits,
+    magnitudeRate: Number(((paitoMagHits / testDraws) * 100).toFixed(2)),
+    magnitudeBaseline: 50.0,
+    sniperBomHits,
+    sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
+    avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),
+    sniperPnlNet: sniperPnl * 1000
+  };
+
   return {
     totalDraws,
     testDraws,
@@ -128,6 +185,7 @@ export function runWalkForwardEvaluation(
     twinRate: Number(((twinCount / testDraws) * 100).toFixed(1)),
     aiStats,
     bbfsStats,
+    paitoStats,
     ai4Streak: {
       maxWin: ai4Streaks.maxWin,
       maxLose: ai4Streaks.maxLose,

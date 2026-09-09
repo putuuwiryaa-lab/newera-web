@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { MarketSelector } from './components/MarketSelector';
 import { AIDashboard } from './components/AIDashboard';
@@ -15,7 +15,7 @@ import { generatePrediction } from './engine/adaptiveEngine';
 import { runWalkForwardEvaluation } from './engine/evaluator';
 import { auditAndCalibrate, reconstructLast7DaysTuningLogs } from './engine/smartCalibrator';
 import type { Market } from './engine/types';
-import { Sparkles, TrendingUp, History, Sliders, Layers } from 'lucide-react';
+import { Sparkles, TrendingUp, History, Sliders, Layers, Compass } from 'lucide-react';
 
 export function App() {
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -23,7 +23,7 @@ export function App() {
   const [dataSource, setDataSource] = useState<'live' | 'cached'>('cached');
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'ai' | 'bbfs' | 'tuning' | 'evaluation' | 'history'>('ai');
-  const [tuningSubTab, setTuningSubTab] = useState<'ai' | 'bbfs'>('ai');
+  const [tuningSubTab, setTuningSubTab] = useState<'ai' | 'bbfs' | 'paito'>('ai');
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const showToast = useCallback((message: string, type: 'success' | 'info' = 'success') => {
@@ -38,7 +38,7 @@ export function App() {
     isOpen: boolean;
     digits: number[];
     tierName: string;
-    initialMode?: 'full' | 'trimmer';
+    initialMode?: 'full' | 'trimmer' | 'sniper';
   }>({
     isOpen: false,
     digits: [],
@@ -106,7 +106,7 @@ export function App() {
     return parseHistoryItems(currentMarket.history_data);
   }, [currentMarket]);
 
-  const handleOpenGenerator = (digits: number[], tierName: string, mode: 'full' | 'trimmer' = 'full') => {
+  const handleOpenGenerator = (digits: number[], tierName: string, mode: 'full' | 'trimmer' | 'sniper' = 'full') => {
     setModalState({
       isOpen: true,
       digits,
@@ -290,7 +290,7 @@ export function App() {
                     Memori Kalibrasi & Log Penyetelan
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Pilih domain: Peluang marginal Angka Ikut (AI) atau densitas pasangan BBFS
+                    Pilih domain: Peluang marginal AI, densitas BBFS, atau Audit Paito Makro
                   </p>
                 </div>
               </div>
@@ -318,18 +318,32 @@ export function App() {
                   <Layers className="w-3.5 h-3.5" />
                   <span>Tuning BBFS</span>
                 </button>
+                <button
+                  onClick={() => setTuningSubTab('paito')}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    tuningSubTab === 'paito'
+                      ? 'bg-amber-400 text-slate-950 font-semibold shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Audit Paito</span>
+                </button>
               </div>
             </div>
 
-            <SmartCalibrationCard
-              audit={calibrationAudit}
-              marketName={currentMarket ? currentMarket.name : ''}
-              mode={tuningSubTab}
-            />
+            {tuningSubTab !== 'paito' && (
+              <SmartCalibrationCard
+                audit={calibrationAudit}
+                marketName={currentMarket ? currentMarket.name : ''}
+                mode={tuningSubTab}
+              />
+            )}
             <TuningTimeline
               logs={tuningLogs}
               marketName={currentMarket ? currentMarket.name : ''}
-              initialMode={tuningSubTab}
+              mode={tuningSubTab}
+              onModeChange={setTuningSubTab}
             />
           </div>
         )}
@@ -345,6 +359,7 @@ export function App() {
           <HistoryPaitoTable
             historyItems={historyItems}
             marketName={currentMarket ? currentMarket.name : ''}
+            paitoPrediction={prediction?.paitoPrediction}
           />
         )}
       </main>
@@ -426,11 +441,13 @@ export function App() {
 
       {/* Line Generator & Smart Trimmer Modal */}
       <LineGeneratorModal
+        key={`modal-${modalState.tierName}-${modalState.initialMode}-${modalState.isOpen ? 'open' : 'closed'}`}
         isOpen={modalState.isOpen}
         onClose={() => setModalState({ ...modalState, isOpen: false })}
         digits={modalState.digits}
         tierName={modalState.tierName}
         initialMode={modalState.initialMode}
+        paitoPrediction={prediction?.paitoPrediction}
       />
 
       {/* Multi-Market Share Prediction Modal */}

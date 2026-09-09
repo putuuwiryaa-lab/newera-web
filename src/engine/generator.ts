@@ -1,3 +1,6 @@
+import type { PaitoMacroPrediction } from './types';
+import { computeBiji, getParity } from './paitoPredictor';
+
 /**
  * Menghasilkan daftar pasangan 2D dari digit-digit BBFS terpilih.
  */
@@ -6,7 +9,7 @@ export function generate2DLines(
   includeTwins = false
 ): string[] {
   const lines: string[] = [];
-  const uniqueDigits = Array.from(new Set(digits)).sort((a, b) => a - b);
+  const uniqueDigits = Array.from(new Set(digits));
 
   for (let i = 0; i < uniqueDigits.length; i++) {
     for (let j = 0; j < uniqueDigits.length; j++) {
@@ -63,4 +66,59 @@ export function generateSmartTrim(rankedDigits: number[]): SmartTrimResult {
   const cadangan = allTop7.filter((l) => !usedSet.has(l));
 
   return { top10, medium15, cadangan };
+}
+
+export interface SniperTrimResult {
+  sniperTop: string[];
+  sniperSecondary: string[];
+  cadangan: string[];
+  efficiencyPct: number;
+}
+
+/**
+ * Pemangkas Sniper 2D Berbasis Paito:
+ * Menyaring baris BBFS menggunakan irisan Top 3 Biji dan Pola Paritas Utama.
+ */
+export function generateSniperTrim(
+  digits: number[],
+  paitoPred: PaitoMacroPrediction,
+  includeTwins = false
+): SniperTrimResult {
+  const allLines = generate2DLines(digits, includeTwins);
+  const topBijiSet = new Set(paitoPred.topBiji);
+
+  const sniperTop: string[] = [];
+  const sniperSecondary: string[] = [];
+  const cadangan: string[] = [];
+
+  for (const line of allLines) {
+    const k = parseInt(line[0], 10);
+    const e = parseInt(line[1], 10);
+    const biji = computeBiji(k, e);
+    const parity = getParity(k, e);
+
+    const hitBiji = topBijiSet.has(biji);
+    const hitParity = parity === paitoPred.primaryParity;
+
+    if (hitBiji && hitParity) {
+      sniperTop.push(line);
+    } else if (hitBiji) {
+      sniperSecondary.push(line);
+    } else {
+      cadangan.push(line);
+    }
+  }
+
+  const keptCount = sniperTop.length || sniperSecondary.length;
+  const efficiencyPct =
+    allLines.length > 0
+      ? Math.round(((allLines.length - keptCount) / allLines.length) * 100)
+      : 0;
+
+  return {
+    sniperTop,
+    sniperSecondary,
+    cadangan,
+    efficiencyPct
+  };
 }

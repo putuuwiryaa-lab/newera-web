@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { PredictionResult, EvaluationMetrics } from '../engine/types';
 import type { CalibrationAudit } from '../engine/smartCalibrator';
-import { generateSmartTrim, formatLines } from '../engine/generator';
+import { generateSmartTrim, generateSniperTrim, formatLines } from '../engine/generator';
 import { SmartCalibrationCard } from './SmartCalibrationCard';
 import {
   Layers,
@@ -21,7 +21,7 @@ interface BBFSDashboardProps {
   audit: CalibrationAudit | null;
   evaluation: EvaluationMetrics | null;
   marketName: string;
-  onOpenGenerator: (digits: number[], tierName: string, mode?: 'full' | 'trimmer') => void;
+  onOpenGenerator: (digits: number[], tierName: string, mode?: 'full' | 'trimmer' | 'sniper') => void;
   onToast?: (message: string) => void;
 }
 
@@ -33,6 +33,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   onToast
 }) => {
   const [selectedTier, setSelectedTier] = useState<6 | 7 | 8 | 9>(7);
+  const [trimmerTab, setTrimmerTab] = useState<'sniper' | 'top10'>('sniper');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [betPerLine, setBetPerLine] = useState<number>(1000);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -57,12 +58,22 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   const allLines = [...trimmed.top10, ...trimmed.medium15, ...trimmed.cadangan];
   const allLinesText = formatLines(allLines, 'space');
 
+  // Sniper Paito Trimmer
+  const sniper = prediction.paitoPrediction
+    ? generateSniperTrim(currentDigits, prediction.paitoPrediction, false)
+    : null;
+
+  const sniperTop = sniper?.sniperTop ?? [];
+  const sniperTopText = formatLines(sniperTop, 'space');
+
   // Finansial kalkulasi 2D
   const discountRate = 0.29; // Diskon standar pasaran 29%
   const payoutRate = 70; // Hadiah 2D umum x70 (Rp 70.000 per Rp 1.000)
+  const winPayout = betPerLine * payoutRate;
+  const costSniper = Math.round(Math.max(1, sniperTop.length) * betPerLine * (1 - discountRate));
+  const profitSniper = winPayout - costSniper;
   const costTop10 = Math.round(10 * betPerLine * (1 - discountRate));
   const costAll = Math.round(allLines.length * betPerLine * (1 - discountRate));
-  const winPayout = betPerLine * payoutRate;
   const profitTop10 = winPayout - costTop10;
   const profitAll = winPayout - costAll;
 
@@ -199,66 +210,148 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
         </div>
       </div>
 
-      {/* 3. Dua Kolom: Top 10 Line BOM & 2 Digit Mati */}
+      {/* 3. Dua Kolom: Top 10 Line BOM / Sniper Paito BOM */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Kolom Kiri (2 col): Top 10 Line BOM */}
         <div className="lg:col-span-2 glass-panel rounded-2xl p-5 border border-purple-500/20 shadow-md flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
               <div className="flex items-center space-x-2">
-                <div className="p-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">
-                  <Bomb className="w-4 h-4" />
+                <div
+                  className={`p-1.5 rounded-lg border ${
+                    trimmerTab === 'sniper'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}
+                >
+                  {trimmerTab === 'sniper' ? <Target className="w-4 h-4" /> : <Bomb className="w-4 h-4" />}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Top 10 Line BOM (Paling Siap Pasang)</h3>
-                  <p className="text-[11px] text-slate-400">10 line 2D dengan bobot skor probabilitas tertinggi</p>
+                  <h3 className="text-sm font-bold text-white">
+                    {trimmerTab === 'sniper'
+                      ? '🎯 Sniper Paito BOM (Paling Presisi & Irit)'
+                      : 'Top 10 Line BOM (Paling Siap Pasang)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {trimmerTab === 'sniper'
+                      ? `Irisan BBFS-${selectedTier} + Top 3 Biji & Pola Paritas (Hemat ~${sniper?.efficiencyPct ?? 88}% Modal)`
+                      : '10 line 2D dengan bobot skor probabilitas tertinggi'}
+                  </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => triggerCopy(top10Text, 'top10', 'Top 10 Line BOM')}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all active:scale-95"
-              >
-                {copiedKey === 'top10' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedKey === 'top10' ? 'Tersalin' : 'Salin 10 Line'}</span>
-              </button>
+              {/* Mode Switcher & Copy Button */}
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-white/[0.08]">
+                  <button
+                    onClick={() => setTrimmerTab('sniper')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      trimmerTab === 'sniper'
+                        ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Sniper ({sniperTop.length})
+                  </button>
+                  <button
+                    onClick={() => setTrimmerTab('top10')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      trimmerTab === 'top10'
+                        ? 'bg-purple-600 text-white font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Top 10
+                  </button>
+                </div>
+
+                <button
+                  onClick={() =>
+                    trimmerTab === 'sniper'
+                      ? triggerCopy(sniperTopText, 'sniper', 'Sniper BOM')
+                      : triggerCopy(top10Text, 'top10', 'Top 10 Line BOM')
+                  }
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 border ${
+                    trimmerTab === 'sniper'
+                      ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30'
+                      : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/30'
+                  }`}
+                >
+                  {copiedKey === (trimmerTab === 'sniper' ? 'sniper' : 'top10') ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {copiedKey === (trimmerTab === 'sniper' ? 'sniper' : 'top10')
+                      ? 'Tersalin'
+                      : trimmerTab === 'sniper'
+                      ? `Salin ${sniperTop.length} Line`
+                      : 'Salin 10 Line'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Clickable Line Pills */}
-            <div className="grid grid-cols-5 gap-2 my-4">
-              {top10.map((line, idx) => {
-                const isLineCopied = copiedKey === `line-${line}`;
-                return (
-                  <button
-                    key={line}
-                    onClick={() => triggerCopy(line, `line-${line}`, `Line ${line}`)}
-                    className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-purple-950/60 border border-white/[0.08] hover:border-purple-500/40 text-center transition-all active:scale-95 group relative"
-                    title="Klik untuk salin 1 line"
-                  >
-                    <div className="text-[10px] text-slate-500 font-mono">#{idx + 1}</div>
-                    <div className="font-mono font-bold text-base text-purple-200 group-hover:text-purple-100 mt-0.5">
-                      {line}
-                    </div>
-                    {isLineCopied && (
-                      <span className="absolute inset-0 bg-emerald-950/90 rounded-xl border border-emerald-500/50 flex items-center justify-center text-emerald-300 text-[10px] font-bold">
-                        OK
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            <div
+              className={`grid gap-2 my-4 ${
+                trimmerTab === 'sniper' ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-5'
+              }`}
+            >
+              {(trimmerTab === 'sniper' ? (sniperTop.length > 0 ? sniperTop : top10.slice(0, 4)) : top10).map(
+                (line, idx) => {
+                  const isLineCopied = copiedKey === `line-${line}`;
+                  return (
+                    <button
+                      key={line}
+                      onClick={() => triggerCopy(line, `line-${line}`, `Line ${line}`)}
+                      className={`p-2.5 rounded-xl border text-center transition-all active:scale-95 group relative ${
+                        trimmerTab === 'sniper'
+                          ? 'bg-slate-900/95 hover:bg-amber-950/40 border-amber-500/30 hover:border-amber-400'
+                          : 'bg-slate-900/90 hover:bg-purple-950/60 border-white/[0.08] hover:border-purple-500/40'
+                      }`}
+                      title="Klik untuk salin 1 line"
+                    >
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        {trimmerTab === 'sniper' ? `🎯 BOM #${idx + 1}` : `#${idx + 1}`}
+                      </div>
+                      <div
+                        className={`font-mono font-bold text-base mt-0.5 ${
+                          trimmerTab === 'sniper'
+                            ? 'text-amber-300 group-hover:text-amber-200'
+                            : 'text-purple-200 group-hover:text-purple-100'
+                        }`}
+                      >
+                        {line}
+                      </div>
+                      {isLineCopied && (
+                        <span className="absolute inset-0 bg-emerald-950/90 rounded-xl border border-emerald-500/50 flex items-center justify-center text-emerald-300 text-[10px] font-bold">
+                          OK
+                        </span>
+                      )}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
-          <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
+          <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
             <span>Klik pada angka untuk menyalin satuan.</span>
-            <button
-              onClick={() => onOpenGenerator(currentDigits, `BBFS-${selectedTier}`, 'trimmer')}
-              className="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center space-x-1"
-            >
-              <span>Lihat 15 Line Medium & Cadangan</span>
-              <span>&rarr;</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => onOpenGenerator(currentDigits, `BBFS-${selectedTier}`, 'sniper')}
+                className="text-amber-400 hover:text-amber-300 font-semibold flex items-center space-x-1"
+              >
+                <span>🎯 Buka Modal Sniper &rarr;</span>
+              </button>
+              <button
+                onClick={() => onOpenGenerator(currentDigits, `BBFS-${selectedTier}`, 'trimmer')}
+                className="text-purple-400 hover:text-purple-300 font-semibold flex items-center space-x-1"
+              >
+                <span>Medium & Cadangan &rarr;</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -291,12 +384,12 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed text-center">
-              Kedua digit ini otomatis disingkirkan dari pembentukan BBFS untuk menghemat modal tanpa mengorbankan win-rate.
+              Dua angka dengan frekuensi & afinitas matriks pasangan terendah. Disarankan coret sepenuhnya dari racikan.
             </p>
           </div>
 
-          <div className="pt-4 border-t border-white/[0.06] text-center">
-            <span className="text-[11px] text-slate-500">
+          <div className="pt-3 border-t border-white/[0.06] text-center">
+            <span className="text-[11px] font-mono text-rose-400/90">
               Analisis eliminasi 2D akurat &bull; Zero risk pruning
             </span>
           </div>
@@ -329,12 +422,34 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Top 10 Line Scenario */}
-          <div className="bg-slate-900/70 p-4 rounded-xl border border-white/[0.06]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Sniper BOM Scenario */}
+          <div className="bg-slate-900/70 p-4 rounded-xl border border-amber-500/20 shadow-sm">
             <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-              <span className="font-semibold text-purple-300">Opsi 1: Pasang Top 10 Line</span>
-              <span className="font-mono">10 line</span>
+              <span className="font-semibold text-amber-300">🎯 Opsi 1: Sniper BOM</span>
+              <span className="font-mono text-amber-400/90 font-bold">{Math.max(1, sniperTop.length)} line (Hemat ~90%)</span>
+            </div>
+            <div className="space-y-1.5 text-xs font-mono">
+              <div className="flex justify-between text-slate-300">
+                <span>Modal Bersih (Disc 29%):</span>
+                <span>Rp {costSniper.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Hadiah Menang (x70):</span>
+                <span>Rp {winPayout.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between pt-1.5 border-t border-white/[0.08] font-bold text-amber-400 text-sm">
+                <span>Profit Bersih:</span>
+                <span>+Rp {profitSniper.toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Top 10 Line Scenario */}
+          <div className="bg-slate-900/70 p-4 rounded-xl border border-purple-500/20">
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+              <span className="font-semibold text-purple-300">💣 Opsi 2: Top 10 Line</span>
+              <span className="font-mono">10 line (Hemat 76%)</span>
             </div>
             <div className="space-y-1.5 text-xs font-mono">
               <div className="flex justify-between text-slate-300">
@@ -355,7 +470,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
           {/* Full Line Scenario */}
           <div className="bg-slate-900/70 p-4 rounded-xl border border-white/[0.06]">
             <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-              <span className="font-semibold text-slate-300">Opsi 2: Pasang Semua Line BBFS-{selectedTier}</span>
+              <span className="font-semibold text-slate-300">🛡️ Opsi 3: Semua BBFS-{selectedTier}</span>
               <span className="font-mono">{allLines.length} line</span>
             </div>
             <div className="space-y-1.5 text-xs font-mono">
