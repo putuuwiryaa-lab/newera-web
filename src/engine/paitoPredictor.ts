@@ -1,4 +1,5 @@
-import type { PaitoMacroPrediction, OverdueAlert } from './types';
+import type { PaitoMacroPrediction, OverdueAlert, OverdueShioInfo } from './types';
+import { getShioFor2D, SHIO_2026_LIST, JALUR_SHIO_MAP } from './shio';
 
 /**
  * Hitung Biji 2D (Digital Root): penjumlahan berulang Kepala + Ekor hingga 1 digit (0-9).
@@ -39,6 +40,8 @@ export function predictPaitoMacro(
   if (history2D.length === 0) {
     const defaultProbs: Record<number, number> = {};
     for (let d = 0; d < 10; d++) defaultProbs[d] = 0.1;
+    const defaultShioProbs: Record<number, number> = {};
+    for (let s = 1; s <= 12; s++) defaultShioProbs[s] = Number((1 / 12).toFixed(3));
     return {
       topBiji: [1, 2, 3],
       bijiProbabilities: defaultProbs,
@@ -51,6 +54,11 @@ export function predictPaitoMacro(
       },
       primaryMagnitude: 'Kecil',
       magnitudeProbabilities: { Besar: 0.5, Kecil: 0.5 },
+      topShios: [1, 2, 3],
+      primaryJalur: 1,
+      shioProbabilities: defaultShioProbs,
+      jalurProbabilities: { 1: 0.34, 2: 0.33, 3: 0.33 },
+      overdueShios: [],
       overdueAlerts: [],
       confidenceScore: 60
     };
@@ -208,7 +216,80 @@ export function predictPaitoMacro(
   };
   const primaryMagnitude: 'Besar' | 'Kecil' = scoreBesar >= scoreKecil ? 'Besar' : 'Kecil';
 
-  // 4. Overdue Alerts
+  // 4. Analisis Shio 2026 (Tahun Kuda Api)
+  const shioHistory = sub.map(([k, e]) => getShioFor2D(k * 10 + e).no);
+  const lastShio = shioHistory[shioHistory.length - 1];
+
+  const shioTrans: Record<number, number> = {};
+  const shioMomentum: Record<number, number> = {};
+  for (let s = 1; s <= 12; s++) {
+    shioTrans[s] = 0;
+    shioMomentum[s] = 0;
+  }
+
+  for (let i = 0; i < shioHistory.length - 1; i++) {
+    if (shioHistory[i] === lastShio) {
+      shioTrans[shioHistory[i + 1]] += 1;
+    }
+  }
+
+  shioHistory.forEach((s, idx) => {
+    const decay = Math.exp(0.06 * (idx - shioHistory.length + 1));
+    shioMomentum[s] += decay;
+  });
+
+  const shioGap: Record<number, number> = {};
+  for (let s = 1; s <= 12; s++) {
+    let gap = shioHistory.length;
+    for (let step = 0; step < shioHistory.length; step++) {
+      if (shioHistory[shioHistory.length - 1 - step] === s) {
+        gap = step;
+        break;
+      }
+    }
+    shioGap[s] = gap;
+  }
+
+  const shioScores: Record<number, number> = {};
+  for (let s = 1; s <= 12; s++) {
+    const mScore = shioMomentum[s];
+    const tScore = shioTrans[s] * 1.5;
+    const gapBonus = shioGap[s] >= 14 ? 1.5 : 0;
+    shioScores[s] = mScore + tScore + gapBonus;
+  }
+
+  const totShioScore = Object.values(shioScores).reduce((a, b) => a + b, 0) || 1.0;
+  const shioProbabilities: Record<number, number> = {};
+  for (let s = 1; s <= 12; s++) {
+    shioProbabilities[s] = Number((shioScores[s] / totShioScore).toFixed(3));
+  }
+
+  const topShios = Array.from({ length: 12 }, (_, i) => i + 1)
+    .sort((a, b) => shioScores[b] - shioScores[a])
+    .slice(0, 3);
+
+  // Probabilitas 3 Jalur Shio
+  const jalurProbabilities: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+  ([1, 2, 3] as (1 | 2 | 3)[]).forEach((j) => {
+    const shiosInJalur = JALUR_SHIO_MAP[j];
+    const sumProb = shiosInJalur.reduce((acc, sno) => acc + (shioProbabilities[sno] || 0), 0);
+    jalurProbabilities[j] = sumProb;
+  });
+  const totJalur = (jalurProbabilities[1] + jalurProbabilities[2] + jalurProbabilities[3]) || 1.0;
+  jalurProbabilities[1] = Number((jalurProbabilities[1] / totJalur).toFixed(3));
+  jalurProbabilities[2] = Number((jalurProbabilities[2] / totJalur).toFixed(3));
+  jalurProbabilities[3] = Number((jalurProbabilities[3] / totJalur).toFixed(3));
+
+  let primaryJalur: 1 | 2 | 3 = 1;
+  let maxJalurProb = -1;
+  ([1, 2, 3] as (1 | 2 | 3)[]).forEach((j) => {
+    if (jalurProbabilities[j] > maxJalurProb) {
+      maxJalurProb = jalurProbabilities[j];
+      primaryJalur = j;
+    }
+  });
+
+  // 5. Overdue Alerts
   const overdueAlerts: OverdueAlert[] = [];
   PARITY_STATES.forEach((p) => {
     const g = parityGap[p];
@@ -234,6 +315,29 @@ export function predictPaitoMacro(
     }
   }
 
+  // Overdue Shios Tracker
+  const overdueShios: OverdueShioInfo[] = [];
+  SHIO_2026_LIST.forEach((sInfo) => {
+    const g = shioGap[sInfo.no];
+    if (g >= 14) {
+      const alertLevel = g >= 20 ? 'EKSTREM' : 'WASPADA';
+      overdueShios.push({
+        number: sInfo.no,
+        name: sInfo.name,
+        emoji: sInfo.emoji,
+        jalur: sInfo.jalur,
+        gap: g,
+        alertLevel
+      });
+      overdueAlerts.push({
+        type: 'shio',
+        label: `Shio ${sInfo.emoji} ${sInfo.name} (${String(sInfo.no).padStart(2, '0')})`,
+        gap: g,
+        alertLevel
+      });
+    }
+  });
+
   const confidenceScore = Math.min(
     92,
     Math.max(
@@ -253,6 +357,11 @@ export function predictPaitoMacro(
     parityProbabilities,
     primaryMagnitude,
     magnitudeProbabilities,
+    topShios,
+    primaryJalur,
+    shioProbabilities,
+    jalurProbabilities,
+    overdueShios,
     overdueAlerts,
     confidenceScore
   };

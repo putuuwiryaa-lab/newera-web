@@ -33,7 +33,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   onToast
 }) => {
   const [selectedTier, setSelectedTier] = useState<6 | 7 | 8 | 9>(7);
-  const [trimmerTab, setTrimmerTab] = useState<'sniper' | 'top10'>('sniper');
+  const [trimmerTab, setTrimmerTab] = useState<'super_sniper' | 'sniper' | 'top10'>('super_sniper');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [betPerLine, setBetPerLine] = useState<number>(1000);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -58,11 +58,13 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   const allLines = [...trimmed.top10, ...trimmed.medium15, ...trimmed.cadangan];
   const allLinesText = formatLines(allLines, 'space');
 
-  // Sniper Paito Trimmer
+  // Sniper Paito & Shio Trimmer
   const sniper = prediction.paitoPrediction
     ? generateSniperTrim(currentDigits, prediction.paitoPrediction, false)
     : null;
 
+  const superSniper = sniper?.superSniperShio ?? [];
+  const superSniperText = formatLines(superSniper, 'space');
   const sniperTop = sniper?.sniperTop ?? [];
   const sniperTopText = formatLines(sniperTop, 'space');
 
@@ -227,12 +229,16 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">
-                    {trimmerTab === 'sniper'
-                      ? '🎯 Sniper Paito BOM (Paling Presisi & Irit)'
+                    {trimmerTab === 'super_sniper'
+                      ? '🐴 Super Sniper Shio (Presisi Maksimal)'
+                      : trimmerTab === 'sniper'
+                      ? '🎯 Sniper Paito BOM (Top Biji & Paritas)'
                       : 'Top 10 Line BOM (Paling Siap Pasang)'}
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    {trimmerTab === 'sniper'
+                    {trimmerTab === 'super_sniper'
+                      ? `Irisan BBFS-${selectedTier} + Top 3 Biji + Paritas + Top 3 Shio 2026 (Super Irit)`
+                      : trimmerTab === 'sniper'
                       ? `Irisan BBFS-${selectedTier} + Top 3 Biji & Pola Paritas (Hemat ~${sniper?.efficiencyPct ?? 88}% Modal)`
                       : '10 line 2D dengan bobot skor probabilitas tertinggi'}
                   </p>
@@ -243,6 +249,16 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
               <div className="flex items-center space-x-2">
                 <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-white/[0.08]">
                   <button
+                    onClick={() => setTrimmerTab('super_sniper')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                      trimmerTab === 'super_sniper'
+                        ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🐴 Super ({superSniper.length})
+                  </button>
+                  <button
                     onClick={() => setTrimmerTab('sniper')}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                       trimmerTab === 'sniper'
@@ -250,7 +266,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Sniper ({sniperTop.length})
+                    🎯 Sniper ({sniperTop.length})
                   </button>
                   <button
                     onClick={() => setTrimmerTab('top10')}
@@ -266,24 +282,30 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
 
                 <button
                   onClick={() =>
-                    trimmerTab === 'sniper'
+                    trimmerTab === 'super_sniper'
+                      ? triggerCopy(superSniperText, 'super_sniper', 'Super Sniper Shio BOM')
+                      : trimmerTab === 'sniper'
                       ? triggerCopy(sniperTopText, 'sniper', 'Sniper BOM')
                       : triggerCopy(top10Text, 'top10', 'Top 10 Line BOM')
                   }
                   className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 border ${
-                    trimmerTab === 'sniper'
+                    trimmerTab === 'super_sniper'
+                      ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
+                      : trimmerTab === 'sniper'
                       ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/30'
                       : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/30'
                   }`}
                 >
-                  {copiedKey === (trimmerTab === 'sniper' ? 'sniper' : 'top10') ? (
+                  {copiedKey === (trimmerTab === 'super_sniper' ? 'super_sniper' : trimmerTab === 'sniper' ? 'sniper' : 'top10') ? (
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
                   )}
                   <span>
-                    {copiedKey === (trimmerTab === 'sniper' ? 'sniper' : 'top10')
+                    {copiedKey === (trimmerTab === 'super_sniper' ? 'super_sniper' : trimmerTab === 'sniper' ? 'sniper' : 'top10')
                       ? 'Tersalin'
+                      : trimmerTab === 'super_sniper'
+                      ? `Salin ${superSniper.length} Line`
                       : trimmerTab === 'sniper'
                       ? `Salin ${sniperTop.length} Line`
                       : 'Salin 10 Line'}
@@ -295,44 +317,59 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
             {/* Clickable Line Pills */}
             <div
               className={`grid gap-2 my-4 ${
-                trimmerTab === 'sniper' ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-5'
+                trimmerTab === 'super_sniper'
+                  ? 'grid-cols-2 sm:grid-cols-4'
+                  : trimmerTab === 'sniper'
+                  ? 'grid-cols-3 sm:grid-cols-6'
+                  : 'grid-cols-5'
               }`}
             >
-              {(trimmerTab === 'sniper' ? (sniperTop.length > 0 ? sniperTop : top10.slice(0, 4)) : top10).map(
-                (line, idx) => {
-                  const isLineCopied = copiedKey === `line-${line}`;
-                  return (
-                    <button
-                      key={line}
-                      onClick={() => triggerCopy(line, `line-${line}`, `Line ${line}`)}
-                      className={`p-2.5 rounded-xl border text-center transition-all active:scale-95 group relative ${
-                        trimmerTab === 'sniper'
-                          ? 'bg-slate-900/95 hover:bg-amber-950/40 border-amber-500/30 hover:border-amber-400'
-                          : 'bg-slate-900/90 hover:bg-purple-950/60 border-white/[0.08] hover:border-purple-500/40'
+              {(trimmerTab === 'super_sniper'
+                ? (superSniper.length > 0 ? superSniper : sniperTop.slice(0, 3))
+                : trimmerTab === 'sniper'
+                ? (sniperTop.length > 0 ? sniperTop : top10.slice(0, 4))
+                : top10
+              ).map((line, idx) => {
+                const isLineCopied = copiedKey === `line-${line}`;
+                return (
+                  <button
+                    key={line}
+                    onClick={() => triggerCopy(line, `line-${line}`, `Line ${line}`)}
+                    className={`p-2.5 rounded-xl border text-center transition-all active:scale-95 group relative ${
+                      trimmerTab === 'super_sniper'
+                        ? 'bg-slate-900/95 hover:bg-emerald-950/40 border-emerald-500/30 hover:border-emerald-400'
+                        : trimmerTab === 'sniper'
+                        ? 'bg-slate-900/95 hover:bg-amber-950/40 border-amber-500/30 hover:border-amber-400'
+                        : 'bg-slate-900/90 hover:bg-purple-950/60 border-white/[0.08] hover:border-purple-500/40'
+                    }`}
+                    title="Klik untuk salin 1 line"
+                  >
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {trimmerTab === 'super_sniper'
+                        ? `🐴 SHIO #${idx + 1}`
+                        : trimmerTab === 'sniper'
+                        ? `🎯 BOM #${idx + 1}`
+                        : `#${idx + 1}`}
+                    </div>
+                    <div
+                      className={`font-mono font-bold text-base mt-0.5 ${
+                        trimmerTab === 'super_sniper'
+                          ? 'text-emerald-300 group-hover:text-emerald-200'
+                          : trimmerTab === 'sniper'
+                          ? 'text-amber-300 group-hover:text-amber-200'
+                          : 'text-purple-200 group-hover:text-purple-100'
                       }`}
-                      title="Klik untuk salin 1 line"
                     >
-                      <div className="text-[10px] text-slate-500 font-mono">
-                        {trimmerTab === 'sniper' ? `🎯 BOM #${idx + 1}` : `#${idx + 1}`}
-                      </div>
-                      <div
-                        className={`font-mono font-bold text-base mt-0.5 ${
-                          trimmerTab === 'sniper'
-                            ? 'text-amber-300 group-hover:text-amber-200'
-                            : 'text-purple-200 group-hover:text-purple-100'
-                        }`}
-                      >
-                        {line}
-                      </div>
-                      {isLineCopied && (
-                        <span className="absolute inset-0 bg-emerald-950/90 rounded-xl border border-emerald-500/50 flex items-center justify-center text-emerald-300 text-[10px] font-bold">
-                          OK
-                        </span>
-                      )}
-                    </button>
-                  );
-                }
-              )}
+                      {line}
+                    </div>
+                    {isLineCopied && (
+                      <span className="absolute inset-0 bg-emerald-950/90 rounded-xl border border-emerald-500/50 flex items-center justify-center text-emerald-300 text-[10px] font-bold">
+                        OK
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

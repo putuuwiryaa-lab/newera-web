@@ -2,6 +2,7 @@ import type { EvaluationMetrics } from './types';
 import { AdaptiveEnsemble, computeDedicatedBBFSTiers } from './adaptiveEngine';
 import { predictPaitoMacro, computeBiji, getParity } from './paitoPredictor';
 import { generateSniperTrim } from './generator';
+import { getShioFor2D } from './shio';
 
 export const AI_BASELINES: Record<number, number> = {
   3: 51.0,
@@ -57,6 +58,8 @@ export function runWalkForwardEvaluation(
   let paitoBijiHits = 0;
   let paitoParityHits = 0;
   let paitoMagHits = 0;
+  let paitoShioHits = 0;
+  let paitoJalurHits = 0;
   let sniperBomHits = 0;
   let totalSniperLines = 0;
   let sniperPnl = 0;
@@ -110,6 +113,7 @@ export function runWalkForwardEvaluation(
     const actualBiji = computeBiji(actualK, actualE);
     const actualParity = getParity(actualK, actualE);
     const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
+    const actualShio = getShioFor2D(actualK * 10 + actualE);
 
     if (paitoPred.topBiji.includes(actualBiji)) {
       paitoBijiHits++;
@@ -119,6 +123,12 @@ export function runWalkForwardEvaluation(
     }
     if (actualMag === paitoPred.primaryMagnitude) {
       paitoMagHits++;
+    }
+    if ((paitoPred.topShios || []).includes(actualShio.no)) {
+      paitoShioHits++;
+    }
+    if (actualShio.jalur === paitoPred.primaryJalur) {
+      paitoJalurHits++;
     }
 
     // Evaluasi Sniper BOM dari BBFS-7
@@ -175,6 +185,10 @@ export function runWalkForwardEvaluation(
     magnitudeHits: paitoMagHits,
     magnitudeRate: Number(((paitoMagHits / testDraws) * 100).toFixed(2)),
     magnitudeBaseline: 50.0,
+    shioHits: paitoShioHits,
+    shioRate: Number(((paitoShioHits / testDraws) * 100).toFixed(2)),
+    jalurHits: paitoJalurHits,
+    jalurRate: Number(((paitoJalurHits / testDraws) * 100).toFixed(2)),
     sniperBomHits,
     sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
     avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),

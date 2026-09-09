@@ -1,3 +1,5 @@
+import type { ShioInfo } from './shio';
+
 export interface Market {
   id: string;
   name: string;
@@ -64,6 +66,10 @@ export interface PaitoEvaluationStats {
   magnitudeHits: number;
   magnitudeRate: number;
   magnitudeBaseline: number;
+  shioHits?: number;
+  shioRate?: number;
+  jalurHits?: number;
+  jalurRate?: number;
   sniperBomHits: number;
   sniperBomRate: number;
   avgSniperLines: number;
@@ -96,6 +102,11 @@ export interface HistoryItem {
   biji: number;
   besarKecil: 'Besar' | 'Kecil';
   ganjilGenap: string;
+  shio?: ShioInfo;
+  shioName?: string;
+  shioNumber?: number;
+  shioEmoji?: string;
+  shioJalur?: 1 | 2 | 3;
 }
 
 export interface TierAuditStatus {
@@ -149,6 +160,12 @@ export interface PaitoTuningDetail {
   predictedMagnitude: string;
   actualMagnitude: string;
   hitMagnitude: boolean;
+  predictedTopShios?: number[];
+  actualShio?: number;
+  hitShio?: boolean;
+  predictedJalur?: 1 | 2 | 3;
+  actualJalur?: 1 | 2 | 3;
+  hitJalur?: boolean;
   sniperZone: 'BOM_SNIPER' | 'SEKUNDER' | 'CADANGAN' | 'MISSED';
   strikeCount: number;
 }
@@ -174,8 +191,17 @@ export interface DayTuningLog {
 }
 
 export interface OverdueAlert {
-  type: 'biji' | 'parity' | 'magnitude';
+  type: 'biji' | 'parity' | 'magnitude' | 'shio' | 'jalur';
   label: string;
+  gap: number;
+  alertLevel: 'NORMAL' | 'WASPADA' | 'EKSTREM';
+}
+
+export interface OverdueShioInfo {
+  number: number;
+  name: string;
+  emoji: string;
+  jalur: 1 | 2 | 3;
   gap: number;
   alertLevel: 'NORMAL' | 'WASPADA' | 'EKSTREM';
 }
@@ -187,6 +213,12 @@ export interface PaitoMacroPrediction {
   parityProbabilities: Record<string, number>;
   primaryMagnitude: 'Besar' | 'Kecil';
   magnitudeProbabilities: Record<string, number>;
+  // Shio 2026 (Tahun Kuda Api)
+  topShios: number[]; // Nomor Shio 1..12 (Top 3)
+  primaryJalur: 1 | 2 | 3;
+  shioProbabilities: Record<number, number>;
+  jalurProbabilities: Record<number, number>;
+  overdueShios?: OverdueShioInfo[];
   overdueAlerts: OverdueAlert[];
   confidenceScore: number;
 }

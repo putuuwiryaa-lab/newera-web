@@ -1,5 +1,6 @@
 import type { PaitoMacroPrediction } from './types';
 import { computeBiji, getParity } from './paitoPredictor';
+import { getShioFor2D } from './shio';
 
 /**
  * Menghasilkan daftar pasangan 2D dari digit-digit BBFS terpilih.
@@ -71,13 +72,14 @@ export function generateSmartTrim(rankedDigits: number[]): SmartTrimResult {
 export interface SniperTrimResult {
   sniperTop: string[];
   sniperSecondary: string[];
+  superSniperShio?: string[];
   cadangan: string[];
   efficiencyPct: number;
 }
 
 /**
- * Pemangkas Sniper 2D Berbasis Paito:
- * Menyaring baris BBFS menggunakan irisan Top 3 Biji dan Pola Paritas Utama.
+ * Pemangkas Sniper 2D Berbasis Paito & Shio:
+ * Menyaring baris BBFS menggunakan irisan Top 3 Biji, Pola Paritas Utama, dan Top 3 Shio 2026.
  */
 export function generateSniperTrim(
   digits: number[],
@@ -86,9 +88,11 @@ export function generateSniperTrim(
 ): SniperTrimResult {
   const allLines = generate2DLines(digits, includeTwins);
   const topBijiSet = new Set(paitoPred.topBiji);
+  const topShioSet = new Set(paitoPred.topShios || []);
 
   const sniperTop: string[] = [];
   const sniperSecondary: string[] = [];
+  const superSniperShio: string[] = [];
   const cadangan: string[] = [];
 
   for (const line of allLines) {
@@ -96,12 +100,17 @@ export function generateSniperTrim(
     const e = parseInt(line[1], 10);
     const biji = computeBiji(k, e);
     const parity = getParity(k, e);
+    const shio = getShioFor2D(k * 10 + e);
 
     const hitBiji = topBijiSet.has(biji);
     const hitParity = parity === paitoPred.primaryParity;
+    const hitShio = topShioSet.has(shio.no);
 
     if (hitBiji && hitParity) {
       sniperTop.push(line);
+      if (hitShio) {
+        superSniperShio.push(line);
+      }
     } else if (hitBiji) {
       sniperSecondary.push(line);
     } else {
@@ -118,6 +127,7 @@ export function generateSniperTrim(
   return {
     sniperTop,
     sniperSecondary,
+    superSniperShio,
     cadangan,
     efficiencyPct
   };

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import type { PaitoMacroPrediction, HistoryItem } from '../engine/types';
 import { predictPaitoMacro, computeBiji, getParity } from '../engine/paitoPredictor';
+import { getShioFor2D, getShioByNumber } from '../engine/shio';
 import {
   Sparkles,
   Compass,
@@ -9,7 +10,8 @@ import {
   Hash,
   Award,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Crown
 } from 'lucide-react';
 
 interface PaitoPredictionCardProps {
@@ -44,6 +46,10 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
     parityProbabilities,
     primaryMagnitude,
     magnitudeProbabilities,
+    topShios = [1, 2, 3],
+    primaryJalur = 1,
+    shioProbabilities = {},
+    jalurProbabilities = { 1: 0.34, 2: 0.33, 3: 0.33 },
     overdueAlerts,
     confidenceScore
   } = prediction;
@@ -61,11 +67,14 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
     const actualBiji = computeBiji(actualK, actualE);
     const actualParity = getParity(actualK, actualE);
     const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
+    const actualShioInfo = getShioFor2D(actualK * 10 + actualE);
 
     const hitBiji = prevPred.topBiji.includes(actualBiji);
     const hitParity = actualParity === prevPred.primaryParity;
     const hitMag = actualMag === prevPred.primaryMagnitude;
-    const hitCount = (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0);
+    const hitShio = (prevPred.topShios || []).includes(actualShioInfo.no);
+    const hitJalur = actualShioInfo.jalur === prevPred.primaryJalur;
+    const hitCount = (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0) + (hitShio ? 1 : 0);
 
     return {
       lastFull: lastItem.full,
@@ -73,12 +82,17 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
       actualBiji,
       actualParity,
       actualMag,
+      actualShioInfo,
       predictedTopBiji: prevPred.topBiji,
       predictedParity: prevPred.primaryParity,
       predictedMag: prevPred.primaryMagnitude,
+      predictedTopShios: prevPred.topShios || [],
+      predictedJalur: prevPred.primaryJalur || 1,
       hitBiji,
       hitParity,
       hitMag,
+      hitShio,
+      hitJalur,
       hitCount
     };
   }, [historyItems]);
@@ -101,7 +115,7 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Analisis siklus Biji, Transisi Paritas 4-Kuadran, dan Fluktuasi Nilai
+              Analisis siklus Biji, Transisi Paritas 4-Kuadran, dan Shio 2026 (Tahun Kuda Api)
             </p>
           </div>
         </div>
@@ -129,16 +143,16 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                    lastDrawAudit.hitCount === 3
+                    lastDrawAudit.hitCount === 4
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : lastDrawAudit.hitCount >= 1
+                      : lastDrawAudit.hitCount >= 2
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                       : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                   }`}
                 >
-                  {lastDrawAudit.hitCount === 3
-                    ? '🎯 3/3 HIT - STRIKE SEMPURNA'
-                    : `${lastDrawAudit.hitCount}/3 ELEMEN HIT`}
+                  {lastDrawAudit.hitCount === 4
+                    ? '🎯 4/4 HIT - STRIKE SEMPURNA'
+                    : `${lastDrawAudit.hitCount}/4 ELEMEN HIT`}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 mt-1 font-mono">
@@ -180,11 +194,161 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
                     </span>
                   )}
                 </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="flex items-center space-x-1">
+                  <span>Shio {lastDrawAudit.actualShioInfo.emoji} {lastDrawAudit.actualShioInfo.name} ({lastDrawAudit.actualShioInfo.no}):</span>
+                  {lastDrawAudit.hitShio ? (
+                    <span className="text-emerald-400 font-bold flex items-center">
+                      <CheckCircle2 className="w-3 h-3 mr-0.5 inline" /> HIT (Top 3)
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 flex items-center">
+                      <XCircle className="w-3 h-3 mr-0.5 inline" /> Miss
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Kartu Analisis Shio 2026 (Tahun Kuda Api) */}
+      <div className="p-4 rounded-xl bg-slate-950/70 border border-white/[0.08] space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">🐴</span>
+            <div>
+              <h5 className="text-xs font-bold text-slate-100 flex items-center space-x-1.5">
+                <span>Analisis Shio 2026 (Tahun Kuda Api)</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  Fire Horse
+                </span>
+              </h5>
+              <p className="text-[11px] text-slate-400">
+                Rotasi 12 Zodiak Mundur &middot; Matriks Markov Orde-1 &middot; Trinitas Jalur Togel
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] text-slate-400 font-mono">Jalur Utama:</span>
+            <span
+              className={`px-2.5 py-0.5 rounded font-mono font-bold text-xs border flex items-center space-x-1 ${
+                primaryJalur === 1
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : primaryJalur === 2
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+              }`}
+            >
+              <Crown className="w-3 h-3 mr-1 text-amber-400" />
+              <span>Jalur {primaryJalur === 1 ? 'I' : primaryJalur === 2 ? 'II' : 'III'}</span>
+              <span className="text-[10px] opacity-80">
+                ({Math.round((jalurProbabilities[primaryJalur] || 0.33) * 100)}%)
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Top 3 Shio Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {topShios.map((shioNo, idx) => {
+            const shioObj = getShioByNumber(shioNo);
+            const prob = shioProbabilities[shioNo]
+              ? Math.round(shioProbabilities[shioNo] * 100)
+              : Math.round(100 / 12);
+            return (
+              <div
+                key={shioNo}
+                className={`p-3 rounded-xl border flex flex-col justify-between space-y-2 transition-all ${
+                  idx === 0
+                    ? 'bg-amber-500/10 border-amber-500/35 ring-1 ring-amber-400/25 shadow-sm'
+                    : idx === 1
+                    ? 'bg-emerald-500/10 border-emerald-500/30'
+                    : 'bg-slate-900/60 border-white/[0.08]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl">{shioObj.emoji}</span>
+                    <div>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-sm font-bold text-white font-mono">{shioObj.name}</span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-slate-300">
+                          {String(shioObj.no).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        Jalur {shioObj.jalur === 1 ? 'I' : shioObj.jalur === 2 ? 'II' : 'III'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right font-mono">
+                    <span className="text-sm font-bold text-amber-300">{prob}%</span>
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-500 font-semibold">
+                      {idx === 0 ? '★ Pilihan 1' : idx === 1 ? 'Pilihan 2' : 'Pilihan 3'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Nomor 2D Shio */}
+                <div className="pt-1.5 border-t border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400 block mb-1">
+                    Angka 2D ({shioObj.numbers.length} Line):
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {shioObj.numbers.map((nStr) => (
+                      <span
+                        key={nStr}
+                        className="px-1.5 py-0.5 rounded bg-slate-950 border border-white/[0.08] text-[10px] font-mono font-semibold text-slate-300 hover:border-amber-400/50 hover:text-white transition-colors"
+                      >
+                        {nStr}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Jalur Meter Bar */}
+        <div className="p-2.5 rounded-lg bg-slate-900/60 border border-white/[0.04] space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span>Distribusi Bobot Trinitas Jalur:</span>
+            <div className="flex items-center space-x-3 text-[10px]">
+              <span className="text-amber-300">
+                Jalur I: {Math.round((jalurProbabilities[1] || 0.34) * 100)}%
+              </span>
+              <span className="text-emerald-300">
+                Jalur II: {Math.round((jalurProbabilities[2] || 0.33) * 100)}%
+              </span>
+              <span className="text-purple-300">
+                Jalur III: {Math.round((jalurProbabilities[3] || 0.33) * 100)}%
+              </span>
+            </div>
+          </div>
+          <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden flex border border-white/[0.04]">
+            <div
+              className="bg-amber-500 h-full transition-all"
+              style={{ width: `${Math.round((jalurProbabilities[1] || 0.34) * 100)}%` }}
+              title="Jalur I (Kuda, Kelinci, Tikus, Ayam)"
+            />
+            <div
+              className="bg-emerald-500 h-full transition-all"
+              style={{ width: `${Math.round((jalurProbabilities[2] || 0.33) * 100)}%` }}
+              title="Jalur II (Ular, Harimau, Babi, Monyet)"
+            />
+            <div
+              className="bg-purple-500 h-full transition-all"
+              style={{ width: `${Math.round((jalurProbabilities[3] || 0.33) * 100)}%` }}
+              title="Jalur III (Naga, Kerbau, Anjing, Kambing)"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* 3 Grid Pillars: Biji, Ganjil-Genap, Besar-Kecil */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">

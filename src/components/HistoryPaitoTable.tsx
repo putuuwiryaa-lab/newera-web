@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { HistoryItem, PaitoMacroPrediction } from '../engine/types';
 import { predictPaitoMacro } from '../engine/paitoPredictor';
+import { SHIO_2026_LIST } from '../engine/shio';
 import { PaitoPredictionCard } from './PaitoPredictionCard';
 import { ListFilter, Search, X, Copy, Check, Star } from 'lucide-react';
 
@@ -18,6 +19,7 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   const [filterTwinOnly, setFilterTwinOnly] = useState(false);
   const [filterBiji, setFilterBiji] = useState<'all' | 'top3' | number>('all');
   const [filterParity, setFilterParity] = useState<string>('all');
+  const [filterShio, setFilterShio] = useState<'all' | 'top3' | 'j1' | 'j2' | 'j3' | number>('all');
   const [searchDigit, setSearchDigit] = useState<string>('');
   const [limit, setLimit] = useState<number>(25);
   const [copied, setCopied] = useState(false);
@@ -42,6 +44,17 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       if (filterParity !== 'all') {
         if (item.ganjilGenap !== filterParity) return false;
       }
+      if (filterShio === 'top3') {
+        if (!computedPrediction.topShios.includes(item.shioNumber ?? 0)) return false;
+      } else if (filterShio === 'j1') {
+        if (item.shioJalur !== 1) return false;
+      } else if (filterShio === 'j2') {
+        if (item.shioJalur !== 2) return false;
+      } else if (filterShio === 'j3') {
+        if (item.shioJalur !== 3) return false;
+      } else if (typeof filterShio === 'number') {
+        if (item.shioNumber !== filterShio) return false;
+      }
       if (searchDigit.trim()) {
         const query = searchDigit.trim();
         const comb2D = `${item.kepala}${item.ekor}`;
@@ -50,16 +63,16 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       }
       return true;
     });
-  }, [reversed, filterTwinOnly, filterBiji, filterParity, searchDigit, computedPrediction]);
+  }, [reversed, filterTwinOnly, filterBiji, filterParity, filterShio, searchDigit, computedPrediction]);
 
   const displayed = useMemo(() => filtered.slice(0, limit), [filtered, limit]);
 
   const handleCopyPaito = () => {
     const lines = displayed.map(
       (d) =>
-        `#${d.index}\t${d.full}\t${d.kepala}${d.ekor}\t${d.isTwin ? 'TWIN' : '-'}\tBiji:${d.biji}\t${d.besarKecil}\t${d.ganjilGenap}`
+        `#${d.index}\t${d.full}\t${d.kepala}${d.ekor}\t${d.shioEmoji || ''} ${d.shioName || ''} (${d.shioNumber || ''}) [J${d.shioJalur || ''}]\t${d.isTwin ? 'TWIN' : '-'}\tBiji:${d.biji}\t${d.besarKecil}\t${d.ganjilGenap}`
     );
-    const header = `=== REKAP PAITO ${marketName} (${displayed.length} PUTARAN) ===\nNo\tResult 4D\tTarget 2D\tTwin\tBiji\tKategori\tPola`;
+    const header = `=== REKAP PAITO ${marketName} (${displayed.length} PUTARAN) ===\nNo\tResult 4D\tTarget 2D\tShio 2026\tTwin\tBiji\tKategori\tPola`;
     navigator.clipboard.writeText([header, ...lines].join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -67,15 +80,21 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
 
   // Statistik cepat dari data yang sedang ditampilkan
   const stats = useMemo(() => {
-    if (displayed.length === 0) return { twinPct: 0, besarPct: 0, genapPct: 0 };
+    if (displayed.length === 0) return { twinPct: 0, besarPct: 0, genapPct: 0, j1Pct: 0, j2Pct: 0, j3Pct: 0 };
     const twins = displayed.filter((d) => d.isTwin).length;
     const besars = displayed.filter((d) => d.besarKecil === 'Besar').length;
     const genaps = displayed.filter((d) => d.ganjilGenap.includes('Genap')).length;
+    const j1 = displayed.filter((d) => d.shioJalur === 1).length;
+    const j2 = displayed.filter((d) => d.shioJalur === 2).length;
+    const j3 = displayed.filter((d) => d.shioJalur === 3).length;
 
     return {
       twinPct: Math.round((twins / displayed.length) * 100),
       besarPct: Math.round((besars / displayed.length) * 100),
-      genapPct: Math.round((genaps / displayed.length) * 100)
+      genapPct: Math.round((genaps / displayed.length) * 100),
+      j1Pct: Math.round((j1 / displayed.length) * 100),
+      j2Pct: Math.round((j2 / displayed.length) * 100),
+      j3Pct: Math.round((j3 / displayed.length) * 100)
     };
   }, [displayed]);
 
@@ -163,6 +182,31 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
             <option value="Ganjil-Ganjil">Ganjil-Ganjil</option>
           </select>
 
+          {/* Filter Shio 2026 */}
+          <select
+            value={typeof filterShio === 'number' ? filterShio : filterShio}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'all' || val === 'top3' || val === 'j1' || val === 'j2' || val === 'j3') {
+                setFilterShio(val);
+              } else {
+                setFilterShio(Number(val));
+              }
+            }}
+            className="px-3 py-1.5 bg-slate-950/80 border border-white/[0.08] rounded-xl text-slate-300 text-xs focus:outline-none focus:border-emerald-500/50 font-mono cursor-pointer"
+          >
+            <option value="all">Semua Shio</option>
+            <option value="top3">★ Top 3 Shio ({computedPrediction.topShios.join(',')})</option>
+            <option value="j1">Jalur I (Kuda, Kelinci, Tikus, Ayam)</option>
+            <option value="j2">Jalur II (Ular, Harimau, Babi, Monyet)</option>
+            <option value="j3">Jalur III (Naga, Kerbau, Anjing, Kambing)</option>
+            {SHIO_2026_LIST.map((s) => (
+              <option key={s.no} value={s.no}>
+                {s.emoji} {String(s.no).padStart(2, '0')} {s.name} [J{s.jalur}]
+              </option>
+            ))}
+          </select>
+
           <button
             onClick={() => setFilterTwinOnly(!filterTwinOnly)}
             className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
@@ -210,6 +254,9 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
         <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/[0.06] text-slate-300">
           Genap: <strong className="text-emerald-400">{stats.genapPct}%</strong> | Ganjil: <strong className="text-purple-400">{100 - stats.genapPct}%</strong>
         </span>
+        <span className="px-2.5 py-1 rounded-lg bg-slate-900/80 border border-white/[0.06] text-slate-300">
+          Jalur: <strong className="text-amber-400">J1:{stats.j1Pct}%</strong> | <strong className="text-emerald-400">J2:{stats.j2Pct}%</strong> | <strong className="text-purple-400">J3:{stats.j3Pct}%</strong>
+        </span>
       </div>
 
       {/* Table */}
@@ -220,6 +267,7 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
               <th className="pb-2.5 font-medium">No</th>
               <th className="pb-2.5 font-medium">Result 4D</th>
               <th className="pb-2.5 font-medium">Target 2D</th>
+              <th className="pb-2.5 font-medium">Shio 2026</th>
               <th className="pb-2.5 font-medium">Status Twin</th>
               <th className="pb-2.5 font-medium">Biji 2D</th>
               <th className="pb-2.5 font-medium">Kategori</th>
@@ -244,6 +292,35 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
                   <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 font-bold tracking-wider shadow-sm">
                     {item.kepala}{item.ekor}
                   </span>
+                </td>
+                <td className="py-2.5">
+                  {item.shio ? (
+                    <span
+                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                        item.shioJalur === 1
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+                          : item.shioJalur === 2
+                          ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                          : 'bg-purple-500/10 text-purple-300 border-purple-500/25'
+                      } ${
+                        computedPrediction.topShios.includes(item.shioNumber ?? 0)
+                          ? 'ring-1 ring-amber-400/50 shadow-sm'
+                          : ''
+                      }`}
+                    >
+                      <span>{item.shioEmoji}</span>
+                      <span className="font-bold">{item.shioName}</span>
+                      <span className="text-[9px] opacity-75">({String(item.shioNumber).padStart(2, '0')})</span>
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-white/10 text-white/90 font-mono ml-0.5">
+                        J{item.shioJalur}
+                      </span>
+                      {computedPrediction.topShios.includes(item.shioNumber ?? 0) && (
+                        <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 ml-0.5" />
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-slate-600 text-[11px]">-</span>
+                  )}
                 </td>
                 <td className="py-2.5">
                   {item.isTwin ? (

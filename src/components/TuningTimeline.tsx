@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { DayTuningLog } from '../engine/types';
+import { getShioByNumber } from '../engine/shio';
 import {
   History,
   RotateCcw,
@@ -377,6 +378,17 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                         <span>{log.paito.actualMagnitude}</span>
                       </span>
                     </div>
+                    {log.paito.actualShio && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">
+                          {getShioByNumber(log.paito.actualShio).emoji} {getShioByNumber(log.paito.actualShio).name}:
+                        </span>
+                        <span className={log.paito.hitShio ? 'text-emerald-400 font-semibold flex items-center space-x-0.5' : 'text-slate-500 flex items-center space-x-0.5'}>
+                          {log.paito.hitShio ? <CheckCircle2 className="w-3 h-3 inline text-emerald-400" /> : <XCircle className="w-3 h-3 inline text-slate-500" />}
+                          <span>{log.paito.hitShio ? 'Top 3' : 'Miss'}</span>
+                        </span>
+                      </div>
+                    )}
                     <div className="pt-1.5 border-t border-white/[0.06] flex justify-between items-center">
                       <span className="text-slate-400">Sniper:</span>
                       <span
@@ -407,14 +419,14 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
                       <span>Evaluasi Paito:</span>
                       <span
                         className={
-                          log.paito?.strikeCount === 3
+                          log.paito?.strikeCount === 4
                             ? 'text-emerald-400 font-bold'
                             : (log.paito?.strikeCount ?? 0) >= 2
                             ? 'text-amber-300 font-semibold'
                             : 'text-slate-500'
                         }
                       >
-                        {log.paito?.strikeCount === 3 ? 'PERFECT' : `${log.paito?.strikeCount ?? 0}/3 Hit`}
+                        {log.paito?.strikeCount === 4 ? 'PERFECT' : `${log.paito?.strikeCount ?? 0}/4 Hit`}
                       </span>
                     </div>
                     <div className="text-[8px] text-center pt-1 border-t border-white/[0.04] text-slate-400">

@@ -1,4 +1,5 @@
 import type { Market, HistoryItem } from '../engine/types';
+import { getShioFor2D } from '../engine/shio';
 import initialMarketsData from './initialMarkets.json';
 
 const FIRESTORE_REST_BASE =
@@ -71,6 +72,8 @@ export function parseHistoryItems(historyStr: string): HistoryItem[] {
     const eGenap = ekor % 2 === 0;
     const ganjilGenap = `${kGenap ? 'Genap' : 'Ganjil'}-${eGenap ? 'Genap' : 'Ganjil'}`;
 
+    const shio = getShioFor2D(val2D);
+
     return {
       index: idx + 1,
       full,
@@ -81,7 +84,12 @@ export function parseHistoryItems(historyStr: string): HistoryItem[] {
       isTwin,
       biji: sum,
       besarKecil,
-      ganjilGenap
+      ganjilGenap,
+      shio,
+      shioName: shio.name,
+      shioNumber: shio.no,
+      shioEmoji: shio.emoji,
+      shioJalur: shio.jalur
     };
   });
 }

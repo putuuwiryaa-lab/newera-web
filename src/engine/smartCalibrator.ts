@@ -14,6 +14,7 @@ import {
 } from './adaptiveEngine';
 import { generateSmartTrim, generateSniperTrim } from './generator';
 import { computeBiji, getParity } from './paitoPredictor';
+import { getShioFor2D } from './shio';
 
 export interface CalibrationAudit {
   marketId?: string;
@@ -679,9 +680,13 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       const actualBiji = computeBiji(k, e);
       const actualParity = getParity(k, e);
       const actualMag = k * 10 + e >= 50 ? 'Besar' : 'Kecil';
+      const actualShio = getShioFor2D(k * 10 + e);
+
       const hitBiji = pred.paitoPrediction.topBiji.includes(actualBiji);
       const hitParity = actualParity === pred.paitoPrediction.primaryParity;
       const hitMag = actualMag === pred.paitoPrediction.primaryMagnitude;
+      const hitShio = (pred.paitoPrediction.topShios || []).includes(actualShio.no);
+      const hitJalur = actualShio.jalur === pred.paitoPrediction.primaryJalur;
 
       const sn = generateSniperTrim(bbfs7, pred.paitoPrediction, false);
       let sniperZone: 'BOM_SNIPER' | 'SEKUNDER' | 'CADANGAN' | 'MISSED' = 'MISSED';
@@ -699,8 +704,14 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
         predictedMagnitude: pred.paitoPrediction.primaryMagnitude,
         actualMagnitude: actualMag,
         hitMagnitude: hitMag,
+        predictedTopShios: pred.paitoPrediction.topShios,
+        actualShio: actualShio.no,
+        hitShio,
+        predictedJalur: pred.paitoPrediction.primaryJalur,
+        actualJalur: actualShio.jalur,
+        hitJalur,
         sniperZone,
-        strikeCount: (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0)
+        strikeCount: (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0) + (hitShio ? 1 : 0)
       };
     }
 
