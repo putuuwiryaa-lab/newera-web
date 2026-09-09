@@ -31,7 +31,9 @@ export type PredictionType =
   | 'bbfs8'
   | 'bbfs9'
   | 'dead'
+  | 'super_sniper'
   | 'sniper'
+  | 'shio'
   | 'paito';
 
 export type LetterCaseMode = 'uppercase' | 'lowercase' | 'original';
@@ -196,10 +198,20 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         return pred.bbfs[9].join('');
       case 'dead':
         return pred.deadDigits.join('');
+      case 'super_sniper': {
+        if (!pred.paitoPrediction || !pred.bbfs[7]) return '----';
+        const sn = generateSniperTrim(pred.bbfs[7], pred.paitoPrediction, false);
+        return sn.superSniperShio && sn.superSniperShio.length > 0 ? sn.superSniperShio.join(' ') : '----';
+      }
       case 'sniper': {
         if (!pred.paitoPrediction || !pred.bbfs[7]) return '----';
         const sn = generateSniperTrim(pred.bbfs[7], pred.paitoPrediction, false);
         return sn.sniperTop.length > 0 ? sn.sniperTop.join(' ') : '----';
+      }
+      case 'shio': {
+        if (!pred.paitoPrediction || !pred.paitoPrediction.topShios) return '----';
+        const p = pred.paitoPrediction;
+        return `Shio:[${p.topShios.join(',')}] (Jalur ${p.primaryJalur})`;
       }
       case 'paito': {
         if (!pred.paitoPrediction) return '----';
@@ -242,8 +254,14 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
       case 'dead':
         label = 'angka mati';
         break;
+      case 'super_sniper':
+        label = 'super sniper 2d';
+        break;
       case 'sniper':
         label = 'bom sniper 2d';
+        break;
+      case 'shio':
+        label = 'shio 2026';
         break;
       case 'paito':
         label = 'paito makro 2d';
@@ -389,7 +407,9 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                 { id: 'bbfs8', label: 'BBFS 8' },
                 { id: 'bbfs9', label: 'BBFS 9' },
                 { id: 'dead', label: 'Angka Mati' },
+                { id: 'super_sniper', label: '🐴 Super (Shio)', star: true },
                 { id: 'sniper', label: '🎯 Sniper BOM', star: true },
+                { id: 'shio', label: '🐴 Shio 2026' },
                 { id: 'paito', label: 'Paito Makro' }
               ].map((item) => (
                 <button

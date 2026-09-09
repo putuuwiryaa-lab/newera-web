@@ -364,7 +364,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Top 3 Biji */}
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between">
               <div className="flex items-center justify-between text-xs text-slate-400">
@@ -443,11 +443,41 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
 
-            {/* Sniper BOM (Modal Hemat 90%) */}
-            <div className="p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/30 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
-                <span>🎯 Sniper BOM (BBFS-7 Irisan)</span>
-                <span className="text-[10px] font-mono text-amber-400">~{paitoStats.avgSniperLines} Line</span>
+            {/* Top 3 Shio 2026 */}
+            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-amber-500/20 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="flex items-center space-x-1">
+                  <span>🐴 Top 3 Shio 2026</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: 25.0%</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-amber-300">
+                  {paitoStats.shioRate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit {paitoStats.shioHits ?? 0} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.04] text-[11px]">
+                {paitoStats.shioRate !== undefined && paitoStats.shioBaseline !== undefined && (
+                  <span
+                    className={`font-semibold ${
+                      paitoStats.shioRate >= paitoStats.shioBaseline ? 'text-emerald-400' : 'text-rose-400'
+                    }`}
+                  >
+                    {paitoStats.shioRate >= paitoStats.shioBaseline ? '+' : ''}
+                    {(paitoStats.shioRate - paitoStats.shioBaseline).toFixed(1)}% Edge
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Sniper BOM */}
+            <div className="p-3.5 rounded-xl bg-cyan-500/[0.06] border border-cyan-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-cyan-300 font-semibold">
+                <span>🎯 Sniper BOM (Irisan)</span>
+                <span className="text-[10px] font-mono text-cyan-400">~{paitoStats.avgSniperLines} Line</span>
               </div>
               <div className="my-2">
                 <div className="text-2xl font-bold font-mono text-white">
@@ -457,7 +487,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   Hit BOM: {paitoStats.sniperBomHits}x tembus
                 </div>
               </div>
-              <div className="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] font-mono">
+              <div className="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[11px] font-mono">
                 <span className="text-slate-400">Net PnL:</span>
                 <span
                   className={`font-bold ${
@@ -465,6 +495,32 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   }`}
                 >
                   Rp {paitoStats.sniperPnlNet.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            {/* Super Sniper (Shio) */}
+            <div className="p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
+                <span>🐴 Super Sniper (Shio)</span>
+                <span className="text-[10px] font-mono text-amber-400">~{paitoStats.avgSuperSniperLines ?? 0} Line</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-white">
+                  {paitoStats.superSniperRate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit Super: {paitoStats.superSniperHits ?? 0}x tembus
+                </div>
+              </div>
+              <div className="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span
+                  className={`font-bold ${
+                    (paitoStats.superSniperPnlNet ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  Rp {(paitoStats.superSniperPnlNet ?? 0).toLocaleString('id-ID')}
                 </span>
               </div>
             </div>

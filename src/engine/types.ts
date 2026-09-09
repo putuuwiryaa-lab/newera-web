@@ -68,8 +68,14 @@ export interface PaitoEvaluationStats {
   magnitudeBaseline: number;
   shioHits?: number;
   shioRate?: number;
+  shioBaseline?: number;
   jalurHits?: number;
   jalurRate?: number;
+  jalurBaseline?: number;
+  superSniperHits?: number;
+  superSniperRate?: number;
+  avgSuperSniperLines?: number;
+  superSniperPnlNet?: number;
   sniperBomHits: number;
   sniperBomRate: number;
   avgSniperLines: number;

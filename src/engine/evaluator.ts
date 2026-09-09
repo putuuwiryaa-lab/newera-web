@@ -63,6 +63,9 @@ export function runWalkForwardEvaluation(
   let sniperBomHits = 0;
   let totalSniperLines = 0;
   let sniperPnl = 0;
+  let superSniperHits = 0;
+  let totalSuperSniperLines = 0;
+  let superSniperPnl = 0;
 
   for (let t = warmup; t < totalDraws; t++) {
     const pastData = history2D.slice(0, t);
@@ -144,6 +147,18 @@ export function runWalkForwardEvaluation(
     } else {
       sniperPnl -= sniperLinesCount;
     }
+
+    // Evaluasi Super Sniper (BBFS ∩ Biji ∩ Paritas ∩ Shio 2026)
+    const isHitSuperSniper = !isTwin && (sniperResult.superSniperShio || []).includes(actual2DStr);
+    const superSniperLinesCount = (sniperResult.superSniperShio || []).length;
+    totalSuperSniperLines += superSniperLinesCount;
+
+    if (isHitSuperSniper) {
+      superSniperHits++;
+      superSniperPnl += (70 - superSniperLinesCount);
+    } else {
+      superSniperPnl -= superSniperLinesCount;
+    }
   }
 
   // Format statistik AI
@@ -187,8 +202,14 @@ export function runWalkForwardEvaluation(
     magnitudeBaseline: 50.0,
     shioHits: paitoShioHits,
     shioRate: Number(((paitoShioHits / testDraws) * 100).toFixed(2)),
+    shioBaseline: 25.0,
     jalurHits: paitoJalurHits,
     jalurRate: Number(((paitoJalurHits / testDraws) * 100).toFixed(2)),
+    jalurBaseline: 33.3,
+    superSniperHits,
+    superSniperRate: Number(((superSniperHits / testDraws) * 100).toFixed(2)),
+    avgSuperSniperLines: Number((totalSuperSniperLines / testDraws).toFixed(1)),
+    superSniperPnlNet: superSniperPnl * 1000,
     sniperBomHits,
     sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
     avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),

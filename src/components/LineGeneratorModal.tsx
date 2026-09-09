@@ -59,6 +59,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   const cadanganText = formatLines(trimmed.cadangan, delimiter);
 
   const sniperTopText = sniper ? formatLines(sniper.sniperTop, delimiter) : '';
+  const superSniperText = sniper?.superSniperShio ? formatLines(sniper.superSniperShio, delimiter) : '';
   const sniperSecText = sniper ? formatLines(sniper.sniperSecondary, delimiter) : '';
   const sniperCadText = sniper ? formatLines(sniper.cadangan, delimiter) : '';
 
@@ -294,15 +295,46 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
               {/* Efisiensi Banner */}
               <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-between text-xs">
                 <div>
-                  <span className="font-semibold text-cyan-300">Target Filter Sniper Paito:</span>
+                  <span className="font-semibold text-cyan-300">Target Filter Sniper Paito & Shio:</span>
                   <p className="text-slate-400 text-[11px] mt-0.5">
-                    Memfilter dengan Biji <strong className="text-cyan-200">[{paitoPrediction?.topBiji.join(', ')}]</strong> & Pola <strong className="text-purple-300">{paitoPrediction?.primaryParity}</strong>
+                    Biji <strong className="text-cyan-200">[{paitoPrediction?.topBiji.join(', ')}]</strong> & Pola <strong className="text-purple-300">{paitoPrediction?.primaryParity}</strong>
+                    {paitoPrediction?.topShios && (
+                      <>, Shio <strong className="text-amber-300">[{paitoPrediction.topShios.join(', ')}]</strong> (Jalur {paitoPrediction.primaryJalur})</>
+                    )}
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono font-bold text-xs border border-cyan-500/30">
                   Hemat {sniper.efficiencyPct}% Modal
                 </span>
               </div>
+
+              {/* Super Sniper Shio BOM */}
+              {sniper.superSniperShio && sniper.superSniperShio.length > 0 && (
+                <div className="bg-amber-500/[0.08] border border-amber-500/40 rounded-xl p-3.5 relative overflow-hidden shadow-lg shadow-amber-500/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-sm">🐴</span>
+                      <span className="text-xs font-bold text-amber-300">
+                        SUPER SNIPER SHIO 2026 ({sniper.superSniperShio.length} Line - 4 Lapis)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(superSniperText, 'superSniper')}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-sm shadow-amber-500/30"
+                    >
+                      {copiedKey === 'superSniper' ? (
+                        <Check className="w-3 h-3 text-emerald-950" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      <span>Salin Super Sniper</span>
+                    </button>
+                  </div>
+                  <div className="bg-slate-950/90 p-2.5 rounded-lg font-mono text-xs text-amber-300 font-bold tracking-widest border border-amber-500/25 min-h-[36px]">
+                    {superSniperText}
+                  </div>
+                </div>
+              )}
 
               {/* Sniper Top BOM */}
               <div className="bg-cyan-500/[0.05] border border-cyan-500/30 rounded-xl p-3.5">
