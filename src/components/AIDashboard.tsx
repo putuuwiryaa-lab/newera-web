@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import type { PredictionResult, EvaluationMetrics } from '../engine/types';
 import type { CalibrationAudit } from '../engine/smartCalibrator';
 import {
@@ -21,13 +21,15 @@ interface AIDashboardProps {
   evaluation: EvaluationMetrics | null;
   marketName: string;
   onToast?: (message: string) => void;
+  onOpenSingleShare?: () => void;
 }
 
 export const AIDashboard: React.FC<AIDashboardProps> = ({
   prediction,
   audit,
   marketName,
-  onToast
+  onToast,
+  onOpenSingleShare
 }) => {
   const [selectedTier, setSelectedTier] = useState<3 | 4 | 5 | 6>(4);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -58,6 +60,10 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
   const polaTarungStr = `Kepala: ${activeDigits.join(',')} | Ekor: ${activeDigits.join(',')}`;
 
   const shareWA = () => {
+    if (onOpenSingleShare) {
+      onOpenSingleShare();
+      return;
+    }
     const text = `🔥 AI-${selectedTier} ${marketName} 🔥\nDigit: ${activeDigits.join(' ')}\n${polaTarungStr}\nvia VORTEX 2D`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };

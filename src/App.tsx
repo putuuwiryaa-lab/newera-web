@@ -9,6 +9,7 @@ import { EvaluationPanel } from './components/EvaluationPanel';
 import { HistoryPaitoTable } from './components/HistoryPaitoTable';
 import { LineGeneratorModal } from './components/LineGeneratorModal';
 import { SharePredictionModal } from './components/SharePredictionModal';
+import { SingleMarketShareModal } from './components/SingleMarketShareModal';
 import { Toast, type ToastMessage } from './components/Toast';
 import { fetchAllMarkets, parseHistoryItems } from './services/marketService';
 import { generatePrediction } from './engine/adaptiveEngine';
@@ -48,6 +49,7 @@ export function App() {
 
   // Share prediction modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isSingleShareOpen, setIsSingleShareOpen] = useState(false);
 
   // Load markets
   const loadMarkets = async () => {
@@ -144,6 +146,8 @@ export function App() {
         }
       } else if (e.key === 's' || e.key === 'S') {
         setIsShareModalOpen(true);
+      } else if (e.key === 'w' || e.key === 'W') {
+        setIsSingleShareOpen(true);
       }
     };
 
@@ -178,6 +182,7 @@ export function App() {
           markets={markets}
           selectedMarketId={selectedMarketId}
           onSelectMarket={(id) => setSelectedMarketId(id)}
+          onOpenSingleShare={() => setIsSingleShareOpen(true)}
         />
 
         {/* Desktop Tab Navigation (Clean & Pill-based) */}
@@ -251,7 +256,7 @@ export function App() {
           </div>
 
           <div className="hidden lg:flex items-center space-x-2 pr-3 text-[11px] text-slate-500 font-mono">
-            <span>Pintasan: [1-5] Tab &bull; [G] Generator &bull; [S] Share &bull; [/] Cari</span>
+            <span>Pintasan: [1-5] Tab &bull; [G] Generator &bull; [W] Share WA &bull; [S] Multi-Share &bull; [/] Cari</span>
           </div>
         </div>
 
@@ -262,6 +267,7 @@ export function App() {
             audit={calibrationAudit}
             evaluation={evaluation}
             marketName={currentMarket ? currentMarket.name : ''}
+            onOpenSingleShare={() => setIsSingleShareOpen(true)}
             onToast={showToast}
           />
         )}
@@ -273,6 +279,7 @@ export function App() {
             evaluation={evaluation}
             marketName={currentMarket ? currentMarket.name : ''}
             onOpenGenerator={handleOpenGenerator}
+            onOpenSingleShare={() => setIsSingleShareOpen(true)}
             onToast={showToast}
           />
         )}
@@ -455,6 +462,14 @@ export function App() {
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         markets={markets}
+      />
+
+      {/* Single Market WhatsApp Share Modal */}
+      <SingleMarketShareModal
+        isOpen={isSingleShareOpen}
+        onClose={() => setIsSingleShareOpen(false)}
+        market={currentMarket}
+        prediction={prediction}
       />
     </div>
   );

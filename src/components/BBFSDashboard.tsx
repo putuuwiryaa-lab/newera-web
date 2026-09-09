@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle
 } from 'lucide-react';
 
 interface BBFSDashboardProps {
@@ -22,6 +23,7 @@ interface BBFSDashboardProps {
   evaluation: EvaluationMetrics | null;
   marketName: string;
   onOpenGenerator: (digits: number[], tierName: string, mode?: 'full' | 'trimmer' | 'sniper') => void;
+  onOpenSingleShare?: () => void;
   onToast?: (message: string) => void;
 }
 
@@ -30,6 +32,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   audit,
   marketName,
   onOpenGenerator,
+  onOpenSingleShare,
   onToast
 }) => {
   const [selectedTier, setSelectedTier] = useState<6 | 7 | 8 | 9>(7);
@@ -376,6 +379,16 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
           <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
             <span>Klik pada angka untuk menyalin satuan.</span>
             <div className="flex items-center space-x-3">
+              {onOpenSingleShare && (
+                <button
+                  onClick={onOpenSingleShare}
+                  className="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center space-x-1.5 transition-colors"
+                  title="Buka format salin WhatsApp lengkap"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Format Salin WA &rarr;</span>
+                </button>
+              )}
               <button
                 onClick={() => onOpenGenerator(currentDigits, `BBFS-${selectedTier}`, 'sniper')}
                 className="text-amber-400 hover:text-amber-300 font-semibold flex items-center space-x-1"

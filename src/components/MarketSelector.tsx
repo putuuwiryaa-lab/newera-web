@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Market } from '../engine/types';
-import { Search, ChevronDown, Check, X } from 'lucide-react';
+import { Search, ChevronDown, Check, X, MessageCircle } from 'lucide-react';
 
 interface MarketSelectorProps {
   markets: Market[];
   selectedMarketId: string;
   onSelectMarket: (marketId: string) => void;
+  onOpenSingleShare?: () => void;
 }
 
 const POPULAR_IDS = [
@@ -23,7 +24,8 @@ const POPULAR_IDS = [
 export const MarketSelector: React.FC<MarketSelectorProps> = ({
   markets,
   selectedMarketId,
-  onSelectMarket
+  onSelectMarket,
+  onOpenSingleShare
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -164,10 +166,11 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
 
       {/* Main Selected Market Bar & Dropdown Trigger */}
       <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between p-3.5 bg-slate-900/80 hover:bg-slate-900 border border-white/[0.08] hover:border-white/[0.16] rounded-xl text-left transition-all shadow-sm group"
-        >
+        <div className="flex items-stretch gap-2">
+          <div
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex-1 flex items-center justify-between p-3.5 bg-slate-900/80 hover:bg-slate-900 border border-white/[0.08] hover:border-white/[0.16] rounded-xl text-left transition-all shadow-sm group cursor-pointer select-none"
+          >
           <div className="flex items-center space-x-3">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-500/10 shrink-0" />
             <div>
@@ -201,7 +204,21 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
               <ChevronDown className="w-4 h-4" />
             </div>
           </div>
-        </button>
+        </div>
+
+        {onOpenSingleShare && (
+          <button
+            type="button"
+            onClick={onOpenSingleShare}
+            className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95 shrink-0"
+            title={`Bagikan Prediksi Lengkap WhatsApp (${selectedMarket ? selectedMarket.name : 'Pasaran Ini'})`}
+          >
+            <MessageCircle className="w-4 h-4 fill-slate-950 text-slate-950" />
+            <span className="hidden sm:inline">Share WA</span>
+            <span className="sm:hidden text-[11px]">WA</span>
+          </button>
+        )}
+      </div>
 
         {/* Dropdown Menu Modal/Overlay */}
         {isOpen && (
