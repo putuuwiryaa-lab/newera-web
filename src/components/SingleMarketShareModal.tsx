@@ -3,6 +3,7 @@ import type { Market } from '../engine/types';
 import { generatePrediction } from '../engine/adaptiveEngine';
 import { generateSniperTrim, generateSmartTrim } from '../engine/generator';
 import { getShioByNumber } from '../engine/shio';
+import { parseHistoryItems } from '../services/marketService';
 import {
   X,
   Copy,
@@ -64,6 +65,9 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     const deadDigits = prediction.deadDigits || [];
     const paito = prediction.paitoPrediction;
 
+    // Top AI 1 Digit: digit peringkat #1 skor tertinggi
+    const topAi1 = ai4[0] !== undefined ? ai4[0] : (ai3[0] !== undefined ? ai3[0] : 0);
+
     // Sniper & Super Sniper
     const sniperResult = paito
       ? generateSniperTrim(bbfs7, paito, includeTwins)
@@ -84,24 +88,101 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     });
 
     const jalurRomawi = (j: number) => (j === 1 ? 'I' : j === 2 ? 'II' : 'III');
+    const jalurNamaShio = (j: number) => {
+      if (j === 1) return 'Shio: Kuda, Kelinci, Tikus, Ayam';
+      if (j === 2) return 'Shio: Ular, Harimau, Babi, Monyet';
+      return 'Shio: Naga, Kerbau, Anjing, Kambing';
+    };
+    const primaryJalurNumber = paito ? paito.primaryJalur : 1;
+    const primaryJalurText = `JALUR ${jalurRomawi(primaryJalurNumber)} (${jalurNamaShio(primaryJalurNumber)})`;
+
+    // Peluang Kembar (Twin Gap & Bet Twin or No)
+    const historyItems = parseHistoryItems(market.history_data);
+    let twinGap = 0;
+    for (let i = historyItems.length - 1; i >= 0; i--) {
+      if (historyItems[i].isTwin) break;
+      twinGap++;
+    }
+    const shouldBetTwin = twinGap >= 14;
+    const twinStatusFull = shouldBetTwin
+      ? `BET TWIN (Waspada Gap ${twinGap} Draw - Siapkan Cadangan)`
+      : `NO TWIN (Aman Tanpa Kembar)`;
+    const twinStatusShort = shouldBetTwin
+      ? `BET TWIN (Waspada Gap ${twinGap} Draw)`
+      : `NO TWIN (Aman)`;
+
+    // Pola Paritas: Sederhana tanpa kpl/ekr, langsung Genap vs Ganjil (BB)
+    const formatParity = (p: string) => {
+      if (p === 'Genap-Ganjil') return 'GENAP vs GANJIL (BB)';
+      if (p === 'Ganjil-Genap') return 'GANJIL vs GENAP (BB)';
+      if (p === 'Genap-Genap') return 'GENAP vs GENAP (Mono Genap)';
+      if (p === 'Ganjil-Ganjil') return 'GANJIL vs GANJIL (Mono Ganjil)';
+      return `${p} (BB)`;
+    };
+    const parityFormatted = formatParity(paito?.primaryParity || 'Genap-Ganjil');
+
+    // Variasi Line 2D Tanpa Tumpang Tindih (Non-overlapping)
+    // 1. BOM Nuklir (2 Line Paling Maut)
+    const bomNuklir: string[] = [];
+    for (const l of (sniperResult.superSniperShio || [])) {
+      if (!bomNuklir.includes(l)) bomNuklir.push(l);
+      if (bomNuklir.length >= 2) break;
+    }
+    if (bomNuklir.length < 2) {
+      for (const l of (sniperResult.sniperTop || [])) {
+        if (!bomNuklir.includes(l)) bomNuklir.push(l);
+        if (bomNuklir.length >= 2) break;
+      }
+    }
+
+    // 2. BOM Sniper (4 Line Variasi Biji/Paito)
+    const bomSniper: string[] = [];
+    const sniperPool = [
+      ...(sniperResult.sniperTop || []),
+      ...(sniperResult.sniperSecondary || []),
+      ...(smartTrim.top10 || [])
+    ];
+    for (const l of sniperPool) {
+      if (!bomNuklir.includes(l) && !bomSniper.includes(l)) {
+        bomSniper.push(l);
+        if (bomSniper.length >= 4) break;
+      }
+    }
+
+    // 3. Cadangan / Invest (10 Line Pengaman)
+    const invest10: string[] = [];
+    const investPool = [
+      ...(smartTrim.top10 || []),
+      ...(smartTrim.medium15 || []),
+      ...(sniperResult.cadangan || []),
+      ...(smartTrim.cadangan || [])
+    ];
+    for (const l of investPool) {
+      if (!bomNuklir.includes(l) && !bomSniper.includes(l) && !invest10.includes(l)) {
+        invest10.push(l);
+        if (invest10.length >= 10) break;
+      }
+    }
 
     return {
       marketName: market.name,
       dateStr,
       confidenceScore: prediction.confidenceScore,
       convergenceStatus: prediction.convergenceStatus,
+      topAi1,
       ai4Str: ai4.join(' - '),
-      ai3Str: ai3.join(' - '),
       bbfs7Str: bbfs7.join(' '),
       deadDigitsStr: deadDigits.join(', '),
+      twinStatusFull,
+      twinStatusShort,
       topShioItems,
-      primaryJalur: paito ? jalurRomawi(paito.primaryJalur) : 'I',
+      primaryJalurText,
       topBijiStr: paito ? paito.topBiji.join(', ') : '',
-      primaryParity: paito?.primaryParity || 'Genap-Ganjil',
+      parityFormatted,
       primaryMagnitude: paito?.primaryMagnitude || 'Besar',
-      superSniperLines: (sniperResult.superSniperShio || []).join(' • ') || (sniperResult.superSniperShio || []).join(' '),
-      sniperLines: sniperResult.sniperTop.join(' • ') || sniperResult.sniperTop.join(' '),
-      top10Lines: smartTrim.top10.join(' ')
+      bomNuklirStr: bomNuklir.join(' • '),
+      bomSniperStr: bomSniper.join(' • '),
+      invest10Str: invest10.join(' • ')
     };
   }, [market, prediction, includeTwins]);
 
@@ -110,118 +191,132 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     if (!calculatedData) return '';
 
     const d = calculatedData;
+    const shioText = d.topShioItems
+      .map((s) => `${s.emoji} ${s.name} (${String(s.no).padStart(2, '0')})`)
+      .join(' • ');
+    const shioShortText = d.topShioItems
+      .map((s) => `${s.emoji} ${s.name}`)
+      .join(' • ');
 
     if (formatStyle === 'vip') {
-      // 1. FORMAT VIP LENGKAP
+      // 1. FORMAT VIP RESMI
       const lines: string[] = [];
-      lines.push('╔═══════════════════════════════════╗');
+      lines.push('╔══════════════════════════════════════╗');
       lines.push(`  🔥 PREDIKSI RESMI ${d.marketName.toUpperCase()} 🔥`);
       lines.push(`  🗓️ ${d.dateStr}`);
-      lines.push(`  ⚡ AI KEYAKINAN : ${d.confidenceScore}% (${d.convergenceStatus})`);
-      lines.push('╚═══════════════════════════════════╝');
+      lines.push(`  ⚡ TINGKAT AKURASI : ${d.confidenceScore}% (${d.convergenceStatus})`);
+      lines.push('╚══════════════════════════════════════╝');
       lines.push('');
 
       if (showAiBbfs) {
         lines.push('🎯 ANGKA MAIN & BBFS:');
-        lines.push(`  ▸ AI Utama (4D)  : ${d.ai4Str}`);
-        lines.push(`  ▸ AI Ketat (3D)  : ${d.ai3Str}`);
-        lines.push(`  ▸ BBFS 7 Digit   : ${d.bbfs7Str}`);
+        lines.push(`  ▸ Top AI 1 Digit : [ ${d.topAi1} ] ★ (Colok Bebas / Tunggal)`);
+        lines.push(`  ▸ AI Main (2D)   : ${d.ai4Str}`);
+        lines.push(`  ▸ BBFS Racikan   : ${d.bbfs7Str} (7 Digit)`);
         if (d.deadDigitsStr) {
-          lines.push(`  ▸ Angka Mati 2D  : [${d.deadDigitsStr}] (OFF 99%)`);
+          lines.push(`  ▸ Angka Mati 2D  : [ ${d.deadDigitsStr} ] (Peluang Keluar < 1%)`);
         }
+        lines.push(`  ▸ Status Twin    : ${d.twinStatusFull}`);
         lines.push('');
       }
 
       if (showShio && d.topShioItems.length > 0) {
-        const shioText = d.topShioItems
-          .map((s) => `${s.emoji} ${s.name} (${String(s.no).padStart(2, '0')})`)
-          .join(' • ');
         lines.push('🐴 SHIO 2026 (TAHUN KUDA API):');
-        lines.push(`  ▸ Top Shio   : ${shioText}`);
-        lines.push(`  ▸ Jalur Kuat : Jalur ${d.primaryJalur} (Prioritas Utama)`);
+        lines.push(`  ▸ Top 3 Shio : ${shioText}`);
+        lines.push(`  ▸ Jalur Kuat : ${d.primaryJalurText}`);
         lines.push('');
       }
 
       if (showPaito && d.topBijiStr) {
-        lines.push('📊 ANALISIS PAITO MAKRO:');
-        lines.push(`  ▸ Top 3 Biji 2D : [${d.topBijiStr}]`);
-        lines.push(`  ▸ Pola Paritas  : ${d.primaryParity}`);
-        lines.push(`  ▸ Kategori 2D   : ${d.primaryMagnitude} (≥50 Besar / <50 Kecil)`);
+        lines.push('📊 SPESIFIKASI PAITO 2D:');
+        lines.push(`  ▸ Karakter 2D  : ${d.primaryMagnitude.toUpperCase()} (Rentang ${d.primaryMagnitude === 'Besar' ? '50 s/d 99' : '00 s/d 49'})`);
+        lines.push(`  ▸ Pola Paritas : ${d.parityFormatted}`);
+        lines.push(`  ▸ Top Biji 2D  : Biji [ ${d.topBijiStr} ]`);
         lines.push('');
       }
 
       if (showBom) {
-        lines.push('💣 LINE BOM 2D AKURASI TINGGI:');
-        if (d.superSniperLines) {
-          lines.push(`  🔥 SUPER SNIPER (4 Lapis) : ${d.superSniperLines}`);
+        lines.push('💣 LINE 2D BERVARIASI (SIAP PASANG):');
+        if (d.bomNuklirStr) {
+          lines.push('  🔥 BOM NUKLIR (2 Line Paling Maut) :');
+          lines.push(`     👉 ${d.bomNuklirStr}`);
+          lines.push('');
         }
-        if (d.sniperLines) {
-          lines.push(`  🎯 BOM SNIPER PAITO       : ${d.sniperLines}`);
+        if (d.bomSniperStr) {
+          lines.push('  🎯 BOM SNIPER (4 Line Variasi Biji) :');
+          lines.push(`     👉 ${d.bomSniperStr}`);
+          lines.push('');
         }
-        if (d.top10Lines) {
-          lines.push(`  💣 TOP 10 LINE BBFS       : ${d.top10Lines}`);
+        if (d.invest10Str) {
+          lines.push('  🛡️ CADANGAN / INVEST (10 Line Pengaman) :');
+          lines.push(`     👉 ${d.invest10Str}`);
+          lines.push('');
         }
-        lines.push('');
       }
 
       if (showFooter) {
-        lines.push('═════════════════════════════════════');
-        lines.push('⚠️ Tetap Utamakan Prediksi Sendiri (UPS)');
+        lines.push('══════════════════════════════════════');
+        lines.push('⚠️ Utamakan Prediksi Sendiri (UPS)');
         lines.push('🚀 Salam JP Paus Beruntun | VORTEX 2D');
       }
 
       return lines.join('\n');
     } else if (formatStyle === 'ringkas') {
-      // 2. FORMAT RINGKAS
+      // 2. FORMAT RINGKAS (Fast Bet)
       const lines: string[] = [];
       lines.push(`🔥 PREDIKSI ${d.marketName.toUpperCase()} 🔥`);
-      lines.push(`🗓️ ${d.dateStr} | Keyakinan AI: ${d.confidenceScore}%`);
+      lines.push(`🗓️ ${d.dateStr} | Tingkat Akurasi: ${d.confidenceScore}%`);
       lines.push('');
       if (showAiBbfs) {
-        lines.push(`🎯 AI 4D: ${d.ai4Str}`);
-        lines.push(`🛡️ BBFS 7D: ${d.bbfs7Str}`);
+        lines.push(`🎯 AI 1D (Tunggal) : [ ${d.topAi1} ] ★`);
+        lines.push(`🎯 AI Main (2D)    : ${d.ai4Str}`);
+        lines.push(`🛡️ BBFS 7 Digit    : ${d.bbfs7Str}`);
+        if (d.deadDigitsStr) {
+          lines.push(`⛔ Angka Mati      : [ ${d.deadDigitsStr} ]`);
+        }
+        lines.push(`👥 Rekomendasi Twin: ${d.twinStatusShort}`);
       }
       if (showShio && d.topShioItems.length > 0) {
-        const shioText = d.topShioItems.map((s) => `${s.emoji} ${s.name}`).join(', ');
-        lines.push(`🐴 Shio: ${shioText} (Jalur ${d.primaryJalur})`);
+        lines.push(`🐴 Shio  : ${shioShortText}`);
+        lines.push(`🛣️ Jalur : ${d.primaryJalurText}`);
       }
       if (showPaito && d.topBijiStr) {
-        lines.push(`📊 Paito: Biji [${d.topBijiStr}] • ${d.primaryParity} • ${d.primaryMagnitude}`);
+        lines.push(`📊 Paito : ${d.primaryMagnitude.toUpperCase()} (${d.primaryMagnitude === 'Besar' ? '50-99' : '00-49'}) • ${d.parityFormatted} • Biji [ ${d.topBijiStr} ]`);
       }
       if (showBom) {
-        if (d.superSniperLines) lines.push(`🔥 SUPER BOM : ${d.superSniperLines}`);
-        if (d.sniperLines) lines.push(`🎯 SNIPER    : ${d.sniperLines}`);
-        if (d.top10Lines) lines.push(`💣 TOP 10   : ${d.top10Lines}`);
-      }
-      if (d.deadDigitsStr) {
-        lines.push(`⛔ Angka Mati: [${d.deadDigitsStr}]`);
+        lines.push('');
+        lines.push('💣 LINE JADI 2D (ANTI-TUMPANG TINDIH):');
+        if (d.bomNuklirStr) lines.push(`💥 BOM NUKLIR  : ${d.bomNuklirStr}`);
+        if (d.bomSniperStr) lines.push(`🎯 BOM SNIPER  : ${d.bomSniperStr}`);
+        if (d.invest10Str) lines.push(`🛡️ INVEST (10) : ${d.invest10Str}`);
       }
       if (showFooter) {
         lines.push('');
-        lines.push('⚠️ UPS! Salam JP Paus 🚀');
+        lines.push('⚠️ UPS | VORTEX 2D');
       }
       return lines.join('\n');
     } else {
       // 3. FORMAT KHUSUS BOM SNIPER
       const lines: string[] = [];
-      lines.push(`🎯 BOM 2D ${d.marketName.toUpperCase()} 🎯`);
-      lines.push(`🗓️ ${d.dateStr} | AI Score: ${d.confidenceScore}%`);
+      lines.push(`🎯 LINE BOM 2D ${d.marketName.toUpperCase()} 🎯`);
+      lines.push(`🗓️ ${d.dateStr} | Tingkat Akurasi: ${d.confidenceScore}%`);
       lines.push('');
-      if (d.superSniperLines) {
-        lines.push(`🔥 SUPER SNIPER (Shio+Pola): ${d.superSniperLines}`);
+      if (d.bomNuklirStr) {
+        lines.push(`🔥 BOM NUKLIR (2 Line) : ${d.bomNuklirStr}`);
       }
-      if (d.sniperLines) {
-        lines.push(`🎯 BOM SNIPER (Biji+Pola) : ${d.sniperLines}`);
+      if (d.bomSniperStr) {
+        lines.push(`🎯 BOM SNIPER (4 Line) : ${d.bomSniperStr}`);
       }
-      if (d.top10Lines) {
-        lines.push(`💣 TOP 10 LINE BBFS       : ${d.top10Lines}`);
+      if (d.invest10Str) {
+        lines.push(`🛡️ INVEST 2D (10 Line) : ${d.invest10Str}`);
       }
       lines.push('');
-      lines.push(`🎯 AI Utama: ${d.ai4Str}`);
-      lines.push(`🛡️ BBFS-7  : ${d.bbfs7Str}`);
+      lines.push(`🎯 AI Tunggal : [ ${d.topAi1} ] | AI 2D: ${d.ai4Str}`);
+      lines.push(`🛡️ BBFS 7D    : ${d.bbfs7Str}`);
       if (d.topShioItems.length > 0) {
-        lines.push(`🐴 Top Shio: ${d.topShioItems.map((s) => `${s.emoji} ${s.name}`).join(' • ')}`);
+        lines.push(`🐴 Top Shio   : ${shioShortText}`);
       }
+      lines.push(`👥 Status Twin: ${d.twinStatusShort}`);
       if (showFooter) {
         lines.push('');
         lines.push('⚠️ UPS | Gaspol JP Paus! 🚀');
