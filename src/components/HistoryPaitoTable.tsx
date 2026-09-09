@@ -229,6 +229,8 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
             <option value={100}>100 Data</option>
             <option value={200}>200 Data</option>
             <option value={500}>500 Data</option>
+            <option value={1000}>1000 Data</option>
+            <option value={99999}>Semua ({historyItems.length})</option>
           </select>
 
           <button
