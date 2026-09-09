@@ -27,7 +27,10 @@ export function runWalkForwardEvaluation(
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length <= warmup + 10) return null;
 
-  const history2D: [number, number][] = valid4D.map((r) => [
+  // Batasi subset evaluasi walk-forward maksimal 500 putaran terakhir agar simulasi browser instan (< 100ms)
+  const evalSubset = valid4D.length > 500 ? valid4D.slice(-500) : valid4D;
+
+  const history2D: [number, number][] = evalSubset.map((r) => [
     parseInt(r[2], 10),
     parseInt(r[3], 10)
   ]);

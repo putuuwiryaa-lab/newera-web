@@ -183,6 +183,8 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
             <option value={25}>25 Data</option>
             <option value={50}>50 Data</option>
             <option value={100}>100 Data</option>
+            <option value={200}>200 Data</option>
+            <option value={500}>500 Data</option>
           </select>
 
           <button
