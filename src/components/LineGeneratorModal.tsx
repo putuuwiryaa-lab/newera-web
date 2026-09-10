@@ -3,17 +3,30 @@ import {
   generate2DLines,
   formatLines,
   generateSmartTrim,
-  generateSniperTrim
+  generateSniperTrim,
+  generateWheelingSystem
 } from '../engine/generator';
 import type { PaitoMacroPrediction, PolaTarungPrediction } from '../engine/types';
-import { X, Copy, Check, ToggleLeft, ToggleRight, Bomb, Shield, Sparkles, Target, Swords } from 'lucide-react';
+import {
+  X,
+  Copy,
+  Check,
+  ToggleLeft,
+  ToggleRight,
+  Bomb,
+  Shield,
+  Sparkles,
+  Target,
+  Swords,
+  Coins
+} from 'lucide-react';
 
 interface LineGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   digits: number[];
   tierName: string;
-  initialMode?: 'full' | 'trimmer' | 'sniper' | 'tarung';
+  initialMode?: 'full' | 'trimmer' | 'sniper' | 'tarung' | 'wheeling';
   paitoPrediction?: PaitoMacroPrediction | null;
   polaTarung?: PolaTarungPrediction | null;
 }
@@ -27,11 +40,12 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   paitoPrediction,
   polaTarung
 }) => {
-  const [userMode, setUserMode] = useState<'full' | 'trimmer' | 'sniper' | 'tarung' | null>(null);
+  const [userMode, setUserMode] = useState<'full' | 'trimmer' | 'sniper' | 'tarung' | 'wheeling' | null>(null);
   const mode = userMode ?? initialMode;
   const [includeTwins, setIncludeTwins] = useState(false);
   const [delimiter, setDelimiter] = useState<'space' | 'comma' | 'newline'>('space');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [wheelSubTab, setWheelSubTab] = useState<'3d_smart' | '3d_full' | '4d_smart' | '4d_full'>('3d_smart');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,6 +63,11 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
     return generateSniperTrim(digits, paitoPrediction, includeTwins);
   }, [digits, paitoPrediction, includeTwins]);
 
+  // Wheeling System
+  const wheeling = useMemo(() => {
+    return generateWheelingSystem(digits);
+  }, [digits]);
+
   if (!isOpen) return null;
 
   const lines = generate2DLines(digits, includeTwins);
@@ -63,11 +82,16 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   const sniperTopText = sniper ? formatLines(sniper.sniperTop, delimiter) : '';
   const superSniperText = sniper?.superSniperShio ? formatLines(sniper.superSniperShio, delimiter) : '';
   const sniperSecText = sniper ? formatLines(sniper.sniperSecondary, delimiter) : '';
-  const sniperCadText = sniper ? formatLines(sniper.cadangan, delimiter) : '';
 
   const tarung3x3Text = polaTarung ? formatLines(polaTarung.tarung3x3, delimiter) : '';
   const tarung4x4Text = polaTarung ? formatLines(polaTarung.tarung4x4, delimiter) : '';
   const tarung5x5Text = polaTarung ? formatLines(polaTarung.tarung5x5, delimiter) : '';
+
+  // Wheeling Formats
+  const wheel3DText = formatLines(wheeling.wheel3D, delimiter);
+  const wheel3DFullText = formatLines(wheeling.wheel3DFull, delimiter);
+  const wheel4DText = formatLines(wheeling.wheel4D, delimiter);
+  const wheel4DFullText = formatLines(wheeling.wheel4DFull, delimiter);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -92,7 +116,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 {tierName}
               </span>
               <h3 className="font-semibold text-white text-base">
-                Generator & Pemangkas Line 2D
+                Generator & Pemangkas Line BBFS
               </h3>
             </div>
             <p className="text-xs text-slate-400 mt-1">
@@ -108,10 +132,10 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
         </div>
 
         {/* Mode Selector Tab */}
-        <div className="flex border-b border-white/[0.06] bg-slate-950/80 p-1">
+        <div className="flex flex-wrap border-b border-white/[0.06] bg-slate-950/80 p-1 gap-1">
           <button
             onClick={() => setUserMode('full')}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+            className={`flex-1 min-w-[75px] py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
               mode === 'full'
                 ? 'bg-purple-600 text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-white'
@@ -123,7 +147,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
 
           <button
             onClick={() => setUserMode('trimmer')}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+            className={`flex-1 min-w-[75px] py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
               mode === 'trimmer'
                 ? 'bg-emerald-600 text-white font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-white'
@@ -136,35 +160,47 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
           {paitoPrediction && (
             <button
               onClick={() => setUserMode('sniper')}
-              className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 min-w-[75px] py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
                 mode === 'sniper'
                   ? 'bg-cyan-600 text-white font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <Target className="w-3.5 h-3.5 text-cyan-200" />
-              <span>🎯 Sniper Paito</span>
+              <span>Sniper</span>
             </button>
           )}
 
           {polaTarung && (
             <button
               onClick={() => setUserMode('tarung')}
-              className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              className={`flex-1 min-w-[75px] py-2 text-xs font-medium rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
                 mode === 'tarung'
                   ? 'bg-rose-600 text-white font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <Swords className="w-3.5 h-3.5 text-rose-200" />
-              <span>⚔️ Pola Tarung</span>
+              <span>Pola Tarung</span>
             </button>
           )}
+
+          <button
+            onClick={() => setUserMode('wheeling')}
+            className={`flex-1 min-w-[95px] py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-all ${
+              mode === 'wheeling'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-sm'
+                : 'text-amber-300 hover:text-amber-200 bg-amber-950/30 border border-amber-500/20'
+            }`}
+          >
+            <Coins className="w-3.5 h-3.5" />
+            <span>🎡 Wheeling 3D/4D</span>
+          </button>
         </div>
 
         {/* Controls */}
         <div className="p-3 bg-slate-950/50 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs">
-          {mode === 'full' && (
+          {mode === 'full' ? (
             <button
               onClick={() => setIncludeTwins(!includeTwins)}
               className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
@@ -180,6 +216,14 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
               )}
               <span>+Twin ({digits.length} line)</span>
             </button>
+          ) : mode === 'wheeling' ? (
+            <span className="text-amber-300 font-mono text-[11px] font-semibold">
+              ★ Covering Design Hemat Hingga 96% Modal
+            </span>
+          ) : (
+            <span className="text-slate-400 font-mono text-[11px]">
+              2D Non-Twin Hierarkis
+            </span>
           )}
 
           <div className="flex items-center space-x-1 bg-slate-900/80 border border-white/[0.08] p-0.5 rounded-lg ml-auto">
@@ -301,7 +345,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
-                      <span>Salin Cadangan</span>
+                      <span>Salin Sisa</span>
                     </button>
                   </div>
                   <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-slate-400 tracking-wider border border-white/[0.04]">
@@ -310,173 +354,116 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 </div>
               )}
             </div>
-          ) : sniper ? (
+          ) : mode === 'sniper' ? (
             <div className="space-y-4">
-              {/* Efisiensi Banner */}
-              <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-semibold text-cyan-300">Target Filter Sniper Paito & Shio:</span>
-                  <p className="text-slate-400 text-[11px] mt-0.5">
-                    Biji <strong className="text-cyan-200">[{paitoPrediction?.topBiji.join(', ')}]</strong> & Pola <strong className="text-purple-300">{paitoPrediction?.primaryParity}</strong>
-                    {paitoPrediction?.topShios && (
-                      <>, Shio <strong className="text-amber-300">[{paitoPrediction.topShios.join(', ')}]</strong> (Jalur {paitoPrediction.primaryJalur})</>
-                    )}
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono font-bold text-xs border border-cyan-500/30">
-                  Hemat {sniper.efficiencyPct}% Modal
-                </span>
-              </div>
-
-              {/* Super Sniper Shio BOM */}
-              {sniper.superSniperShio && sniper.superSniperShio.length > 0 && (
-                <div className="bg-amber-500/[0.08] border border-amber-500/40 rounded-xl p-3.5 relative overflow-hidden shadow-lg shadow-amber-500/5">
+              {/* Super Sniper Shio */}
+              {sniper?.superSniperShio && sniper.superSniperShio.length > 0 && (
+                <div className="bg-emerald-500/[0.08] border border-emerald-500/30 rounded-xl p-3.5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-1.5">
-                      <span className="text-sm">🐴</span>
-                      <span className="text-xs font-bold text-amber-300">
-                        SUPER SNIPER SHIO 2026 ({sniper.superSniperShio.length} Line - 4 Lapis)
+                      <Target className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-emerald-300">
+                        🐴 SUPER SNIPER SHIO 2026 ({sniper.superSniperShio.length} LINE)
                       </span>
                     </div>
                     <button
-                      onClick={() => handleCopy(superSniperText, 'superSniper')}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold flex items-center space-x-1 transition-all active:scale-95 shadow-sm shadow-amber-500/30"
+                      onClick={() => handleCopy(superSniperText, 'supersniper')}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
                     >
-                      {copiedKey === 'superSniper' ? (
-                        <Check className="w-3 h-3 text-emerald-950" />
+                      {copiedKey === 'supersniper' ? (
+                        <Check className="w-3 h-3 text-emerald-200" />
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
                       <span>Salin Super Sniper</span>
                     </button>
                   </div>
-                  <div className="bg-slate-950/90 p-2.5 rounded-lg font-mono text-xs text-amber-300 font-bold tracking-widest border border-amber-500/25 min-h-[36px]">
+                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-emerald-300 tracking-wider border border-emerald-500/20">
                     {superSniperText}
                   </div>
                 </div>
               )}
 
-              {/* Sniper Top BOM */}
-              <div className="bg-cyan-500/[0.05] border border-cyan-500/30 rounded-xl p-3.5">
+              {/* Sniper BOM */}
+              <div className="bg-amber-500/[0.05] border border-amber-500/25 rounded-xl p-3.5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-1.5">
-                    <Target className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-semibold text-cyan-300">
-                      🎯 BOM SNIPER UTAMA ({sniper.sniperTop.length} Line)
+                    <Bomb className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-semibold text-amber-300">
+                      🎯 SNIPER BOM ({sniper?.sniperTop.length ?? 0} LINE)
                     </span>
                   </div>
-                  {sniper.sniperTop.length > 0 && (
-                    <button
-                      onClick={() => handleCopy(sniperTopText, 'sniperTop')}
-                      className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95 shadow-sm shadow-cyan-600/30"
-                    >
-                      {copiedKey === 'sniperTop' ? (
-                        <Check className="w-3 h-3 text-cyan-200" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      <span>Salin Sniper BOM</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleCopy(sniperTopText, 'snipertop')}
+                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
+                  >
+                    {copiedKey === 'snipertop' ? (
+                      <Check className="w-3 h-3 text-amber-200" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    <span>Salin BOM</span>
+                  </button>
                 </div>
-                <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-cyan-300 tracking-wider border border-white/[0.04] min-h-[36px]">
-                  {sniperTopText || <span className="text-slate-500 italic text-[11px]">Tidak ada line yang memenuhi irisan 100% pola</span>}
+                <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-amber-300 tracking-wider border border-white/[0.04]">
+                  {sniperTopText || 'Tidak ada baris irisan'}
                 </div>
               </div>
 
-              {/* Sniper Sekunder */}
-              {sniper.sniperSecondary.length > 0 && (
-                <div className="bg-purple-500/[0.04] border border-purple-500/25 rounded-xl p-3.5">
+              {/* Sekunder */}
+              {sniper && sniper.sniperSecondary.length > 0 && (
+                <div className="bg-cyan-500/[0.05] border border-cyan-500/25 rounded-xl p-3.5">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-1.5">
-                      <Shield className="w-4 h-4 text-purple-400" />
-                      <span className="text-xs font-semibold text-purple-300">
-                        🛡️ SNIPER SEKUNDER ({sniper.sniperSecondary.length} Line - Lolos Biji)
-                      </span>
-                    </div>
+                    <span className="text-xs font-semibold text-cyan-300">
+                      LINE SEKUNDER ({sniper.sniperSecondary.length} Line)
+                    </span>
                     <button
-                      onClick={() => handleCopy(sniperSecText, 'sniperSec')}
-                      className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
+                      onClick={() => handleCopy(sniperSecText, 'snipersec')}
+                      className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
                     >
-                      {copiedKey === 'sniperSec' ? (
-                        <Check className="w-3 h-3 text-purple-200" />
+                      {copiedKey === 'snipersec' ? (
+                        <Check className="w-3 h-3 text-cyan-200" />
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
                       <span>Salin Sekunder</span>
                     </button>
                   </div>
-                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-purple-300 tracking-wider border border-white/[0.04]">
+                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-cyan-300 tracking-wider border border-white/[0.04]">
                     {sniperSecText}
                   </div>
                 </div>
               )}
-
-              {/* Cadangan */}
-              {sniper.cadangan.length > 0 && (
-                <div className="bg-slate-950/50 border border-white/[0.06] rounded-xl p-3.5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-slate-400">
-                      LINE DILUAR FILTER ({sniper.cadangan.length} Line)
-                    </span>
-                    <button
-                      onClick={() => handleCopy(sniperCadText, 'sniperCad')}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium flex items-center space-x-1 transition-all"
-                    >
-                      {copiedKey === 'sniperCad' ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      <span>Salin Cadangan</span>
-                    </button>
-                  </div>
-                  <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-slate-400 tracking-wider border border-white/[0.04]">
-                    {sniperCadText}
-                  </div>
-                </div>
-              )}
             </div>
-          ) : mode === 'tarung' && polaTarung ? (
+          ) : mode === 'tarung' ? (
             <div className="space-y-4">
-              {/* Header Info */}
-              <div className="p-3 rounded-xl bg-slate-950/70 border border-white/[0.08] text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300 mb-1">
-                  <span>Digit Kepala Kuat: <strong className="font-mono text-purple-300">{polaTarung.rankedKepala.join(', ')}</strong></span>
-                  <span>Digit Ekor Kuat: <strong className="font-mono text-cyan-300">{polaTarung.rankedEkor.join(', ')}</strong></span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Formasi posisi Kepala × Ekor terpisah tanpa bolak-balik (No BB), memangkas baris modal secara presisi.
-                </p>
-              </div>
-
-              {/* 3x3 BOM (9 Line) */}
-              <div className="bg-red-500/[0.05] border border-red-500/25 rounded-xl p-3.5">
+              {/* 3x3 Sniper (9 Line) */}
+              <div className="bg-rose-500/[0.05] border border-rose-500/25 rounded-xl p-3.5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-1.5">
-                    <Bomb className="w-4 h-4 text-red-400" />
-                    <span className="text-xs font-semibold text-red-300">
-                      3×3 BOM SUPER HEMAT (9 LINE)
+                    <Swords className="w-4 h-4 text-rose-400" />
+                    <span className="text-xs font-semibold text-rose-300">
+                      3×3 SNIPER NUKLIR (9 LINE)
                     </span>
                   </div>
                   <button
                     onClick={() => handleCopy(tarung3x3Text, 'tarung3x3')}
-                    className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-semibold flex items-center space-x-1 transition-all active:scale-95"
                   >
-                    {copiedKey === 'tarung3x3' ? <Check className="w-3 h-3 text-red-200" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === 'tarung3x3' ? <Check className="w-3 h-3 text-rose-200" /> : <Copy className="w-3 h-3" />}
                     <span>Salin 9 Line</span>
                   </button>
                 </div>
-                <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-red-300 tracking-wider border border-white/[0.04]">
+                <div className="bg-slate-950/80 p-2.5 rounded-lg font-mono text-xs text-rose-300 tracking-wider border border-white/[0.04]">
                   {tarung3x3Text}
                 </div>
               </div>
 
-              {/* 4x4 Utama (16 Line) */}
+              {/* 4x4 Rekomendasi (16 Line) */}
               <div className="bg-amber-500/[0.05] border border-amber-500/25 rounded-xl p-3.5">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-1.5">
-                    <Target className="w-4 h-4 text-amber-400" />
+                    <Sparkles className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-semibold text-amber-300">
                       4×4 UTAMA REKOMENDASI (16 LINE)
                     </span>
@@ -516,6 +503,174 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 </div>
               </div>
             </div>
+          ) : mode === 'wheeling' ? (
+            /* WHEELING 3D / 4D VIEW */
+            <div className="space-y-4">
+              {/* Wheeling Subtab Selector */}
+              <div className="flex rounded-xl bg-slate-950 p-1 border border-white/[0.08] text-xs">
+                <button
+                  onClick={() => setWheelSubTab('3d_smart')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition-all ${
+                    wheelSubTab === '3d_smart'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  3D Hemat (15)
+                </button>
+                <button
+                  onClick={() => setWheelSubTab('3d_full')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition-all ${
+                    wheelSubTab === '3d_full'
+                      ? 'bg-amber-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  3D Lengkap (35)
+                </button>
+                <button
+                  onClick={() => setWheelSubTab('4d_smart')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition-all ${
+                    wheelSubTab === '4d_smart'
+                      ? 'bg-orange-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  4D Hemat (14)
+                </button>
+                <button
+                  onClick={() => setWheelSubTab('4d_full')}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition-all ${
+                    wheelSubTab === '4d_full'
+                      ? 'bg-orange-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  4D Lengkap (35)
+                </button>
+              </div>
+
+              {/* Active Subtab Card */}
+              {wheelSubTab === '3d_smart' && (
+                <div className="bg-amber-500/[0.06] border border-amber-500/30 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-300">
+                        🎡 Wheel 3D Covering Design (15 Line)
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {wheeling.guarantee3D}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(wheel3DText, 'wheel3d')}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95"
+                    >
+                      {copiedKey === 'wheel3d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedKey === 'wheel3d' ? 'Tersalin!' : 'Salin 15 Line'}</span>
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={4}
+                    value={wheel3DText}
+                    className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 font-mono text-xs text-amber-200 resize-none tracking-wider"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                    <span>Modal Bersih (Disc 59%): ~Rp 6.150</span>
+                    <span className="text-emerald-400 font-semibold">Hemat Rp 79.950 vs BBFS Lurus</span>
+                  </div>
+                </div>
+              )}
+
+              {wheelSubTab === '3d_full' && (
+                <div className="bg-amber-500/[0.04] border border-amber-500/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-200">
+                        3D Full Set Boxed C(7, 3) (35 Line)
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        100% dari seluruh kombinasi 3 digit unik BBFS 7
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(wheel3DFullText, 'wheel3dfull')}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
+                    >
+                      {copiedKey === 'wheel3dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>Salin 35 Line</span>
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={5}
+                    value={wheel3DFullText}
+                    className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 font-mono text-xs text-amber-300 resize-none tracking-wider"
+                  />
+                </div>
+              )}
+
+              {wheelSubTab === '4d_smart' && (
+                <div className="bg-orange-500/[0.06] border border-orange-500/30 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-orange-300">
+                        🎡 Wheel 4D Covering Design C(7, 4, 3) (14 Line)
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {wheeling.guarantee4D}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(wheel4DText, 'wheel4d')}
+                      className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-orange-500/20 active:scale-95"
+                    >
+                      {copiedKey === 'wheel4d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedKey === 'wheel4d' ? 'Tersalin!' : 'Salin 14 Line'}</span>
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={4}
+                    value={wheel4DText}
+                    className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 font-mono text-xs text-orange-200 resize-none tracking-wider"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                    <span>Modal Bersih (Disc 66%): ~Rp 4.760</span>
+                    <span className="text-emerald-400 font-semibold">Hemat Rp 280.840 vs BBFS Lurus</span>
+                  </div>
+                </div>
+              )}
+
+              {wheelSubTab === '4d_full' && (
+                <div className="bg-orange-500/[0.04] border border-orange-500/20 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-orange-200">
+                        4D Full Set Boxed C(7, 4) (35 Line)
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        100% dari seluruh variasi 4 digit tanpa duplikasi
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(wheel4DFullText, 'wheel4dfull')}
+                      className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
+                    >
+                      {copiedKey === 'wheel4dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>Salin 35 Line</span>
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    rows={5}
+                    value={wheel4DFullText}
+                    className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 font-mono text-xs text-orange-300 resize-none tracking-wider"
+                  />
+                </div>
+              )}
+            </div>
           ) : null}
         </div>
 
@@ -532,4 +687,3 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
     </div>
   );
 };
-

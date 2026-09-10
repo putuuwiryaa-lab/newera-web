@@ -61,10 +61,12 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
   const calculatedData = useMemo(() => {
     if (!market || !prediction) return null;
 
-    const bbfs7 = prediction.bbfs?.[7] || [];
+    const bbfs7 = prediction.paitoBBFS7?.digits || prediction.bbfs?.[7] || [];
     const ai4 = prediction.ai?.[4] || [];
     const ai3 = prediction.ai?.[3] || [];
-    const deadDigits = prediction.deadDigits || [];
+    const deadDigits = (prediction.paitoBBFS7?.triadKumat && prediction.paitoBBFS7.triadKumat.length > 0)
+      ? prediction.paitoBBFS7.triadKumat.map((t) => t.digit)
+      : (prediction.deadDigits || []);
     const paito = prediction.paitoPrediction;
 
     // Top AI 1 Digit: digit peringkat #1 skor tertinggi
@@ -124,9 +126,10 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     const parityFormatted = formatParity(paito?.primaryParity || 'Genap-Ganjil');
 
     // Variasi Line 2D Tanpa Tumpang Tindih (Non-overlapping)
-    // 1. BOM Nuklir (2 Line Paling Maut)
+    // 1. BOM Nuklir (2 Line Paling Maut dari Super Nuklir Paito Pro)
     const bomNuklir: string[] = [];
-    for (const l of (sniperResult.superSniperShio || [])) {
+    const nuklirCandidates = prediction.paitoBBFS7?.nuklir6 || sniperResult.superSniperShio || [];
+    for (const l of nuklirCandidates) {
       if (!bomNuklir.includes(l)) bomNuklir.push(l);
       if (bomNuklir.length >= 2) break;
     }
@@ -137,9 +140,10 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       }
     }
 
-    // 2. BOM Sniper (4 Line Variasi Biji/Paito)
+    // 2. BOM Sniper (4 Line Variasi Biji/Paito/BOM12)
     const bomSniper: string[] = [];
     const sniperPool = [
+      ...(prediction.paitoBBFS7?.bom12 || []),
       ...(sniperResult.sniperTop || []),
       ...(sniperResult.sniperSecondary || []),
       ...(smartTrim.top10 || [])

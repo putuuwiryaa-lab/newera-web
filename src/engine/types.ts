@@ -32,6 +32,8 @@ export interface PredictionResult {
   deadDigits: number[]; // 2 Digit paling lemah
   paitoPrediction?: PaitoMacroPrediction;
   polaTarung?: PolaTarungPrediction;
+  paitoBBFS7?: PaitoBBFS7Result;
+  wheeling7?: WheelingResult;
   lastDraw: {
     full: string;
     as: number;
@@ -358,5 +360,51 @@ export interface Heatmap2DStats {
     kepala: number;
     ekor: number;
   }[];
+}
+
+// ==========================================
+// BBFS-7 PAITO PRO (GENERASI BARU) & WHEELING TYPES
+// ==========================================
+
+export interface DeadDigitDetail {
+  digit: number;
+  safetyScore: number; // 0-100 (100 = paling aman dieliminasi / nol risiko keluar)
+  status: 'AMAN' | 'WASPADA' | 'NETRAL';
+  reason: string;
+  gap: number;
+}
+
+export interface PaitoBBFS7Result {
+  digits: number[]; // 7 digit terpilih
+  ranked7: number[]; // 7 digit terurut dari skor terkuat
+  nuklir6: string[]; // 6 line super nuklir (irisan sempurna Biji + Paritas + Shio)
+  bom12: string[]; // 12 line dari 4 digit terkuat P(4, 2)
+  invest20: string[]; // 20 line dari 5 digit terkuat P(5, 2)
+  full42: string[]; // 42 line non-twin dari 7 digit P(7, 2)
+  twin7: string[]; // 7 line twin jika anomali kembar
+  triadKumat: DeadDigitDetail[]; // 3 digit kumat/mati yang dibuang secara teruji
+  spectrumBalance: {
+    besarCount: number;
+    kecilCount: number;
+    genapCount: number;
+    ganjilCount: number;
+    entropyScore: number;
+    isBalanced: boolean;
+  };
+  synthesisDetails: {
+    bijiContribution: Record<number, number>;
+    parityContribution: Record<number, number>;
+    shioContribution: Record<number, number>;
+    heatmapContribution: Record<number, number>;
+  };
+}
+
+export interface WheelingResult {
+  wheel3D: string[]; // 15 line covering design C(7, 3, 2)
+  wheel3DFull: string[]; // 35 line full combination C(7, 3)
+  wheel4D: string[]; // 14 line covering design C(7, 4, 3)
+  wheel4DFull: string[]; // 35 line full combination C(7, 4)
+  guarantee3D: string;
+  guarantee4D: string;
 }
 

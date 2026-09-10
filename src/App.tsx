@@ -39,7 +39,7 @@ export function App() {
     isOpen: boolean;
     digits: number[];
     tierName: string;
-    initialMode?: 'full' | 'trimmer' | 'sniper';
+    initialMode?: 'full' | 'trimmer' | 'sniper' | 'tarung' | 'wheeling';
   }>({
     isOpen: false,
     digits: [],
@@ -108,7 +108,11 @@ export function App() {
     return parseHistoryItems(currentMarket.history_data);
   }, [currentMarket]);
 
-  const handleOpenGenerator = (digits: number[], tierName: string, mode: 'full' | 'trimmer' | 'sniper' = 'full') => {
+  const handleOpenGenerator = (
+    digits: number[],
+    tierName: string,
+    mode: 'full' | 'trimmer' | 'sniper' | 'tarung' | 'wheeling' = 'full'
+  ) => {
     setModalState({
       isOpen: true,
       digits,

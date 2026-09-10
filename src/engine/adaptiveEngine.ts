@@ -1,6 +1,8 @@
 import type { PredictionResult } from './types';
 import { predictPaitoMacro } from './paitoPredictor';
 import { analyzePolaTarungMovement } from './movementPredictor';
+import { synthesizePaitoBBFS7 } from './paitoBBFS7';
+import { generateWheelingSystem } from './generator';
 
 // Tabel Transformasi Komunitas Tradisional
 export const INDEX_MAP: Record<number, number> = {
@@ -612,6 +614,8 @@ export function generatePrediction(
 
   const paitoPrediction = predictPaitoMacro(history2D, 50, valid4D);
   const polaTarung = analyzePolaTarungMovement(history2D);
+  const paitoBBFS7 = synthesizePaitoBBFS7(history2D, valid4D, paitoPrediction);
+  const wheeling7 = generateWheelingSystem(paitoBBFS7.digits);
 
   return {
     rankedDigits: res4.ranked,
@@ -625,6 +629,8 @@ export function generatePrediction(
     deadDigits: dedicatedBBFS.deadDigits, // 2 Digit terlemah berbasis skor BBFS 2D!
     paitoPrediction,
     polaTarung,
+    paitoBBFS7,
+    wheeling7,
     lastDraw: {
       full: lastFull,
       as: parseInt(lastFull[0], 10),
