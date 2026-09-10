@@ -41,6 +41,8 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
   const [showAiBbfs, setShowAiBbfs] = useState<boolean>(true);
   const [showShio, setShowShio] = useState<boolean>(true);
   const [showPaito, setShowPaito] = useState<boolean>(true);
+  const [showTarung, setShowTarung] = useState<boolean>(true);
+  const [showMovement, setShowMovement] = useState<boolean>(true);
   const [showBom, setShowBom] = useState<boolean>(true);
   const [showFooter, setShowFooter] = useState<boolean>(true);
 
@@ -164,6 +166,27 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       }
     }
 
+    const polaTarung = prediction.polaTarung;
+    const movement = prediction.paitoPrediction?.movement;
+
+    const tarungKepalaStr = polaTarung ? polaTarung.rankedKepala.slice(0, 4).join(', ') : '';
+    const tarungEkorStr = polaTarung ? polaTarung.rankedEkor.slice(0, 4).join(', ') : '';
+    const tarung4x4Str = polaTarung ? polaTarung.tarung4x4.join(' ') : '';
+    const tarung3x3Str = polaTarung ? polaTarung.tarung3x3.join(' ') : '';
+
+    const movementMagnitude = movement
+      ? `${movement.magnitude.rhythmLabel} ➔ Proyeksi ${movement.magnitude.prediction.toUpperCase()}`
+      : '';
+    const movementParity = movement
+      ? `K:${movement.parity.kepalaOscillation} • E:${movement.parity.ekorOscillation} ➔ ${movement.parity.primaryParity}`
+      : '';
+    const movementJalur = movement
+      ? `${movement.jalur.orbitLabel} (Jalur ${movement.jalur.predictedJalur})`
+      : '';
+    const movementBiji = movement
+      ? `${movement.biji.stepLabel} ➔ Target [ ${movement.biji.targetBiji.join(', ')} ]`
+      : '';
+
     return {
       marketName: market.name,
       dateStr,
@@ -180,6 +203,14 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       topBijiStr: paito ? paito.topBiji.join(', ') : '',
       parityFormatted,
       primaryMagnitude: paito?.primaryMagnitude || 'Besar',
+      tarungKepalaStr,
+      tarungEkorStr,
+      tarung4x4Str,
+      tarung3x3Str,
+      movementMagnitude,
+      movementParity,
+      movementJalur,
+      movementBiji,
       bomNuklirStr: bomNuklir.join(' • '),
       bomSniperStr: bomSniper.join(' • '),
       invest10Str: invest10.join(' • ')
@@ -235,6 +266,24 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
         lines.push('');
       }
 
+      if (showMovement && d.movementMagnitude) {
+        lines.push('🚀 DINAMIKA POLA PERGERAKAN (KINETIC):');
+        lines.push(`  ▸ Ritme B/K      : ${d.movementMagnitude}`);
+        lines.push(`  ▸ Aliran Paritas : ${d.movementParity}`);
+        lines.push(`  ▸ Orbit Siklis   : ${d.movementJalur}`);
+        lines.push(`  ▸ Langkah Biji   : ${d.movementBiji}`);
+        lines.push('');
+      }
+
+      if (showTarung && d.tarungKepalaStr) {
+        lines.push('⚔️ POLA TARUNG 2D (KEPALA VS EKOR NO BB):');
+        lines.push(`  ▸ Kepala Kuat    : [ ${d.tarungKepalaStr} ]`);
+        lines.push(`  ▸ Ekor Kuat      : [ ${d.tarungEkorStr} ]`);
+        lines.push(`  ▸ 4x4 Utama      : ${d.tarung4x4Str} (16 Line Rekomendasi)`);
+        lines.push(`  ▸ 3x3 BOM        : ${d.tarung3x3Str} (9 Line Super Hemat 78%)`);
+        lines.push('');
+      }
+
       if (showBom) {
         lines.push('💣 LINE 2D BERVARIASI (SIAP PASANG):');
         if (d.bomNuklirStr) {
@@ -283,6 +332,12 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       if (showPaito && d.topBijiStr) {
         lines.push(`📊 Paito : ${d.primaryMagnitude.toUpperCase()} (${d.primaryMagnitude === 'Besar' ? '50-99' : '00-49'}) • ${d.parityFormatted} • Biji [ ${d.topBijiStr} ]`);
       }
+      if (showMovement && d.movementMagnitude) {
+        lines.push(`🚀 Gerak : ${d.movementMagnitude} • Orbit ${d.movementJalur}`);
+      }
+      if (showTarung && d.tarungKepalaStr) {
+        lines.push(`⚔️ Tarung: K:[${d.tarungKepalaStr}] * E:[${d.tarungEkorStr}] ➔ 16L: ${d.tarung4x4Str}`);
+      }
       if (showBom) {
         lines.push('');
         lines.push('💣 LINE JADI 2D (ANTI-TUMPANG TINDIH):');
@@ -307,12 +362,18 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       if (d.bomSniperStr) {
         lines.push(`🎯 BOM SNIPER (4 Line) : ${d.bomSniperStr}`);
       }
+      if (showTarung && d.tarung3x3Str) {
+        lines.push(`⚔️ TARUNG 3x3 BOM (9 Line) : ${d.tarung3x3Str}`);
+      }
       if (d.invest10Str) {
         lines.push(`🛡️ INVEST 2D (10 Line) : ${d.invest10Str}`);
       }
       lines.push('');
       lines.push(`🎯 AI Tunggal : [ ${d.topAi1} ] | AI 2D: ${d.ai4Str}`);
       lines.push(`🛡️ BBFS 7D    : ${d.bbfs7Str}`);
+      if (showTarung && d.tarungKepalaStr) {
+        lines.push(`⚔️ Pola Tarung: K:[${d.tarungKepalaStr}] vs E:[${d.tarungEkorStr}]`);
+      }
       if (d.topShioItems.length > 0) {
         lines.push(`🐴 Top Shio   : ${shioShortText}`);
       }
@@ -323,7 +384,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       }
       return lines.join('\n');
     }
-  }, [calculatedData, formatStyle, showAiBbfs, showShio, showPaito, showBom, showFooter]);
+  }, [calculatedData, formatStyle, showAiBbfs, showShio, showPaito, showTarung, showMovement, showBom, showFooter]);
 
   if (!isOpen || !market || !prediction) return null;
 
@@ -444,6 +505,8 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
               { label: 'AI & BBFS', state: showAiBbfs, set: setShowAiBbfs },
               { label: '🐴 Shio 2026', state: showShio, set: setShowShio },
               { label: '📊 Paito Makro', state: showPaito, set: setShowPaito },
+              { label: '⚔️ Pola Tarung', state: showTarung, set: setShowTarung },
+              { label: '🚀 Pola Gerak', state: showMovement, set: setShowMovement },
               { label: '💣 Line BOM', state: showBom, set: setShowBom },
               { label: 'Footer UPS', state: showFooter, set: setShowFooter }
             ].map((sec, idx) => (

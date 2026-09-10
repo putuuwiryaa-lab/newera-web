@@ -34,7 +34,10 @@ export type PredictionType =
   | 'super_sniper'
   | 'sniper'
   | 'shio'
-  | 'paito';
+  | 'paito'
+  | 'tarung'
+  | 'tarung_lines'
+  | 'movement';
 
 export type LetterCaseMode = 'uppercase' | 'lowercase' | 'original';
 
@@ -220,6 +223,19 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         const p = pred.paitoPrediction;
         return `Biji:[${p.topBiji.join(',')}] ${p.primaryParity} (${p.primaryMagnitude})`;
       }
+      case 'tarung': {
+        if (!pred.polaTarung) return '----';
+        return `K:[${pred.polaTarung.rankedKepala.slice(0, 4).join(',')}]*E:[${pred.polaTarung.rankedEkor.slice(0, 4).join(',')}]`;
+      }
+      case 'tarung_lines': {
+        if (!pred.polaTarung || pred.polaTarung.tarung4x4.length === 0) return '----';
+        return pred.polaTarung.tarung4x4.join(' ');
+      }
+      case 'movement': {
+        if (!pred.paitoPrediction?.movement) return '----';
+        const mv = pred.paitoPrediction.movement;
+        return `${mv.magnitude.prediction.toUpperCase()} (${mv.magnitude.rhythm}) | ${mv.parity.primaryParity} | J${mv.jalur.predictedJalur} | B${mv.biji.targetBiji[0]}`;
+      }
       default:
         return pred.ai[4].join('');
     }
@@ -267,6 +283,15 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         break;
       case 'paito':
         label = 'paito makro 2d';
+        break;
+      case 'tarung':
+        label = 'pola tarung 2d (k*e)';
+        break;
+      case 'tarung_lines':
+        label = 'tarung 4x4 (16 line no bb)';
+        break;
+      case 'movement':
+        label = 'dinamika gerak kinetik';
         break;
     }
     return lower ? label.toLowerCase() : label.toUpperCase();
@@ -414,6 +439,9 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                 { id: 'dead', label: 'Angka Mati' },
                 { id: 'super_sniper', label: '🐴 Super (Shio)', star: true },
                 { id: 'sniper', label: '🎯 Sniper BOM', star: true },
+                { id: 'tarung', label: '⚔️ Tarung (K*E)', star: true },
+                { id: 'tarung_lines', label: '⚔️ Tarung 16L', star: true },
+                { id: 'movement', label: '🚀 Pola Gerak' },
                 { id: 'shio', label: '🐴 Shio 2026' },
                 { id: 'paito', label: 'Paito Makro' }
               ].map((item) => (
