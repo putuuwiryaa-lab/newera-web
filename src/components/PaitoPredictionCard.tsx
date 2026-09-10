@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import type { PaitoMacroPrediction, HistoryItem } from '../engine/types';
+import React, { useState, useMemo } from 'react';
+import type { PaitoMacroPrediction, HistoryItem, PolaTarungPrediction, PaitoBBFS7Result } from '../engine/types';
 import { predictPaitoMacro, computeBiji, getParity } from '../engine/paitoPredictor';
 import { getShioFor2D, getShioByNumber } from '../engine/shio';
 import {
@@ -14,13 +14,21 @@ import {
   Crown,
   Activity,
   ArrowRight,
-  Zap
+  Zap,
+  Copy,
+  Check,
+  Target,
+  ShieldCheck,
+  Scissors
 } from 'lucide-react';
 
 interface PaitoPredictionCardProps {
   prediction: PaitoMacroPrediction;
   marketName: string;
   historyItems?: HistoryItem[];
+  polaTarung?: PolaTarungPrediction;
+  paitoBBFS7?: PaitoBBFS7Result;
+  onToast?: (msg: string) => void;
 }
 
 // Representasi kombinasi 2D untuk setiap biji (0-9)
@@ -40,8 +48,13 @@ const BIJI_2D_MAP: Record<number, string[]> = {
 export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
   prediction,
   marketName,
-  historyItems
+  historyItems,
+  polaTarung,
+  paitoBBFS7,
+  onToast
 }) => {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const {
     topBiji,
     bijiProbabilities,
@@ -57,6 +70,13 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
     confidenceScore,
     movement
   } = prediction;
+
+  const triggerCopy = (text: string, key: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    if (onToast) onToast(`${label} disalin ke clipboard!`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   // Verifikasi Audit Draw Kemarin
   const lastDrawAudit = useMemo(() => {
@@ -101,33 +121,37 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
     };
   }, [historyItems]);
 
+  const nuklir6 = paitoBBFS7?.nuklir6 || [];
+  const bom12 = paitoBBFS7?.bom12 || [];
+  const triadKumat = paitoBBFS7?.triadKumat || [];
+
   return (
-    <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/[0.1] bg-slate-900/80 shadow-xl space-y-4 animate-in fade-in duration-300">
+    <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/[0.1] bg-slate-900/80 shadow-2xl space-y-4 animate-in fade-in duration-300">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-white/[0.08]">
         <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
-            <Compass className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+            <Compass className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h4 className="text-sm font-semibold text-white tracking-tight">
-                Prediksi Makro Paito 2D
+              <h4 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Pusat Prediksi Paito 2D Terpadu
               </h4>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
                 {marketName}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Analisis siklus Biji, Transisi Paritas 4-Kuadran, dan Shio 2026 (Tahun Kuda Api)
+              Analisis siklus Biji, Transisi Paritas Kinetik, Shio 2026 (Kuda Api), dan Formasi Pangkas Presisi
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 self-start sm:self-auto">
-          <span className="text-[11px] text-slate-400 font-mono">Keyakinan Model:</span>
-          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs flex items-center space-x-1">
-            <Sparkles className="w-3 h-3" />
+          <span className="text-[11px] text-slate-400 font-mono">Keyakinan Paito:</span>
+          <span className="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-black text-xs flex items-center space-x-1.5 shadow-md">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             <span>{confidenceScore}%</span>
           </span>
         </div>
@@ -135,14 +159,14 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
 
       {/* Verifikasi Audit Result Kemarin */}
       {lastDrawAudit && (
-        <div className="p-3 rounded-xl bg-slate-950/70 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-md">
           <div className="flex items-center space-x-2.5">
-            <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <div className="p-2 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30">
               <Award className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-semibold text-slate-200">
+                <span className="font-bold text-slate-200">
                   Audit Result Kemarin ({lastDrawAudit.lastFull} &rarr; 2D: {lastDrawAudit.target2D}):
                 </span>
                 <span
@@ -240,7 +264,7 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
 
             <div className="flex items-center space-x-2">
               <span className="text-[11px] text-slate-400 font-mono">Ritme Makro:</span>
-              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
                 <Zap className="w-3 h-3 text-emerald-400" />
                 <span>{movement.magnitude.rhythmLabel}</span>
               </span>
@@ -352,6 +376,140 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
         </div>
       )}
 
+      {/* ⚡ Formasi Pangkas Presisi 2D (Hasil Tarikan Paito) */}
+      {(nuklir6.length > 0 || bom12.length > 0 || polaTarung) && (
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-amber-500/25 shadow-xl space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                <Target className="w-4 h-4" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-white flex items-center space-x-2">
+                  <span>Formasi Pangkas Presisi 2D</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    Eksekusi Tarikan
+                  </span>
+                </h5>
+                <p className="text-[11px] text-slate-400">
+                  Line pilihan paito hasil filter irisan Biji Top 3, Paritas Kinetik, Shio 2026, dan Trinitas Jalur
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Copy Fast Buttons */}
+            <div className="flex items-center space-x-1.5">
+              {nuklir6.length > 0 && (
+                <button
+                  onClick={() => triggerCopy(nuklir6.join(' '), 'nuklir', '6 Line Super Nuklir')}
+                  className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 text-xs font-bold transition-all"
+                >
+                  {copiedKey === 'nuklir' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>Salin 6 Nuklir</span>
+                </button>
+              )}
+              {bom12.length > 0 && (
+                <button
+                  onClick={() => triggerCopy(bom12.join(' '), 'bom', '12 Line BOM')}
+                  className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 text-xs font-bold transition-all"
+                >
+                  {copiedKey === 'bom' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>Salin 12 BOM</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Box 1: 6 Line Super Nuklir */}
+            {nuklir6.length > 0 && (
+              <div className="p-3 rounded-xl bg-slate-900/70 border border-rose-500/20 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <Zap className="w-3.5 h-3.5 text-rose-400" />
+                    <span className="text-xs font-bold text-rose-300">⚡ Super Nuklir (6 Line)</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">Modal Mini, Profit Maksimal</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {nuklir6.map((line) => (
+                    <span
+                      key={line}
+                      className="px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-200 font-mono font-black text-xs tracking-wider shadow-sm"
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Box 2: 12 Line BOM */}
+            {bom12.length > 0 && (
+              <div className="p-3 rounded-xl bg-slate-900/70 border border-amber-500/20 flex flex-col justify-between space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs font-bold text-amber-300">💣 BOM Penyerang (12 Line)</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400">Striker Utama 2D</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {bom12.map((line) => (
+                    <span
+                      key={line}
+                      className="px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 font-mono font-bold text-xs tracking-wider shadow-sm"
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pola Tarung 4x4 & 3 Triad Kumat Mini Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {polaTarung && (
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-cyan-500/20 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-200">Pola Tarung 4×4:</div>
+                    <div className="text-[11px] font-mono text-cyan-300">
+                      [{polaTarung.rankedKepala.slice(0, 4).join(', ')}] vs [{polaTarung.rankedEkor.slice(0, 4).join(', ')}] ({polaTarung.tarung4x4.length} Line)
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => triggerCopy(polaTarung.tarung4x4.join(' '), 'tarung', '16 Line Pola Tarung')}
+                  className="px-2 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/25 text-[11px] font-bold transition-all"
+                >
+                  {copiedKey === 'tarung' ? 'Tersalin' : 'Salin'}
+                </button>
+              </div>
+            )}
+
+            {triadKumat.length > 0 && (
+              <div className="p-2.5 rounded-xl bg-slate-900/60 border border-rose-500/20 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Scissors className="w-4 h-4 text-rose-400 shrink-0" />
+                  <div className="text-xs">
+                    <div className="font-bold text-slate-200">3 Triad Kumat (Digit Buang):</div>
+                    <div className="text-[11px] font-mono text-rose-300">
+                      Digit Mati: {triadKumat.map((d) => d.digit).join(', ')} (Aman: {triadKumat[0]?.safetyScore ?? 85}%)
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                  10 - 7 = 3
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Kartu Analisis Shio 2026 (Tahun Kuda Api) */}
       <div className="p-4 rounded-xl bg-slate-950/70 border border-white/[0.08] space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
@@ -373,7 +531,7 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
           <div className="flex items-center space-x-2">
             <span className="text-[11px] text-slate-400 font-mono">Jalur Utama:</span>
             <span
-              className={`px-2.5 py-0.5 rounded font-mono font-bold text-xs border flex items-center space-x-1 ${
+              className={`px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs border flex items-center space-x-1 ${
                 primaryJalur === 1
                   ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                   : primaryJalur === 2
@@ -549,7 +707,7 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs text-slate-400">Kecenderungan:</span>
-              <span className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono font-bold text-xs">
+              <span className="px-2 py-0.5 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono font-bold text-xs">
                 {primaryParity}
               </span>
             </div>
@@ -598,7 +756,7 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-400">Kecenderungan:</span>
               <span
-                className={`px-2.5 py-0.5 rounded font-mono font-bold text-xs border ${
+                className={`px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs border ${
                   primaryMagnitude === 'Besar'
                     ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                     : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
