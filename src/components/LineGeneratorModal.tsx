@@ -18,7 +18,8 @@ import {
   Sparkles,
   Target,
   Swords,
-  Coins
+  Coins,
+  Receipt
 } from 'lucide-react';
 
 interface LineGeneratorModalProps {
@@ -44,6 +45,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
   const mode = userMode ?? initialMode;
   const [includeTwins, setIncludeTwins] = useState(false);
   const [delimiter, setDelimiter] = useState<'space' | 'comma' | 'newline'>('space');
+  const [betSuffix, setBetSuffix] = useState<string>(''); // '', '*1000', '*500', '*2000', '*1'
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [wheelSubTab, setWheelSubTab] = useState<'3d_smart' | '3d_full' | '4d_smart' | '4d_full'>('3d_smart');
 
@@ -68,34 +70,50 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
     return generateWheelingSystem(digits);
   }, [digits]);
 
+  // Helper pemformat baris dengan bet suffix
+  const formatWithBet = (rawLines: string[]) => {
+    if (!betSuffix) return formatLines(rawLines, delimiter);
+    const suffixed = rawLines.map((l) => `${l}${betSuffix}`);
+    return formatLines(suffixed, delimiter);
+  };
+
   if (!isOpen) return null;
 
   const lines = generate2DLines(digits, includeTwins);
-  const formattedFullText = formatLines(lines, delimiter);
+  const formattedFullText = formatWithBet(lines);
 
   // Smart Trimmer
   const trimmed = generateSmartTrim(digits);
-  const top10Text = formatLines(trimmed.top10, delimiter);
-  const medium15Text = formatLines(trimmed.medium15, delimiter);
-  const cadanganText = formatLines(trimmed.cadangan, delimiter);
+  const top10Text = formatWithBet(trimmed.top10);
+  const medium15Text = formatWithBet(trimmed.medium15);
+  const cadanganText = formatWithBet(trimmed.cadangan);
 
-  const sniperTopText = sniper ? formatLines(sniper.sniperTop, delimiter) : '';
-  const superSniperText = sniper?.superSniperShio ? formatLines(sniper.superSniperShio, delimiter) : '';
-  const sniperSecText = sniper ? formatLines(sniper.sniperSecondary, delimiter) : '';
+  const sniperTopText = sniper ? formatWithBet(sniper.sniperTop) : '';
+  const superSniperText = sniper?.superSniperShio ? formatWithBet(sniper.superSniperShio) : '';
+  const sniperSecText = sniper ? formatWithBet(sniper.sniperSecondary) : '';
 
-  const tarung3x3Text = polaTarung ? formatLines(polaTarung.tarung3x3, delimiter) : '';
-  const tarung4x4Text = polaTarung ? formatLines(polaTarung.tarung4x4, delimiter) : '';
-  const tarung5x5Text = polaTarung ? formatLines(polaTarung.tarung5x5, delimiter) : '';
+  const tarung3x3Text = polaTarung ? formatWithBet(polaTarung.tarung3x3) : '';
+  const tarung4x4Text = polaTarung ? formatWithBet(polaTarung.tarung4x4) : '';
+  const tarung5x5Text = polaTarung ? formatWithBet(polaTarung.tarung5x5) : '';
 
   // Wheeling Formats
-  const wheel3DText = formatLines(wheeling.wheel3D, delimiter);
-  const wheel3DFullText = formatLines(wheeling.wheel3DFull, delimiter);
-  const wheel4DText = formatLines(wheeling.wheel4D, delimiter);
-  const wheel4DFullText = formatLines(wheeling.wheel4DFull, delimiter);
+  const wheel3DText = formatWithBet(wheeling.wheel3D);
+  const wheel3DFullText = formatWithBet(wheeling.wheel3DFull);
+  const wheel4DText = formatWithBet(wheeling.wheel4D);
+  const wheel4DFullText = formatWithBet(wheeling.wheel4DFull);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  // Salin Format Slip WAP (2D*1000*01,23,45#)
+  const handleCopyWap = (rawLines: string[], gameType: '2D' | '3D' | '4D') => {
+    const betVal = betSuffix ? betSuffix.replace('*', '') : '1000';
+    const wapStr = `${gameType}*${betVal}*${rawLines.join(',')}#`;
+    navigator.clipboard.writeText(wapStr);
+    setCopiedKey('wap-slip');
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -198,8 +216,8 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
           </button>
         </div>
 
-        {/* Controls */}
-        <div className="p-3 bg-slate-950/50 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs">
+        {/* Controls Bar: Pemformat Delimiter & Format Bet BO */}
+        <div className="p-3 bg-slate-950/50 border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2.5 text-xs">
           {mode === 'full' ? (
             <button
               onClick={() => setIncludeTwins(!includeTwins)}
@@ -218,7 +236,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
             </button>
           ) : mode === 'wheeling' ? (
             <span className="text-amber-300 font-mono text-[11px] font-semibold">
-              ★ Covering Design Hemat Hingga 96% Modal
+              ★ Covering Design Hemat Hingga 96%
             </span>
           ) : (
             <span className="text-slate-400 font-mono text-[11px]">
@@ -226,6 +244,31 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
             </span>
           )}
 
+          {/* Quick Format Bet BO Chips */}
+          <div className="flex items-center space-x-1 bg-slate-900/80 border border-white/[0.08] p-0.5 rounded-lg">
+            <span className="text-[10px] text-slate-400 px-1.5 font-medium">Bet BO:</span>
+            {[
+              { label: 'Polos', val: '' },
+              { label: '*1rb', val: '*1000' },
+              { label: '*500', val: '*500' },
+              { label: '*2rb', val: '*2000' },
+              { label: '*1', val: '*1' }
+            ].map((b) => (
+              <button
+                key={b.label}
+                onClick={() => setBetSuffix(b.val)}
+                className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition-all ${
+                  betSuffix === b.val
+                    ? 'bg-amber-400 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Delimiter */}
           <div className="flex items-center space-x-1 bg-slate-900/80 border border-white/[0.08] p-0.5 rounded-lg ml-auto">
             {(['space', 'comma', 'newline'] as const).map((d) => (
               <button
@@ -253,26 +296,36 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                 rows={7}
                 className="w-full bg-slate-950/80 border border-white/[0.08] rounded-xl p-3 font-mono text-sm text-purple-200 focus:outline-none focus:border-purple-500/50 resize-none leading-relaxed tracking-wider"
               />
-              <div className="flex items-center justify-between mt-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5">
                 <span className="text-xs text-slate-500 font-mono">
-                  Total {lines.length} Line Siap Pasang
+                  Total {lines.length} Line Siap Pasang {betSuffix ? `(${betSuffix})` : ''}
                 </span>
-                <button
-                  onClick={() => handleCopy(formattedFullText, 'full')}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-md shadow-purple-600/20 active:scale-95"
-                >
-                  {copiedKey === 'full' ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-300" />
-                      <span>Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Salin Semua ({lines.length})</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleCopyWap(lines, '2D')}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold flex items-center space-x-1.5 transition-all border border-amber-500/30 active:scale-95"
+                    title="Salin format WAP siap pasang BO: 2D*1000*01,23,45#"
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>{copiedKey === 'wap-slip' ? 'Slip Tersalin!' : 'Slip WAP BO'}</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopy(formattedFullText, 'full')}
+                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-md shadow-purple-600/20 active:scale-95"
+                  >
+                    {copiedKey === 'full' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-300" />
+                        <span>Tersalin!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Salin Semua ({lines.length})</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ) : mode === 'trimmer' ? (
@@ -562,13 +615,22 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                         {wheeling.guarantee3D}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleCopy(wheel3DText, 'wheel3d')}
-                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95"
-                    >
-                      {copiedKey === 'wheel3d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedKey === 'wheel3d' ? 'Tersalin!' : 'Salin 15 Line'}</span>
-                    </button>
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleCopyWap(wheeling.wheel3D, '3D')}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-amber-500/30 active:scale-95"
+                        title="Salin format WAP siap pasang BO"
+                      >
+                        Slip WAP
+                      </button>
+                      <button
+                        onClick={() => handleCopy(wheel3DText, 'wheel3d')}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-amber-500/20 active:scale-95"
+                      >
+                        {copiedKey === 'wheel3d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedKey === 'wheel3d' ? 'Tersalin!' : 'Salin 15 Line'}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -594,13 +656,22 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                         100% dari seluruh kombinasi 3 digit unik BBFS 7
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleCopy(wheel3DFullText, 'wheel3dfull')}
-                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
-                    >
-                      {copiedKey === 'wheel3dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>Salin 35 Line</span>
-                    </button>
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleCopyWap(wheeling.wheel3DFull, '3D')}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold border border-amber-500/30 active:scale-95"
+                        title="Salin format WAP siap pasang BO"
+                      >
+                        Slip WAP
+                      </button>
+                      <button
+                        onClick={() => handleCopy(wheel3DFullText, 'wheel3dfull')}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
+                      >
+                        {copiedKey === 'wheel3dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>Salin 35 Line</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -622,13 +693,22 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                         {wheeling.guarantee4D}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleCopy(wheel4DText, 'wheel4d')}
-                      className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-orange-500/20 active:scale-95"
-                    >
-                      {copiedKey === 'wheel4d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedKey === 'wheel4d' ? 'Tersalin!' : 'Salin 14 Line'}</span>
-                    </button>
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleCopyWap(wheeling.wheel4D, '4D')}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-300 text-xs font-semibold border border-orange-500/30 active:scale-95"
+                        title="Salin format WAP siap pasang BO"
+                      >
+                        Slip WAP
+                      </button>
+                      <button
+                        onClick={() => handleCopy(wheel4DText, 'wheel4d')}
+                        className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-400 text-slate-950 text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-orange-500/20 active:scale-95"
+                      >
+                        {copiedKey === 'wheel4d' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedKey === 'wheel4d' ? 'Tersalin!' : 'Salin 14 Line'}</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -654,13 +734,22 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
                         100% dari seluruh variasi 4 digit tanpa duplikasi
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleCopy(wheel4DFullText, 'wheel4dfull')}
-                      className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
-                    >
-                      {copiedKey === 'wheel4dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>Salin 35 Line</span>
-                    </button>
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleCopyWap(wheeling.wheel4DFull, '4D')}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-300 text-xs font-semibold border border-orange-500/30 active:scale-95"
+                        title="Salin format WAP siap pasang BO"
+                      >
+                        Slip WAP
+                      </button>
+                      <button
+                        onClick={() => handleCopy(wheel4DFullText, 'wheel4dfull')}
+                        className="px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md"
+                      >
+                        {copiedKey === 'wheel4dfull' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>Salin 35 Line</span>
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     readOnly
@@ -675,7 +764,14 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 border-t border-white/[0.06] bg-slate-950/60 flex justify-end">
+        <div className="p-3.5 border-t border-white/[0.06] bg-slate-950/60 flex items-center justify-between">
+          <div className="text-[11px] font-mono text-slate-400">
+            {betSuffix ? (
+              <span className="text-amber-300">Format BO aktif: {betSuffix}</span>
+            ) : (
+              <span>Format BO: Polos (Tanpa Nominal)</span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
