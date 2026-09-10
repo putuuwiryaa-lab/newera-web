@@ -1,20 +1,25 @@
 import React, { useState, useMemo } from 'react';
-import type { HistoryItem, PaitoMacroPrediction } from '../engine/types';
+import type { HistoryItem, PaitoMacroPrediction, PredictionResult } from '../engine/types';
 import { predictPaitoMacro } from '../engine/paitoPredictor';
 import { SHIO_2026_LIST } from '../engine/shio';
 import { PaitoPredictionCard } from './PaitoPredictionCard';
-import { ListFilter, Search, X, Copy, Check, Star } from 'lucide-react';
+import { Heatmap2DView } from './Heatmap2DView';
+import { ListFilter, Search, X, Copy, Check, Star, Flame } from 'lucide-react';
 
 interface HistoryPaitoTableProps {
   historyItems: HistoryItem[];
   marketName: string;
   paitoPrediction?: PaitoMacroPrediction | null;
+  prediction?: PredictionResult | null;
+  onToast?: (msg: string) => void;
 }
 
 export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   historyItems,
   marketName,
-  paitoPrediction
+  paitoPrediction,
+  prediction,
+  onToast
 }) => {
   const [filterTwinOnly, setFilterTwinOnly] = useState(false);
   const [filterBiji, setFilterBiji] = useState<'all' | 'top3' | number>('all');
@@ -23,6 +28,12 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
   const [searchDigit, setSearchDigit] = useState<string>('');
   const [limit, setLimit] = useState<number>(25);
   const [copied, setCopied] = useState(false);
+  const [subTab, setSubTab] = useState<'paito' | 'heatmap'>('paito');
+
+  const history2D: [number, number][] = useMemo(
+    () => historyItems.map((item) => [item.kepala, item.ekor]),
+    [historyItems]
+  );
 
   const computedPrediction = useMemo(() => {
     if (paitoPrediction) return paitoPrediction;
@@ -107,8 +118,45 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
         historyItems={historyItems}
       />
 
-      {/* Tabel Riwayat Paito & Filter */}
-      <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4">
+      {/* Sub-Tab Navigation Switcher */}
+      <div className="flex items-center justify-between bg-slate-900/90 border border-white/[0.08] p-1.5 rounded-2xl shadow-lg backdrop-blur-md">
+        <div className="flex items-center space-x-1.5 w-full sm:w-auto">
+          <button
+            onClick={() => setSubTab('paito')}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              subTab === 'paito'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 scale-[1.02]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <ListFilter className="w-4 h-4" />
+            <span>📋 Tabel Paito & Makro 2D</span>
+          </button>
+          <button
+            onClick={() => setSubTab('heatmap')}
+            className={`flex-1 sm:flex-initial flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              subTab === 'heatmap'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 scale-[1.02]'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            <Flame className="w-4 h-4" />
+            <span>🔥 Heatmap 10x10 & Lintasan Gerak</span>
+          </button>
+        </div>
+      </div>
+
+      {subTab === 'heatmap' ? (
+        <Heatmap2DView
+          history2D={history2D}
+          marketName={marketName}
+          prediction={prediction}
+          polaTarung={prediction?.polaTarung}
+          onToast={onToast}
+        />
+      ) : (
+        /* Tabel Riwayat Paito & Filter */
+        <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-xl space-y-4">
       {/* Header & Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
         <div className="flex items-center space-x-3">
@@ -374,6 +422,7 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
         </table>
       </div>
     </div>
+      )}
   </div>
   );
 };

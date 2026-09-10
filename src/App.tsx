@@ -367,6 +367,8 @@ export function App() {
             historyItems={historyItems}
             marketName={currentMarket ? currentMarket.name : ''}
             paitoPrediction={prediction?.paitoPrediction}
+            prediction={prediction}
+            onToast={(msg) => showToast(msg, 'info')}
           />
         )}
       </main>
@@ -455,6 +457,7 @@ export function App() {
         tierName={modalState.tierName}
         initialMode={modalState.initialMode}
         paitoPrediction={prediction?.paitoPrediction}
+        polaTarung={prediction?.polaTarung}
       />
 
       {/* Multi-Market Share Prediction Modal */}

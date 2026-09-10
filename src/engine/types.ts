@@ -31,6 +31,7 @@ export interface PredictionResult {
   convergenceStatus: 'TINGGI' | 'SEDANG' | 'RENDAH';
   deadDigits: number[]; // 2 Digit paling lemah
   paitoPrediction?: PaitoMacroPrediction;
+  polaTarung?: PolaTarungPrediction;
   lastDraw: {
     full: string;
     as: number;
@@ -227,5 +228,135 @@ export interface PaitoMacroPrediction {
   overdueShios?: OverdueShioInfo[];
   overdueAlerts: OverdueAlert[];
   confidenceScore: number;
+  movement?: MovementDynamics;
+}
+
+// ==========================================
+// KINETIC MOVEMENT & POLA PERGERAKAN TYPES
+// ==========================================
+
+export interface MovementMagnitudeDetail {
+  rhythm: 'ZIG_ZAG' | 'STREAK_REVERSAL' | 'TREND_FOLLOW';
+  rhythmLabel: string;
+  flipRate: number; // 0.0 - 1.0
+  currentStreak: number;
+  currentStreakState: 'Besar' | 'Kecil';
+  historicalMaxStreak: number;
+  velocitySlope: number; // pergerakan nilai 2D (+ naik, - turun)
+  prediction: 'Besar' | 'Kecil';
+  confidence: number;
+  rationale: string;
+}
+
+export interface MovementParityDetail {
+  kepalaPolarity: 'Genap' | 'Ganjil';
+  kepalaOscillation: 'FLIP' | 'STICKY';
+  ekorPolarity: 'Genap' | 'Ganjil';
+  ekorOscillation: 'FLIP' | 'STICKY';
+  trajectoryFlow: string; // e.g. "Ganjil-Genap -> Genap-Ganjil -> Ganjil-Ganjil"
+  primaryParity: 'Genap-Genap' | 'Genap-Ganjil' | 'Ganjil-Genap' | 'Ganjil-Ganjil';
+  confidence: number;
+  rationale: string;
+}
+
+export interface MovementJalurDetail {
+  orbitDirection: 'PUTARAN_MAJU' | 'PUTARAN_MUNDUR' | 'PANTULAN' | 'BERTAHAN';
+  orbitLabel: string;
+  lastTransitions: [1 | 2 | 3, 1 | 2 | 3][];
+  predictedJalur: 1 | 2 | 3;
+  predictedShios: number[];
+  shioStepRhythm: 'TRIAD_HARMONIC' | 'CIONG_OPPOSITE' | 'STEP_CREEP' | 'STABLE';
+  confidence: number;
+  rationale: string;
+}
+
+export interface MovementBijiDetail {
+  dominantStepDelta: number; // e.g. +2, +3, etc.
+  stepLabel: string;
+  isMirrorReflection: boolean;
+  targetBiji: number[];
+  confidence: number;
+  rationale: string;
+}
+
+export interface MovementHistoryPoint {
+  period: number;
+  full: string;
+  comb2D: string;
+  kepala: number;
+  ekor: number;
+  magnitude: 'Besar' | 'Kecil';
+  parity: string;
+  biji: number;
+  jalur: 1 | 2 | 3;
+  shioNumber: number;
+  shioName: string;
+}
+
+export interface MovementDynamics {
+  magnitude: MovementMagnitudeDetail;
+  parity: MovementParityDetail;
+  jalur: MovementJalurDetail;
+  biji: MovementBijiDetail;
+  last5Draws: MovementHistoryPoint[];
+}
+
+// ==========================================
+// POLA TARUNG 2D (KEPALA VS EKOR) TYPES
+// ==========================================
+
+export interface PolaTarungPrediction {
+  rankedKepala: number[]; // 0-9
+  rankedEkor: number[];   // 0-9
+  kepalaScores: Record<number, number>;
+  ekorScores: Record<number, number>;
+  kepalaDirection: 'NAIK' | 'TURUN' | 'STABIL';
+  ekorDirection: 'NAIK' | 'TURUN' | 'STABIL';
+  tarung3x3: string[]; // 9 lines
+  tarung4x4: string[]; // 16 lines
+  tarung5x5: string[]; // 25 lines
+}
+
+// ==========================================
+// HEATMAP & STATISTIK 2D TYPES
+// ==========================================
+
+export interface HeatmapCellData {
+  comb2D: string;
+  kepala: number;
+  ekor: number;
+  count: number;
+  lastSeenGap: number;
+  biji: number;
+  parity: string;
+  magnitude: 'Besar' | 'Kecil';
+  shioNumber: number;
+  shioName: string;
+  shioEmoji: string;
+  isTwin: boolean;
+}
+
+export interface PositionalDigitStat {
+  digit: number;
+  count: number;
+  rate: number;
+  lastSeenGap: number;
+  status: 'HOT' | 'WARM' | 'COLD';
+  trend: 'UP' | 'DOWN' | 'STABLE';
+}
+
+export interface Heatmap2DStats {
+  lookback: number;
+  totalDraws: number;
+  maxCount: number;
+  cells: Record<string, HeatmapCellData>; // "00".."99"
+  kepalaStats: Record<number, PositionalDigitStat>; // 0..9
+  ekorStats: Record<number, PositionalDigitStat>;   // 0..9
+  kineticTrace: {
+    step: number; // 1 to 5
+    comb2D: string;
+    kepala: number;
+    ekor: number;
+  }[];
 }
 

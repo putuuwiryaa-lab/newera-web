@@ -1,5 +1,6 @@
 import type { PredictionResult } from './types';
 import { predictPaitoMacro } from './paitoPredictor';
+import { analyzePolaTarungMovement } from './movementPredictor';
 
 // Tabel Transformasi Komunitas Tradisional
 export const INDEX_MAP: Record<number, number> = {
@@ -609,7 +610,8 @@ export function generatePrediction(
   if (confidenceScore >= 80) convergenceStatus = 'TINGGI';
   else if (confidenceScore < 68) convergenceStatus = 'RENDAH';
 
-  const paitoPrediction = predictPaitoMacro(history2D);
+  const paitoPrediction = predictPaitoMacro(history2D, 50, valid4D);
+  const polaTarung = analyzePolaTarungMovement(history2D);
 
   return {
     rankedDigits: res4.ranked,
@@ -622,6 +624,7 @@ export function generatePrediction(
     convergenceStatus,
     deadDigits: dedicatedBBFS.deadDigits, // 2 Digit terlemah berbasis skor BBFS 2D!
     paitoPrediction,
+    polaTarung,
     lastDraw: {
       full: lastFull,
       as: parseInt(lastFull[0], 10),

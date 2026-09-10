@@ -1,41 +1,27 @@
 import type { PaitoMacroPrediction, OverdueAlert, OverdueShioInfo } from './types';
-import { getShioFor2D, SHIO_2026_LIST, JALUR_SHIO_MAP } from './shio';
+import { SHIO_2026_LIST, JALUR_SHIO_MAP, getShioFor2D } from './shio';
+import {
+  computeBiji,
+  getParity,
+  analyzeMovementDynamics,
+  PARITY_STATES,
+  type ParityState
+} from './movementPredictor';
+
+// Re-export untuk kompatibilitas modul lain
+export { computeBiji, getParity, PARITY_STATES, type ParityState };
 
 /**
- * Hitung Biji 2D (Digital Root): penjumlahan berulang Kepala + Ekor hingga 1 digit (0-9).
- */
-export function computeBiji(k: number, e: number): number {
-  if (k === 0 && e === 0) return 0;
-  let s = k + e;
-  while (s >= 10) {
-    s = Math.floor(s / 10) + (s % 10);
-  }
-  return s;
-}
-
-export type ParityState = 'Genap-Genap' | 'Genap-Ganjil' | 'Ganjil-Genap' | 'Ganjil-Ganjil';
-export const PARITY_STATES: ParityState[] = [
-  'Genap-Genap',
-  'Genap-Ganjil',
-  'Ganjil-Genap',
-  'Ganjil-Ganjil'
-];
-
-export function getParity(k: number, e: number): ParityState {
-  const kp = k % 2 === 0 ? 'Genap' : 'Ganjil';
-  const ep = e % 2 === 0 ? 'Genap' : 'Ganjil';
-  return `${kp}-${ep}` as ParityState;
-}
-
-/**
- * Memprediksi atribut makro paito berdasarkan riwayat 2D:
- * 1. Biji 2D (Transisi Markov + Momentum Recency + Overdue Gap Tracker)
- * 2. Pola Ganjil-Genap (4 Kuadran Transisi + Deteksi Pola Terlambat)
- * 3. Kategori Besar-Kecil (>= 50 Besar vs < 50 Kecil)
+ * Memprediksi atribut makro paito berdasarkan DINAMIKA POLA PERGERAKAN:
+ * 1. Biji 2D (Step modular aritmatika delta + Resonansi cermin)
+ * 2. Pola Ganjil-Genap (Osilasi kutub partikel Kepala/Ekor + 2-step n-gram trajectory)
+ * 3. Kategori Besar-Kecil (Deteksi ritme Zig-Zag vs Runtutan Jenuh Reversal)
+ * 4. Shio & Jalur (Rotasi siklis orbit Z3 dan ritme harmonik Z12)
  */
 export function predictPaitoMacro(
   history2D: [number, number][],
-  lookback = 50
+  lookback = 50,
+  rawHistory4D?: string[]
 ): PaitoMacroPrediction {
   if (history2D.length === 0) {
     const defaultProbs: Record<number, number> = {};
@@ -66,29 +52,81 @@ export function predictPaitoMacro(
 
   const sub = history2D.slice(-lookback);
 
-  // 1. Analisis Biji 2D
-  const bijiHistory = sub.map(([k, e]) => computeBiji(k, e));
-  const lastBiji = bijiHistory[bijiHistory.length - 1];
+  // 1. Eksekusi Analisis Pola Pergerakan Menyeluruh
+  const movement = analyzeMovementDynamics(history2D, rawHistory4D);
 
-  const bijiTrans: Record<number, number> = {};
-  const bijiMomentum: Record<number, number> = {};
-  for (let d = 0; d < 10; d++) {
-    bijiTrans[d] = 0;
-    bijiMomentum[d] = 0;
-  }
+  // 2. Besar vs Kecil (Berdasarkan Pola Pergerakan Zig-Zag / Reversal Breakout)
+  const primaryMagnitude: 'Besar' | 'Kecil' = movement.magnitude.prediction;
+  const magConf = movement.magnitude.confidence / 100;
+  const magnitudeProbabilities = {
+    Besar: primaryMagnitude === 'Besar' ? magConf : Number((1 - magConf).toFixed(3)),
+    Kecil: primaryMagnitude === 'Kecil' ? magConf : Number((1 - magConf).toFixed(3))
+  };
 
-  for (let i = 0; i < bijiHistory.length - 1; i++) {
-    if (bijiHistory[i] === lastBiji) {
-      bijiTrans[bijiHistory[i + 1]] += 1;
+  // 3. Genap vs Ganjil (Berdasarkan Osilasi Kutub Kepala/Ekor & Trajektori N-Gram)
+  const primaryParity = movement.parity.primaryParity;
+  const parityConf = movement.parity.confidence / 100;
+  const remainingParityProb = (1 - parityConf) / 3;
+  const parityProbabilities: Record<string, number> = {};
+  PARITY_STATES.forEach((p) => {
+    parityProbabilities[p] = p === primaryParity ? parityConf : Number(remainingParityProb.toFixed(3));
+  });
+
+  // 4. Jalur & Shio 2026 (Berdasarkan Rotasi Orbit Z3 & Ritme Harmonik Z12)
+  const primaryJalur = movement.jalur.predictedJalur;
+  const topShios = movement.jalur.predictedShios;
+
+  const jalurConf = movement.jalur.confidence / 100;
+  const remainingJalurProb = (1 - jalurConf) / 2;
+  const jalurProbabilities: Record<number, number> = {
+    1: primaryJalur === 1 ? jalurConf : Number(remainingJalurProb.toFixed(3)),
+    2: primaryJalur === 2 ? jalurConf : Number(remainingJalurProb.toFixed(3)),
+    3: primaryJalur === 3 ? jalurConf : Number(remainingJalurProb.toFixed(3))
+  };
+
+  // Shio Probabilities
+  const shioProbabilities: Record<number, number> = {};
+  for (let s = 1; s <= 12; s++) {
+    if (topShios.includes(s)) {
+      shioProbabilities[s] = 0.18;
+    } else if (JALUR_SHIO_MAP[primaryJalur].includes(s)) {
+      shioProbabilities[s] = 0.10;
+    } else {
+      shioProbabilities[s] = 0.04;
     }
   }
 
-  bijiHistory.forEach((b, idx) => {
-    const decay = Math.exp(0.06 * (idx - bijiHistory.length + 1));
-    bijiMomentum[b] += decay;
+  // 5. Biji 2D (Berdasarkan Step Modular Delta & Cermin Sumbu 9)
+  const topBiji = movement.biji.targetBiji;
+  const bijiProbabilities: Record<number, number> = {};
+  for (let d = 0; d < 10; d++) {
+    if (topBiji.includes(d)) {
+      bijiProbabilities[d] = 0.22;
+    } else {
+      bijiProbabilities[d] = 0.048;
+    }
+  }
+
+  // 6. Overdue Gap Analysis (Untuk Sistem Peringatan Anomali)
+  const parityHistory = sub.map(([k, e]) => getParity(k, e));
+  const bijiHistory = sub.map(([k, e]) => computeBiji(k, e));
+  const shioHistory = sub.map(([k, e]) => getShioFor2D(k * 10 + e).no);
+
+  const parityGap: Record<ParityState, number> = {
+    'Genap-Genap': parityHistory.length,
+    'Genap-Ganjil': parityHistory.length,
+    'Ganjil-Genap': parityHistory.length,
+    'Ganjil-Ganjil': parityHistory.length
+  };
+  PARITY_STATES.forEach((p) => {
+    for (let step = 0; step < parityHistory.length; step++) {
+      if (parityHistory[parityHistory.length - 1 - step] === p) {
+        parityGap[p] = step;
+        break;
+      }
+    }
   });
 
-  // Gap / Overdue Tracker Biji
   const bijiGap: Record<number, number> = {};
   for (let d = 0; d < 10; d++) {
     let gap = bijiHistory.length;
@@ -100,143 +138,6 @@ export function predictPaitoMacro(
     }
     bijiGap[d] = gap;
   }
-
-  const bijiScores: Record<number, number> = {};
-  for (let d = 0; d < 10; d++) {
-    const mScore = bijiMomentum[d];
-    const tScore = bijiTrans[d] * 1.5;
-    const gapBonus = bijiGap[d] >= 12 ? 1.2 : 0;
-    bijiScores[d] = mScore + tScore + gapBonus;
-  }
-
-  const totBijiScore = Object.values(bijiScores).reduce((a, b) => a + b, 0) || 1.0;
-  const bijiProbabilities: Record<number, number> = {};
-  for (let d = 0; d < 10; d++) {
-    bijiProbabilities[d] = Number((bijiScores[d] / totBijiScore).toFixed(3));
-  }
-
-  const topBiji = Array.from({ length: 10 }, (_, i) => i)
-    .sort((a, b) => bijiScores[b] - bijiScores[a])
-    .slice(0, 3);
-
-  // 2. Analisis Ganjil-Genap (4 Kuadran)
-  const parityHistory = sub.map(([k, e]) => getParity(k, e));
-  const lastParity = parityHistory[parityHistory.length - 1];
-
-  const parityTrans: Record<ParityState, number> = {
-    'Genap-Genap': 0,
-    'Genap-Ganjil': 0,
-    'Ganjil-Genap': 0,
-    'Ganjil-Ganjil': 0
-  };
-  const parityMomentum: Record<ParityState, number> = {
-    'Genap-Genap': 0,
-    'Genap-Ganjil': 0,
-    'Ganjil-Genap': 0,
-    'Ganjil-Ganjil': 0
-  };
-
-  for (let i = 0; i < parityHistory.length - 1; i++) {
-    if (parityHistory[i] === lastParity) {
-      parityTrans[parityHistory[i + 1]] += 1;
-    }
-  }
-
-  parityHistory.forEach((p, idx) => {
-    const decay = Math.exp(0.08 * (idx - parityHistory.length + 1));
-    parityMomentum[p] += decay;
-  });
-
-  const parityGap: Record<ParityState, number> = {
-    'Genap-Genap': parityHistory.length,
-    'Genap-Ganjil': parityHistory.length,
-    'Ganjil-Genap': parityHistory.length,
-    'Ganjil-Ganjil': parityHistory.length
-  };
-
-  PARITY_STATES.forEach((p) => {
-    for (let step = 0; step < parityHistory.length; step++) {
-      if (parityHistory[parityHistory.length - 1 - step] === p) {
-        parityGap[p] = step;
-        break;
-      }
-    }
-  });
-
-  const parityScores: Record<ParityState, number> = {
-    'Genap-Genap': 0,
-    'Genap-Ganjil': 0,
-    'Ganjil-Genap': 0,
-    'Ganjil-Ganjil': 0
-  };
-
-  PARITY_STATES.forEach((p) => {
-    const reversion = parityGap[p] >= 8 ? 1.5 : 0;
-    parityScores[p] = parityMomentum[p] + parityTrans[p] * 2.0 + reversion;
-  });
-
-  const totParity = Object.values(parityScores).reduce((a, b) => a + b, 0) || 1.0;
-  const parityProbabilities: Record<string, number> = {};
-  PARITY_STATES.forEach((p) => {
-    parityProbabilities[p] = Number((parityScores[p] / totParity).toFixed(3));
-  });
-
-  const primaryParity = PARITY_STATES.slice().sort(
-    (a, b) => parityScores[b] - parityScores[a]
-  )[0];
-
-  // 3. Analisis Kategori Besar-Kecil
-  const magnitudeHistory = sub.map(([k, e]) => (k * 10 + e >= 50 ? 'Besar' : 'Kecil'));
-  const lastMag = magnitudeHistory[magnitudeHistory.length - 1];
-
-  let magTransBesar = 0;
-  let magTransKecil = 0;
-  for (let i = 0; i < magnitudeHistory.length - 1; i++) {
-    if (magnitudeHistory[i] === lastMag) {
-      if (magnitudeHistory[i + 1] === 'Besar') magTransBesar += 1;
-      else magTransKecil += 1;
-    }
-  }
-
-  let magMomBesar = 0;
-  let magMomKecil = 0;
-  magnitudeHistory.forEach((m, idx) => {
-    const decay = Math.exp(0.08 * (idx - magnitudeHistory.length + 1));
-    if (m === 'Besar') magMomBesar += decay;
-    else magMomKecil += decay;
-  });
-
-  const scoreBesar = magMomBesar + magTransBesar * 1.5;
-  const scoreKecil = magMomKecil + magTransKecil * 1.5;
-  const totMag = scoreBesar + scoreKecil || 1.0;
-
-  const magnitudeProbabilities = {
-    Besar: Number((scoreBesar / totMag).toFixed(3)),
-    Kecil: Number((scoreKecil / totMag).toFixed(3))
-  };
-  const primaryMagnitude: 'Besar' | 'Kecil' = scoreBesar >= scoreKecil ? 'Besar' : 'Kecil';
-
-  // 4. Analisis Shio 2026 (Tahun Kuda Api)
-  const shioHistory = sub.map(([k, e]) => getShioFor2D(k * 10 + e).no);
-  const lastShio = shioHistory[shioHistory.length - 1];
-
-  const shioTrans: Record<number, number> = {};
-  const shioMomentum: Record<number, number> = {};
-  for (let s = 1; s <= 12; s++) {
-    shioTrans[s] = 0;
-    shioMomentum[s] = 0;
-  }
-
-  for (let i = 0; i < shioHistory.length - 1; i++) {
-    if (shioHistory[i] === lastShio) {
-      shioTrans[shioHistory[i + 1]] += 1;
-    }
-  }
-
-  shioHistory.forEach((s, idx) => {
-    const decay = Math.exp(0.06 * (idx - shioHistory.length + 1));
-    shioMomentum[s] += decay;
-  });
 
   const shioGap: Record<number, number> = {};
   for (let s = 1; s <= 12; s++) {
@@ -250,46 +151,6 @@ export function predictPaitoMacro(
     shioGap[s] = gap;
   }
 
-  const shioScores: Record<number, number> = {};
-  for (let s = 1; s <= 12; s++) {
-    const mScore = shioMomentum[s];
-    const tScore = shioTrans[s] * 1.5;
-    const gapBonus = shioGap[s] >= 14 ? 1.5 : 0;
-    shioScores[s] = mScore + tScore + gapBonus;
-  }
-
-  const totShioScore = Object.values(shioScores).reduce((a, b) => a + b, 0) || 1.0;
-  const shioProbabilities: Record<number, number> = {};
-  for (let s = 1; s <= 12; s++) {
-    shioProbabilities[s] = Number((shioScores[s] / totShioScore).toFixed(3));
-  }
-
-  const topShios = Array.from({ length: 12 }, (_, i) => i + 1)
-    .sort((a, b) => shioScores[b] - shioScores[a])
-    .slice(0, 3);
-
-  // Probabilitas 3 Jalur Shio
-  const jalurProbabilities: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
-  ([1, 2, 3] as (1 | 2 | 3)[]).forEach((j) => {
-    const shiosInJalur = JALUR_SHIO_MAP[j];
-    const sumProb = shiosInJalur.reduce((acc, sno) => acc + (shioProbabilities[sno] || 0), 0);
-    jalurProbabilities[j] = sumProb;
-  });
-  const totJalur = (jalurProbabilities[1] + jalurProbabilities[2] + jalurProbabilities[3]) || 1.0;
-  jalurProbabilities[1] = Number((jalurProbabilities[1] / totJalur).toFixed(3));
-  jalurProbabilities[2] = Number((jalurProbabilities[2] / totJalur).toFixed(3));
-  jalurProbabilities[3] = Number((jalurProbabilities[3] / totJalur).toFixed(3));
-
-  let primaryJalur: 1 | 2 | 3 = 1;
-  let maxJalurProb = -1;
-  ([1, 2, 3] as (1 | 2 | 3)[]).forEach((j) => {
-    if (jalurProbabilities[j] > maxJalurProb) {
-      maxJalurProb = jalurProbabilities[j];
-      primaryJalur = j;
-    }
-  });
-
-  // 5. Overdue Alerts
   const overdueAlerts: OverdueAlert[] = [];
   PARITY_STATES.forEach((p) => {
     const g = parityGap[p];
@@ -315,12 +176,11 @@ export function predictPaitoMacro(
     }
   }
 
-  // Overdue Shios Tracker
   const overdueShios: OverdueShioInfo[] = [];
   SHIO_2026_LIST.forEach((sInfo) => {
     const g = shioGap[sInfo.no];
     if (g >= 14) {
-      const alertLevel = g >= 20 ? 'EKSTREM' : 'WASPADA';
+      const alertLevel = g >= 24 ? 'EKSTREM' : 'WASPADA';
       overdueShios.push({
         number: sInfo.no,
         name: sInfo.name,
@@ -331,23 +191,18 @@ export function predictPaitoMacro(
       });
       overdueAlerts.push({
         type: 'shio',
-        label: `Shio ${sInfo.emoji} ${sInfo.name} (${String(sInfo.no).padStart(2, '0')})`,
+        label: `Shio ${sInfo.emoji} ${sInfo.name} (${sInfo.no.toString().padStart(2, '0')})`,
         gap: g,
         alertLevel
       });
     }
   });
 
-  const confidenceScore = Math.min(
-    92,
-    Math.max(
-      60,
-      Math.round(
-        60 +
-          (parityProbabilities[primaryParity] || 0.25) * 40 +
-          (magnitudeProbabilities[primaryMagnitude] || 0.5) * 20
-      )
-    )
+  overdueAlerts.sort((a, b) => b.gap - a.gap);
+  overdueShios.sort((a, b) => b.gap - a.gap);
+
+  const confidenceScore = Math.round(
+    (movement.magnitude.confidence + movement.parity.confidence + movement.jalur.confidence + movement.biji.confidence) / 4
   );
 
   return {
@@ -363,6 +218,7 @@ export function predictPaitoMacro(
     jalurProbabilities,
     overdueShios,
     overdueAlerts,
-    confidenceScore
+    confidenceScore,
+    movement
   };
 }

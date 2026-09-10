@@ -11,7 +11,10 @@ import {
   Award,
   CheckCircle2,
   XCircle,
-  Crown
+  Crown,
+  Activity,
+  ArrowRight,
+  Zap
 } from 'lucide-react';
 
 interface PaitoPredictionCardProps {
@@ -51,7 +54,8 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
     shioProbabilities = {},
     jalurProbabilities = { 1: 0.34, 2: 0.33, 3: 0.33 },
     overdueAlerts,
-    confidenceScore
+    confidenceScore,
+    movement
   } = prediction;
 
   // Verifikasi Audit Draw Kemarin
@@ -207,6 +211,141 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
                     </span>
                   )}
                 </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 Monitor Pola Dinamika Pergerakan Kinetik */}
+      {movement && (
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-cyan-500/25 shadow-lg space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-white flex items-center space-x-2">
+                  <span>Radar Dinamika Pola Pergerakan</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                    Kinetic Trajectory Engine
+                  </span>
+                </h5>
+                <p className="text-[11px] text-slate-400">
+                  Kalkulasi ritme osilasi zig-zag, rotasi orbit Jalur mod 3, dan osilasi kutub Kepala-Ekor
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] text-slate-400 font-mono">Ritme Makro:</span>
+              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                <Zap className="w-3 h-3 text-emerald-400" />
+                <span>{movement.magnitude.rhythmLabel}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* 1. Jejak Lintasan 5 Result Terakhir */}
+          {movement.last5Draws && movement.last5Draws.length > 0 && (
+            <div>
+              <div className="text-[11px] text-slate-400 font-semibold mb-2 flex items-center space-x-1">
+                <span>Lintasan Aliran 5 Result Terakhir:</span>
+              </div>
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 overflow-x-auto pb-1">
+                {movement.last5Draws.map((d, idx) => {
+                  const isLatest = idx === movement.last5Draws.length - 1;
+                  return (
+                    <React.Fragment key={idx}>
+                      <div
+                        className={`flex-1 min-w-[72px] p-2 rounded-xl border text-center transition-all ${
+                          isLatest
+                            ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200 shadow-md ring-1 ring-cyan-400/30'
+                            : 'bg-slate-900/90 border-white/[0.06] text-slate-300'
+                        }`}
+                      >
+                        <div className="text-[10px] font-mono text-slate-400 mb-0.5">
+                          {isLatest ? 'Terkini' : `D-${movement.last5Draws.length - 1 - idx}`}
+                        </div>
+                        <div className="text-sm font-mono font-black tracking-wider text-white">
+                          {d.comb2D}
+                        </div>
+                        <div className="text-[9px] font-mono mt-1 flex items-center justify-center space-x-1 text-slate-400">
+                          <span className={d.magnitude === 'Besar' ? 'text-amber-300 font-bold' : 'text-cyan-300 font-bold'}>
+                            {d.magnitude.charAt(0)}
+                          </span>
+                          <span>&bull;</span>
+                          <span>B{d.biji}</span>
+                          <span>&bull;</span>
+                          <span>J{d.jalur}</span>
+                        </div>
+                      </div>
+                      {!isLatest && (
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 2. Grid Indikator Dinamika 4 Dimensi */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+            {/* Besar/Kecil Rhythm */}
+            <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Pergerakan B/K</span>
+                <span className="font-bold text-amber-300">{movement.magnitude.prediction}</span>
+              </div>
+              <div className="text-xs font-semibold text-slate-200 truncate">
+                {movement.magnitude.rhythmLabel}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Flip: {Math.round(movement.magnitude.flipRate * 100)}% &bull; Streak: {movement.magnitude.currentStreak}x {movement.magnitude.currentStreakState}
+              </div>
+            </div>
+
+            {/* Paritas Partikel Kepala & Ekor */}
+            <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Partikel Paritas</span>
+                <span className="font-bold text-purple-300">{movement.parity.primaryParity}</span>
+              </div>
+              <div className="text-xs font-semibold text-slate-200">
+                K: <span className="font-mono text-purple-400 font-bold">{movement.parity.kepalaOscillation}</span> &bull; E: <span className="font-mono text-cyan-400 font-bold">{movement.parity.ekorOscillation}</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono truncate" title={movement.parity.trajectoryFlow}>
+                {movement.parity.trajectoryFlow}
+              </div>
+            </div>
+
+            {/* Orbit Jalur & Shio */}
+            <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Orbit Siklis Jalur</span>
+                <span className="font-bold text-emerald-300">Jalur {movement.jalur.predictedJalur}</span>
+              </div>
+              <div className="text-xs font-semibold text-slate-200 truncate">
+                {movement.jalur.orbitLabel}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Ritme Shio: {movement.jalur.shioStepRhythm}
+              </div>
+            </div>
+
+            {/* Biji Step Modular */}
+            <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] space-y-1">
+              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                <span>Langkah Biji 2D</span>
+                <span className="font-bold text-cyan-300">Target: {movement.biji.targetBiji.join(', ')}</span>
+              </div>
+              <div className="text-xs font-semibold text-slate-200 truncate">
+                {movement.biji.stepLabel}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Step Δ: {movement.biji.dominantStepDelta >= 0 ? `+${movement.biji.dominantStepDelta}` : movement.biji.dominantStepDelta} mod 10
               </div>
             </div>
           </div>
@@ -402,7 +541,9 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
               <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
               <span>Pola Ganjil-Genap</span>
             </span>
-            <span className="text-[10px] font-mono text-purple-400">4-Kuadran</span>
+            <span className="text-[10px] font-mono text-purple-400">
+              {movement?.parity.kepalaOscillation ? `K:${movement.parity.kepalaOscillation} • E:${movement.parity.ekorOscillation}` : '4-Kuadran'}
+            </span>
           </div>
 
           <div>
@@ -448,7 +589,9 @@ export const PaitoPredictionCard: React.FC<PaitoPredictionCardProps> = ({
               <Compass className="w-3.5 h-3.5 text-amber-400" />
               <span>Kategori Nilai 2D</span>
             </span>
-            <span className="text-[10px] font-mono text-amber-400">00-49 vs 50-99</span>
+            <span className="text-[10px] font-mono text-amber-400">
+              {movement?.magnitude.rhythm ? `Ritme: ${movement.magnitude.rhythmLabel}` : '00-49 vs 50-99'}
+            </span>
           </div>
 
           <div>

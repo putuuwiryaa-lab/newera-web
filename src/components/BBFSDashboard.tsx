@@ -3,6 +3,7 @@ import type { PredictionResult, EvaluationMetrics } from '../engine/types';
 import type { CalibrationAudit } from '../engine/smartCalibrator';
 import { generateSmartTrim, generateSniperTrim, formatLines } from '../engine/generator';
 import { SmartCalibrationCard } from './SmartCalibrationCard';
+import { PolaTarungCard } from './PolaTarungCard';
 import {
   Layers,
   Scissors,
@@ -446,7 +447,14 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
         </div>
       </div>
 
-      {/* 4. Kalkulator Investasi Finansial 2D (Clean & Compact) */}
+      {/* 4. Pola Tarung 2D: Kepala vs Ekor Berdasarkan Dinamika Pergerakan */}
+      <PolaTarungCard
+        polaTarung={prediction.polaTarung}
+        marketName={marketName}
+        onToast={onToast}
+      />
+
+      {/* 5. Kalkulator Investasi Finansial 2D (Clean & Compact) */}
       <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-white/[0.06]">
           <div>
