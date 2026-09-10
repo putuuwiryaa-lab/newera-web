@@ -22,7 +22,7 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
   paintedColors,
   onCellClick
 }) => {
-  const [sortOrder, setSortOrder] = useState<'newest_top' | 'oldest_top'>('newest_top');
+  const [sortOrder, setSortOrder] = useState<'newest_top' | 'oldest_top'>('oldest_top');
 
   const colHeaders = useMemo(() => {
     if (colCount === 5) return ['Senin', 'Rabu', 'Kamis', 'Sabtu', 'Minggu'];
@@ -56,8 +56,13 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
   }, [historyItems, colCount, sortOrder]);
 
   const displayedRows = useMemo(() => {
+    if (!rows || rows.length === 0) return [];
+    if (sortOrder === 'oldest_top') {
+      // Standar Angkanet: Ambil N baris TERAKHIR agar putaran terkini/hari ini selalu di baris paling bawah!
+      return rows.slice(-rowsLimit);
+    }
     return rows.slice(0, rowsLimit);
-  }, [rows, rowsLimit]);
+  }, [rows, rowsLimit, sortOrder]);
 
   // Helper styling sel
   const getCellStyle = (item: HistoryItem, pos: 'as' | 'kop' | 'kepala' | 'ekor' | 'jumlah') => {
@@ -96,7 +101,7 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs font-mono">
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => setSortOrder(sortOrder === 'newest_top' ? 'oldest_top' : 'newest_top')}
+            onClick={() => setSortOrder(sortOrder === 'oldest_top' ? 'newest_top' : 'oldest_top')}
             className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg border transition-all ${
               theme === 'light'
                 ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-200'
@@ -105,7 +110,7 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
             <span>
-              Urutan: {sortOrder === 'newest_top' ? 'Terbaru di Atas' : 'Terlama di Atas (Standar Paito)'}
+              Urutan: {sortOrder === 'oldest_top' ? 'Terlama di Atas (Standar Angkanet)' : 'Terbaru di Atas'}
             </span>
           </button>
 
@@ -131,7 +136,7 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
           style={{ minWidth: `${colCount * 130}px` }}
         >
           {/* Header 1: Nama Kolom / Hari */}
-          <thead>
+          <thead className="sticky top-0 z-20 shadow-sm">
             <tr
               className={`border-b text-xs font-bold uppercase tracking-wider ${
                 theme === 'light'
@@ -158,7 +163,7 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
               className={`border-b text-[10px] font-bold ${
                 theme === 'light'
                   ? 'bg-slate-100 border-slate-300 text-slate-600'
-                  : 'bg-slate-900/60 border-white/[0.08] text-slate-400'
+                  : 'bg-slate-900/90 border-white/[0.08] text-slate-400'
               }`}
             >
               <th className="py-1 px-0.5 border-r border-slate-400/20 text-[9px]">
@@ -179,12 +184,12 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
           {/* Body Rows */}
           <tbody className="divide-y divide-slate-400/15 text-xs">
             {displayedRows.map((rowDraws, rIdx) => {
-              // Striping setiap baris ke-5 (nth-child 5n+1 ala Angkanet)
-              const isFifthRow = (displayedRows.length - rIdx) % 5 === 1;
+              // Striping setiap baris ke-5 dari bawah (nth-last-child 5n+1 standar Angkanet)
+              const isFifthRow = (displayedRows.length - 1 - rIdx) % 5 === 0;
               const rowBgClass = isFifthRow
                 ? theme === 'light'
-                  ? 'bg-slate-200/80'
-                  : 'bg-slate-800/40'
+                  ? 'bg-[#e8e4e7]'
+                  : 'bg-slate-800/50'
                 : '';
 
               return (
@@ -194,9 +199,10 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
                 >
                   {/* Row Number */}
                   <td
+                    title={`Baris ke-${rIdx + 1} (${displayedRows.length - 1 - rIdx} baris dari bawah)`}
                     className={`py-1 px-1 text-[10px] font-bold border-r border-slate-400/20 text-slate-500`}
                   >
-                    {sortOrder === 'newest_top' ? displayedRows.length - rIdx : rIdx + 1}
+                    {sortOrder === 'oldest_top' ? rIdx + 1 : displayedRows.length - rIdx}
                   </td>
 
                   {/* Draws in this row */}
@@ -204,11 +210,11 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
                     if (!item) {
                       return (
                         <React.Fragment key={dIdx}>
-                          <td className="py-1.5 border-r border-slate-400/15 text-slate-700">-</td>
-                          <td className="py-1.5 border-r border-slate-400/15 text-slate-700">-</td>
-                          <td className="py-1.5 border-r border-slate-400/15 text-slate-700">-</td>
-                          <td className="py-1.5 border-r border-slate-400/15 text-slate-700">-</td>
-                          <td className="py-1.5 border-r last:border-r-0 border-slate-400/30 text-slate-700 bg-slate-500/5">-</td>
+                          <td className="py-1.5 border-r border-slate-400/15 text-slate-400/40 text-xs font-bold">·</td>
+                          <td className="py-1.5 border-r border-slate-400/15 text-slate-400/40 text-xs font-bold">·</td>
+                          <td className="py-1.5 border-r border-slate-400/15 text-slate-400/40 text-xs font-bold">·</td>
+                          <td className="py-1.5 border-r border-slate-400/15 text-slate-400/40 text-xs font-bold">·</td>
+                          <td className="py-1.5 border-r last:border-r-0 border-slate-400/30 text-slate-400/50 bg-slate-500/5 text-xs font-bold">.</td>
                         </React.Fragment>
                       );
                     }

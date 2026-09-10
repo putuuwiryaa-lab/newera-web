@@ -140,9 +140,10 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       else if (target === 'lurus') targetVal = `${latestItem.kepala}${latestItem.ekor}`;
 
       let matchCount = 0;
+      const step = colCount * Math.max(1, jarak);
       setPaintedColors((prev) => {
         const next = { ...prev };
-        for (let i = historyItems.length - 1; i >= 0; i -= Math.max(1, jarak)) {
+        for (let i = historyItems.length - 1; i >= 0; i -= step) {
           const it = historyItems[i];
           if (!it) break;
 
@@ -176,10 +177,10 @@ export const HistoryPaitoTable: React.FC<HistoryPaitoTableProps> = ({
       });
 
       if (onToast) {
-        onToast(`🎯 Menyorot ${matchCount} kuncian ${target.toUpperCase()} [${targetVal}] jarak ${jarak} baris!`);
+        onToast(`🎯 Menyorot ${matchCount} kuncian ${target.toUpperCase()} [${targetVal}] jarak ${jarak} baris vertikal!`);
       }
     },
-    [historyItems, activeColor, jarak, saveColorsToStorage, onToast]
+    [historyItems, colCount, activeColor, jarak, saveColorsToStorage, onToast]
   );
 
   const paintedCount = useMemo(() => Object.keys(paintedColors).length, [paintedColors]);
