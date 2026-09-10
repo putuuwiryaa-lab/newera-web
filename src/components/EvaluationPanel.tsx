@@ -9,7 +9,10 @@ import {
   Sparkles,
   Layers,
   Compass,
-  Target
+  Target,
+  Flame,
+  Swords,
+  Bomb
 } from 'lucide-react';
 
 interface EvaluationPanelProps {
@@ -521,6 +524,132 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   }`}
                 >
                   Rp {(paitoStats.superSniperPnlNet ?? 0).toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KARTU EVALUASI FORMASI PRESISI BBFS-7 & POLA TARUNG */}
+      {(filterMode === 'all' || filterMode === 'bbfs') && paitoStats && (
+        <div className="glass-panel rounded-2xl p-5 border border-purple-500/25 bg-gradient-to-b from-purple-950/15 via-slate-900/80 to-slate-950/90 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                <Flame className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">
+                  Evaluasi Out-of-Sample: BBFS-7 Paito Pro & Pola Tarung
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Uji performa riil formasi presisi VORTEX-7 pada {testDraws} putaran bergulir
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/25 self-start sm:self-auto">
+              Simulasi Riil Non-Twin
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* BBFS-7 Paito Pro */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-purple-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-purple-300 font-semibold">
+                <span className="flex items-center space-x-1">
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>BBFS-7 Paito Pro</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">42 Line (42%)</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-white">
+                  {paitoStats.bbfs7PaitoProRate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit: {paitoStats.bbfs7PaitoProHits ?? 0} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span className={`font-bold ${(paitoStats.bbfs7PaitoProPnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  Rp {(paitoStats.bbfs7PaitoProPnl ?? 0).toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            {/* Super Nuklir 6 Line */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-red-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-red-300 font-semibold">
+                <span className="flex items-center space-x-1">
+                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Super Nuklir (6L)</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">6 Line (6%)</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-amber-300">
+                  {paitoStats.nuklir6Rate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit: {paitoStats.nuklir6Hits ?? 0} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span className={`font-bold ${(paitoStats.nuklir6Pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  Rp {(paitoStats.nuklir6Pnl ?? 0).toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            {/* BOM Utama 12 Line */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-amber-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
+                <span className="flex items-center space-x-1">
+                  <Bomb className="w-3.5 h-3.5 text-amber-400" />
+                  <span>BOM Utama (12L)</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">12 Line (12%)</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-white">
+                  {paitoStats.bom12Rate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit: {paitoStats.bom12Hits ?? 0} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span className={`font-bold ${(paitoStats.bom12Pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  Rp {(paitoStats.bom12Pnl ?? 0).toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            {/* Pola Tarung 4x4 (16 Line) */}
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-rose-500/30 flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-rose-300 font-semibold">
+                <span className="flex items-center space-x-1">
+                  <Swords className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Pola Tarung 4×4</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">16 Line (16%)</span>
+              </div>
+              <div className="my-2">
+                <div className="text-2xl font-bold font-mono text-rose-200">
+                  {paitoStats.tarung4x4Rate ?? 0}%
+                </div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Hit: {paitoStats.tarung4x4Hits ?? 0} dari {testDraws} putaran
+                </div>
+              </div>
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono">
+                <span className="text-slate-400">Net PnL:</span>
+                <span className={`font-bold ${(paitoStats.tarung4x4Pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  Rp {(paitoStats.tarung4x4Pnl ?? 0).toLocaleString('id-ID')}
                 </span>
               </div>
             </div>

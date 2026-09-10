@@ -83,6 +83,19 @@ export interface PaitoEvaluationStats {
   sniperBomRate: number;
   avgSniperLines: number;
   sniperPnlNet: number;
+  // Metrik Evaluasi BBFS-7 Paito Pro & Pola Tarung
+  bbfs7PaitoProHits?: number;
+  bbfs7PaitoProRate?: number;
+  bbfs7PaitoProPnl?: number;
+  nuklir6Hits?: number;
+  nuklir6Rate?: number;
+  nuklir6Pnl?: number;
+  bom12Hits?: number;
+  bom12Rate?: number;
+  bom12Pnl?: number;
+  tarung4x4Hits?: number;
+  tarung4x4Rate?: number;
+  tarung4x4Pnl?: number;
 }
 
 export interface EvaluationMetrics {

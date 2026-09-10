@@ -3,6 +3,8 @@ import { AdaptiveEnsemble, computeDedicatedBBFSTiers } from './adaptiveEngine';
 import { predictPaitoMacro, computeBiji, getParity } from './paitoPredictor';
 import { generateSniperTrim } from './generator';
 import { getShioFor2D } from './shio';
+import { synthesizePaitoBBFS7 } from './paitoBBFS7';
+import { analyzePolaTarungMovement } from './movementPredictor';
 
 export const AI_BASELINES: Record<number, number> = {
   3: 51.0,
@@ -67,10 +69,22 @@ export function runWalkForwardEvaluation(
   let totalSuperSniperLines = 0;
   let superSniperPnl = 0;
 
+  // Formasi Baru: BBFS-7 Paito Pro, Super Nuklir 6, BOM 12, dan Pola Tarung 4x4
+  let bbfs7PaitoProHits = 0;
+  let bbfs7PaitoProPnl = 0;
+  let nuklir6Hits = 0;
+  let nuklir6Pnl = 0;
+  let bom12Hits = 0;
+  let bom12Pnl = 0;
+  let tarung4x4Hits = 0;
+  let tarung4x4Pnl = 0;
+
   for (let t = warmup; t < totalDraws; t++) {
     const pastData = history2D.slice(0, t);
+    const past4D = evalSubset.slice(0, t);
     const [actualK, actualE] = history2D[t];
     const isTwin = actualK === actualE;
+    const actual2DStr = `${actualK}${actualE}`;
 
     if (isTwin) twinCount++;
 
@@ -99,8 +113,6 @@ export function runWalkForwardEvaluation(
     [6, 7, 8, 9].forEach((size) => {
       const bbfsSet = new Set(bbfsResult.tiers[size as 6 | 7 | 8 | 9]);
       const lines = size * (size - 1);
-      // BBFS standar memainkan lines = size * (size - 1) non-twin.
-      // Jika terjadi result angka kembar (isTwin), taruhan non-twin tidak mencakup angka kembar tersebut.
       const isHitBBFS = !isTwin && bbfsSet.has(actualK) && bbfsSet.has(actualE);
 
       if (isHitBBFS) {
@@ -112,7 +124,7 @@ export function runWalkForwardEvaluation(
     });
 
     // 3. Evaluasi Prediksi Makro Paito & Sniper BOM
-    const paitoPred = predictPaitoMacro(pastData);
+    const paitoPred = predictPaitoMacro(pastData, 50, past4D);
     const actualBiji = computeBiji(actualK, actualE);
     const actualParity = getParity(actualK, actualE);
     const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
@@ -136,7 +148,6 @@ export function runWalkForwardEvaluation(
 
     // Evaluasi Sniper BOM dari BBFS-7
     const sniperResult = generateSniperTrim(bbfsResult.tiers[7], paitoPred, false);
-    const actual2DStr = `${actualK}${actualE}`;
     const isHitSniperBom = !isTwin && sniperResult.sniperTop.includes(actual2DStr);
     const sniperLinesCount = sniperResult.sniperTop.length;
     totalSniperLines += sniperLinesCount;
@@ -158,6 +169,38 @@ export function runWalkForwardEvaluation(
       superSniperPnl += (70 - superSniperLinesCount);
     } else {
       superSniperPnl -= superSniperLinesCount;
+    }
+
+    // 4. Evaluasi BBFS-7 Paito Pro & Formasi Hierarkis
+    const paitoBBFS = synthesizePaitoBBFS7(pastData, past4D, paitoPred);
+    if (!isTwin && paitoBBFS.full42.includes(actual2DStr)) {
+      bbfs7PaitoProHits++;
+      bbfs7PaitoProPnl += (70 - 42);
+    } else if (!isTwin) {
+      bbfs7PaitoProPnl -= 42;
+    }
+
+    if (!isTwin && paitoBBFS.nuklir6.includes(actual2DStr)) {
+      nuklir6Hits++;
+      nuklir6Pnl += (70 - 6);
+    } else if (!isTwin) {
+      nuklir6Pnl -= 6;
+    }
+
+    if (!isTwin && paitoBBFS.bom12.includes(actual2DStr)) {
+      bom12Hits++;
+      bom12Pnl += (70 - 12);
+    } else if (!isTwin) {
+      bom12Pnl -= 12;
+    }
+
+    // Pola Tarung 4x4 (16 line)
+    const polaTarung = analyzePolaTarungMovement(pastData);
+    if (!isTwin && polaTarung.tarung4x4.includes(actual2DStr)) {
+      tarung4x4Hits++;
+      tarung4x4Pnl += (70 - 16);
+    } else if (!isTwin) {
+      tarung4x4Pnl -= 16;
     }
   }
 
@@ -185,7 +228,7 @@ export function runWalkForwardEvaluation(
       actualRate: Number(actualRate.toFixed(2)),
       baselineRate,
       diff: Number((actualRate - baselineRate).toFixed(2)),
-      pnlNet: pnl[size] * 1000 // nominal rupiah misal 1.000 per baris
+      pnlNet: pnl[size] * 1000
     };
   });
 
@@ -213,7 +256,19 @@ export function runWalkForwardEvaluation(
     sniperBomHits,
     sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
     avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),
-    sniperPnlNet: sniperPnl * 1000
+    sniperPnlNet: sniperPnl * 1000,
+    bbfs7PaitoProHits,
+    bbfs7PaitoProRate: Number(((bbfs7PaitoProHits / testDraws) * 100).toFixed(2)),
+    bbfs7PaitoProPnl: bbfs7PaitoProPnl * 1000,
+    nuklir6Hits,
+    nuklir6Rate: Number(((nuklir6Hits / testDraws) * 100).toFixed(2)),
+    nuklir6Pnl: nuklir6Pnl * 1000,
+    bom12Hits,
+    bom12Rate: Number(((bom12Hits / testDraws) * 100).toFixed(2)),
+    bom12Pnl: bom12Pnl * 1000,
+    tarung4x4Hits,
+    tarung4x4Rate: Number(((tarung4x4Hits / testDraws) * 100).toFixed(2)),
+    tarung4x4Pnl: tarung4x4Pnl * 1000
   };
 
   return {
