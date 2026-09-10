@@ -88,19 +88,21 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
   markets
 }) => {
   const [predType, setPredType] = useState<PredictionType>('ai4');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
     // Default pilih pasar populer yang ada
-    const initial = new Set<string>();
-    markets.forEach((m) => {
-      if (POPULAR_MARKET_IDS.includes(m.id)) {
-        initial.add(m.id);
+    const initial: string[] = [];
+    POPULAR_MARKET_IDS.forEach((id) => {
+      if (markets.some((m) => m.id === id)) {
+        initial.push(id);
       }
     });
-    if (initial.size === 0 && markets.length > 0) {
-      initial.add(markets[0].id);
+    if (initial.length === 0 && markets.length > 0) {
+      initial.push(markets[0].id);
     }
     return initial;
   });
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const [delimiter, setDelimiter] = useState<string>('#');
   const [layout, setLayout] = useState<'inline' | 'list'>('inline');
@@ -115,14 +117,14 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
   useEffect(() => {
     if (markets.length > 0 && !hasInitialized.current) {
       hasInitialized.current = true;
-      const initial = new Set<string>();
-      markets.forEach((m) => {
-        if (POPULAR_MARKET_IDS.includes(m.id)) {
-          initial.add(m.id);
+      const initial: string[] = [];
+      POPULAR_MARKET_IDS.forEach((id) => {
+        if (markets.some((m) => m.id === id)) {
+          initial.push(id);
         }
       });
-      if (initial.size === 0) {
-        initial.add(markets[0].id);
+      if (initial.length === 0) {
+        initial.push(markets[0].id);
       }
       setSelectedIds(initial);
     }
@@ -156,7 +158,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
     if (!isOpen) return map; // Jangan kalkulasi berat jika modal tertutup
 
     markets.forEach((m) => {
-      if (!selectedIds.has(m.id)) return;
+      if (!selectedSet.has(m.id)) return;
       const historyStr = m.history_data || '';
       const history4D = historyStr
         .trim()
@@ -171,7 +173,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
       }
     });
     return map;
-  }, [markets, selectedIds, isOpen]);
+  }, [markets, selectedSet, isOpen]);
 
   // Ekstrak digit sesuai jenis prediksi
   const getDigitsForType = (
@@ -270,9 +272,13 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
     return lower ? label.toLowerCase() : label.toUpperCase();
   };
 
-  // Buat output teks prediksi
+  // Buat output teks prediksi (mengikuti urutan pemilihan pasaran secara presisi)
   const generatedText = useMemo(() => {
-    const selectedList = markets.filter((m) => selectedIds.has(m.id));
+    const marketMap = new Map<string, Market>(markets.map((m) => [m.id, m]));
+    const selectedList = selectedIds
+      .map((id) => marketMap.get(id))
+      .filter((m): m is Market => Boolean(m));
+
     if (selectedList.length === 0) {
       return '(Pilih minimal satu pasaran di bawah)';
     }
@@ -312,28 +318,27 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
 
   const toggleSelectAll = (select: boolean) => {
     if (select) {
-      setSelectedIds(new Set(markets.map((m) => m.id)));
+      const existing = new Set(selectedIds);
+      const remaining = markets.filter((m) => !existing.has(m.id)).map((m) => m.id);
+      setSelectedIds([...selectedIds, ...remaining]);
     } else {
-      setSelectedIds(new Set());
+      setSelectedIds([]);
     }
   };
 
   const selectPopular = () => {
-    const next = new Set<string>();
-    markets.forEach((m) => {
-      if (POPULAR_MARKET_IDS.includes(m.id)) next.add(m.id);
-    });
+    const next = POPULAR_MARKET_IDS.filter((id) =>
+      markets.some((m) => m.id === id)
+    );
     setSelectedIds(next);
   };
 
   const toggleMarket = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
+    if (selectedSet.has(id)) {
+      setSelectedIds(selectedIds.filter((item) => item !== id));
     } else {
-      next.add(id);
+      setSelectedIds([...selectedIds, id]);
     }
-    setSelectedIds(next);
   };
 
   const handleCopy = () => {
@@ -555,7 +560,10 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
               <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-2">
                 <span>3. Tandai Pasaran:</span>
                 <span className="text-xs font-mono font-medium text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20">
-                  {selectedIds.size} terpilih
+                  {selectedIds.length} terpilih
+                </span>
+                <span className="text-[10px] text-cyan-300/70 font-normal normal-case hidden sm:inline">
+                  (Urutan salin sesuai urutan centang)
                 </span>
               </label>
 
@@ -597,7 +605,8 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
             {/* Grid Checkbox Pasaran */}
             <div className="max-h-56 overflow-y-auto p-2 rounded-xl bg-slate-950/80 border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {filteredMarkets.map((m) => {
-                const isSelected = selectedIds.has(m.id);
+                const isSelected = selectedSet.has(m.id);
+                const orderIndex = isSelected ? selectedIds.indexOf(m.id) : -1;
                 const shortCode =
                   MARKET_SHORT_CODES[m.name] || m.name.replace(/\s+POOLS$/i, '').trim();
 
@@ -612,7 +621,12 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
                     }`}
                   >
                     {isSelected ? (
-                      <CheckSquare className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <div className="flex items-center space-x-1.5 shrink-0">
+                        <CheckSquare className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <span className="min-w-4 h-4 px-1 rounded bg-cyan-500 text-slate-950 font-bold text-[10px] flex items-center justify-center">
+                          {orderIndex + 1}
+                        </span>
+                      </div>
                     ) : (
                       <Square className="w-4 h-4 text-slate-600 shrink-0" />
                     )}
