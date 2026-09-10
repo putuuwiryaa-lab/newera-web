@@ -25,7 +25,7 @@ export const Heatmap2DView: React.FC<Heatmap2DViewProps> = ({
 }) => {
   const [lookback, setLookback] = useState<number>(50);
   const [highlightMode, setHighlightMode] = useState<
-    'none' | 'tarung' | 'bbfs7' | 'sniper' | 'twin' | 'besar' | 'kecil'
+    'none' | 'tarung' | 'bbfs7' | 'sniper' | 'twin' | 'besar' | 'kecil' | 'nuklir' | 'bom12'
   >('none');
   const [parityFilter, setParityFilter] = useState<string>('all');
   const [selectedCell, setSelectedCell] = useState<HeatmapCellData | null>(null);
@@ -39,13 +39,19 @@ export const Heatmap2DView: React.FC<Heatmap2DViewProps> = ({
   // Set Highlight Set
   const highlightedSet = useMemo(() => {
     const set = new Set<string>();
-    if (highlightMode === 'tarung' && polaTarung) {
+    if (highlightMode === 'nuklir' && prediction?.paitoBBFS7?.nuklir6) {
+      prediction.paitoBBFS7.nuklir6.forEach((c) => set.add(c));
+    } else if (highlightMode === 'bom12' && prediction?.paitoBBFS7?.bom12) {
+      prediction.paitoBBFS7.bom12.forEach((c) => set.add(c));
+    } else if (highlightMode === 'tarung' && polaTarung) {
       polaTarung.tarung4x4.forEach((c) => set.add(c));
-    } else if (highlightMode === 'bbfs7' && prediction?.bbfs?.[7]) {
-      const b7 = prediction.bbfs[7];
-      for (const k of b7) {
-        for (const e of b7) {
-          if (k !== e) set.add(`${k}${e}`);
+    } else if (highlightMode === 'bbfs7') {
+      const b7 = prediction?.paitoBBFS7?.digits || prediction?.bbfs?.[7];
+      if (b7) {
+        for (const k of b7) {
+          for (const e of b7) {
+            if (k !== e) set.add(`${k}${e}`);
+          }
         }
       }
     } else if (highlightMode === 'twin') {
@@ -138,6 +144,8 @@ export const Heatmap2DView: React.FC<Heatmap2DViewProps> = ({
             </span>
             {[
               { id: 'none', label: 'Polos' },
+              { id: 'nuklir', label: '⚡ 6 Nuklir' },
+              { id: 'bom12', label: '💣 12 BOM' },
               { id: 'tarung', label: '⚔️ Pola Tarung (4x4)' },
               { id: 'bbfs7', label: 'Set BBFS-7' },
               { id: 'twin', label: '👯 Kembar (Twin)' },
