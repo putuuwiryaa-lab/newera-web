@@ -101,7 +101,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     const primaryJalurText = `JALUR ${jalurRomawi(primaryJalurNumber)} (${jalurNamaShio(primaryJalurNumber)})`;
 
     // Peluang Kembar (Twin Gap & Bet Twin or No)
-    const historyItems = parseHistoryItems(market.history_data);
+    const historyItems = parseHistoryItems(market.history_data, market.history_days, market.name);
     let twinGap = 0;
     for (let i = historyItems.length - 1; i >= 0; i--) {
       if (historyItems[i].isTwin) break;

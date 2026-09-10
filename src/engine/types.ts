@@ -4,6 +4,7 @@ export interface Market {
   id: string;
   name: string;
   history_data: string;
+  history_days?: string | string[];
   order: number;
   updated_at?: string;
   latest_prediction?: any;
@@ -129,6 +130,7 @@ export interface HistoryItem {
   shioNumber?: number;
   shioEmoji?: string;
   shioJalur?: 1 | 2 | 3;
+  day?: string;
 }
 
 export interface TierAuditStatus {

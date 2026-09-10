@@ -25,10 +25,14 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
         const liveMarkets: Market[] = data.documents.map((doc: any) => {
           const f = doc.fields || {};
           const id = f.id?.stringValue || doc.name.split('/').pop();
+          const historyDaysVal = f.history_days?.stringValue ||
+            (f.history_days?.arrayValue ? f.history_days.arrayValue.values?.map((v: any) => v.stringValue).join(' ') : '') || '';
+
           return {
             id,
             name: f.name?.stringValue || id,
             history_data: f.history_data?.stringValue || '',
+            history_days: historyDaysVal,
             order: parseInt(f.order?.integerValue || '99', 10),
             updated_at: f.updated_at?.stringValue || ''
           };
@@ -48,10 +52,38 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
 }
 
 /**
+ * Helper default pola urutan hari per minggu jika pasaran belum memiliki history_days tersimpan
+ */
+export function getDefaultDaysForMarket(marketName: string = ''): string[] {
+  const m = marketName.toLowerCase();
+  if (m.includes('sgp') || m.includes('singapore')) {
+    return ['Senin', 'Rabu', 'Kamis', 'Sabtu', 'Minggu'];
+  }
+  if (m.includes('pcso')) {
+    return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  }
+  return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+}
+
+/**
  * Parsing history_data string ke HistoryItem array untuk tabel paito & analisis
  */
-export function parseHistoryItems(historyStr: string): HistoryItem[] {
+export function parseHistoryItems(
+  historyStr: string,
+  historyDays?: string | string[],
+  marketName: string = ''
+): HistoryItem[] {
   const tokens = historyStr.trim().split(/\s+/).filter((t) => t.length === 4 && /^\d{4}$/.test(t));
+
+  let daysList: string[] = [];
+  if (Array.isArray(historyDays)) {
+    daysList = historyDays;
+  } else if (typeof historyDays === 'string' && historyDays.trim()) {
+    daysList = historyDays.trim().split(/\s+/);
+  }
+
+  const defaultSchema = getDefaultDaysForMarket(marketName);
+
   return tokens.map((full, idx) => {
     const as = parseInt(full[0], 10);
     const kop = parseInt(full[1], 10);
@@ -74,6 +106,9 @@ export function parseHistoryItems(historyStr: string): HistoryItem[] {
 
     const shio = getShioFor2D(val2D);
 
+    // Gunakan hari riil dari scraper jika ada, atau fallback ke default pola pasar
+    const day = daysList[idx] || defaultSchema[idx % defaultSchema.length];
+
     return {
       index: idx + 1,
       full,
@@ -89,7 +124,8 @@ export function parseHistoryItems(historyStr: string): HistoryItem[] {
       shioName: shio.name,
       shioNumber: shio.no,
       shioEmoji: shio.emoji,
-      shioJalur: shio.jalur
+      shioJalur: shio.jalur,
+      day
     };
   });
 }

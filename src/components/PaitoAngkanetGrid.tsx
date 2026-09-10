@@ -219,7 +219,8 @@ export const PaitoAngkanetGrid: React.FC<PaitoAngkanetGridProps> = ({
                       );
                     }
 
-                    const tooltipText = `Putaran #${item.index} | 4D: ${item.full} | 2D: ${item.kepala}${item.ekor} | Biji: ${item.biji} | Shio: ${item.shioName || ''} | ${item.besarKecil} ${item.ganjilGenap}`;
+                    const dayLabel = item.day ? ` (${item.day})` : '';
+                    const tooltipText = `Putaran #${item.index}${dayLabel} | 4D: ${item.full} | 2D: ${item.kepala}${item.ekor} | Biji: ${item.biji} | Shio: ${item.shioName || ''} | ${item.besarKecil} ${item.ganjilGenap}`;
 
                     return (
                       <React.Fragment key={item.index}>

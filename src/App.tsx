@@ -105,7 +105,7 @@ export function App() {
   // Paito Items
   const historyItems = useMemo(() => {
     if (!currentMarket) return [];
-    return parseHistoryItems(currentMarket.history_data);
+    return parseHistoryItems(currentMarket.history_data, currentMarket.history_days, currentMarket.name);
   }, [currentMarket]);
 
   const handleOpenGenerator = (

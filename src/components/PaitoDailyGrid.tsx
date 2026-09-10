@@ -40,30 +40,44 @@ export const PaitoDailyGrid: React.FC<PaitoDailyGridProps> = ({
   const [selectedCol, setSelectedCol] = useState<number | null>(null);
 
   // Petakan setiap item riwayat ke kolom hari (0 = Senin ... 6 = Minggu)
-  // Item terakhir (historyItems[historyItems.length - 1]) memiliki day = lastDrawDayIndex
   const mappedGrid = useMemo(() => {
     if (!historyItems || historyItems.length === 0) return [];
+
+    const DAY_MAP: Record<string, number> = {
+      senin: 0, selasa: 1, rabu: 2, kamis: 3, jumat: 4, sabtu: 5, minggu: 6
+    };
 
     const total = historyItems.length;
     // Map item dengan dayIndex
     const itemsWithDay = historyItems.map((item, idx) => {
       const offsetFromEnd = total - 1 - idx;
-      // Menghitung mundur dari lastDrawDayIndex
-      const dayIndex = ((lastDrawDayIndex - (offsetFromEnd % 7)) % 7 + 7) % 7;
+      let dayIndex: number;
+      if (item.day && DAY_MAP[item.day.toLowerCase()] !== undefined) {
+        dayIndex = DAY_MAP[item.day.toLowerCase()];
+      } else {
+        // Fallback mundur dari lastDrawDayIndex
+        dayIndex = ((lastDrawDayIndex - (offsetFromEnd % 7)) % 7 + 7) % 7;
+      }
       return { item, dayIndex };
     });
 
     // Kelompokkan menjadi baris mingguan
-    // Agar rapi, kita mulai dari item pertama dan buat baris-baris berukuran 7 kolom
     const rows: (({ item: HistoryItem; dayIndex: number } | null)[])[] = [];
     let currentRow: ({ item: HistoryItem; dayIndex: number } | null)[] = Array(7).fill(null);
+    let lastSeenDay = -1;
 
     itemsWithDay.forEach((entry) => {
+      // Jika slot hari sudah terisi atau hari mundur (siklus minggu baru), simpan baris sebelumnya
+      if (currentRow[entry.dayIndex] !== null || (lastSeenDay !== -1 && entry.dayIndex <= lastSeenDay)) {
+        rows.push(currentRow);
+        currentRow = Array(7).fill(null);
+      }
       currentRow[entry.dayIndex] = entry;
-      // Jika sudah sampai Minggu (dayIndex 6) atau baris sudah penuh
+      lastSeenDay = entry.dayIndex;
       if (entry.dayIndex === 6) {
         rows.push(currentRow);
         currentRow = Array(7).fill(null);
+        lastSeenDay = -1;
       }
     });
 
