@@ -49,24 +49,52 @@ export interface SmartTrimResult {
 }
 
 /**
+ * Skor deterministik berdasarkan ranking digit yang diberikan engine.
+ * Digit di depan rankedDigits dianggap lebih kuat. Fungsi ini sengaja tidak
+ * mengklaim probabilitas; hanya menjaga pemangkasan line konsisten dengan
+ * ranking engine, bukan bergantung pada urutan loop generator.
+ */
+function rankLineByDigitStrength(line: string, rankedDigits: number[]): number {
+  const a = Number(line[0]);
+  const b = Number(line[1]);
+  const ia = rankedDigits.indexOf(a);
+  const ib = rankedDigits.indexOf(b);
+  const n = rankedDigits.length;
+  const sa = ia >= 0 ? n - ia : 0;
+  const sb = ib >= 0 ? n - ib : 0;
+  return sa + sb;
+}
+
+/**
  * Pemangkas Cerdas 2D (Smart Trimmer)
  * Memilah baris BBFS menjadi:
  * - BOM 12 Line: P(4, 2) dari 4 digit teratas
- * - Investasi 20 Line: P(5, 2) dari 5 digit teratas
+ * - Top 10: 10 line terkuat di dalam BOM 12 berdasarkan ranking digit
+ * - Medium 15: 15 line terbaik berikutnya dari Full 42 tanpa overlap Top 10
  * - Proteksi Penuh 42 Line: P(7, 2) dari 7 digit
  */
 export function generateSmartTrim(rankedDigits: number[]): SmartTrimResult {
   const top4 = rankedDigits.slice(0, 4);
-  const bom12 = generate2DLines(top4, false); // P(4, 2) = 12 lines
+  const bom12 = generate2DLines(top4, false).sort((a, b) => {
+    const diff = rankLineByDigitStrength(b, rankedDigits) - rankLineByDigitStrength(a, rankedDigits);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
   const top10 = bom12.slice(0, 10);
 
   const top5 = rankedDigits.slice(0, 5);
-  const invest20 = generate2DLines(top5, false); // P(5, 2) = 20 lines
-  const top10Set = new Set(top10);
-  const medium15 = invest20.filter((l) => !top10Set.has(l)).slice(0, 15);
+  const invest20 = generate2DLines(top5, false).sort((a, b) => {
+    const diff = rankLineByDigitStrength(b, rankedDigits) - rankLineByDigitStrength(a, rankedDigits);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
 
   const top7 = rankedDigits.slice(0, 7);
-  const full42 = generate2DLines(top7, false); // P(7, 2) = 42 lines
+  const full42 = generate2DLines(top7, false).sort((a, b) => {
+    const diff = rankLineByDigitStrength(b, rankedDigits) - rankLineByDigitStrength(a, rankedDigits);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+
+  const top10Set = new Set(top10);
+  const medium15 = full42.filter((l) => !top10Set.has(l)).slice(0, 15);
   const usedSet = new Set([...top10, ...medium15]);
   const cadangan = full42.filter((l) => !usedSet.has(l));
 
@@ -83,7 +111,7 @@ export interface SniperTrimResult {
 
 /**
  * Pemangkas Sniper 2D Berbasis Paito & Shio:
- * Menyaring baris BBFS menggunakan irisan Top 3 Biji, Pola Paritas Utama, dan Top 3 Shio 2026.
+ * Menyaring baris BBFS menggunakan irisan Top Biji, Pola Paritas Utama, dan Top Shio 2026.
  */
 export function generateSniperTrim(
   digits: number[],
@@ -122,7 +150,8 @@ export function generateSniperTrim(
     }
   }
 
-  const keptCount = sniperTop.length || sniperSecondary.length;
+  // superSniperShio adalah subset sniperTop, jadi jangan dihitung dua kali.
+  const keptCount = sniperTop.length + sniperSecondary.length;
   const efficiencyPct =
     allLines.length > 0
       ? Math.round(((allLines.length - keptCount) / allLines.length) * 100)
@@ -138,8 +167,10 @@ export function generateSniperTrim(
 }
 
 /**
- * Wheeling System (Covering Design) untuk 3D & 4D BBFS 7 Digit:
- * Mengompresi ratusan baris permutasi menjadi kumpulan tiket tercover secara matematis.
+ * Wheeling System (covering design) untuk subset digit 3D/4D.
+ * PENTING: coverage di bawah adalah coverage subset kombinatorial, bukan
+ * jaminan urutan straight 3D/4D. String yang dihasilkan tidak boleh dianggap
+ * sebagai pengganti seluruh permutasi straight.
  */
 export function generateWheelingSystem(digits: number[]): WheelingResult {
   const unique = Array.from(new Set(digits));
@@ -153,7 +184,7 @@ export function generateWheelingSystem(digits: number[]): WheelingResult {
     }
   }
 
-  // 1. Wheel 3D Covering Design C(7, 3, 2) - 15 Line (100% pairs covered)
+  // 1. Wheel 3D Covering Design C(7, 3, 2) - menutup pasangan sebagai subset.
   const WHEEL_3D_INDICES = [
     [0, 1, 2], [0, 3, 4], [0, 5, 6],
     [1, 3, 5], [1, 4, 6], [2, 3, 6], [2, 4, 5],
@@ -165,7 +196,7 @@ export function generateWheelingSystem(digits: number[]): WheelingResult {
     (idx) => `${d[idx[0]]}${d[idx[1]]}${d[idx[2]]}`
   );
 
-  // 2. Wheel 3D Full Combinations C(7, 3) - 35 Line
+  // 2. Wheel 3D Full Combinations C(7, 3) - 35 kombinasi tidak berurutan.
   const wheel3DFull: string[] = [];
   for (let i = 0; i < 7; i++) {
     for (let j = i + 1; j < 7; j++) {
@@ -175,7 +206,7 @@ export function generateWheelingSystem(digits: number[]): WheelingResult {
     }
   }
 
-  // 3. Wheel 4D Covering Design C(7, 4, 3) - 14 Line (100% triplets covered)
+  // 3. Wheel 4D Covering Design C(7, 4, 3) - menutup triplet sebagai subset.
   const WHEEL_4D_INDICES = [
     [0, 1, 2, 3], [0, 1, 4, 5], [0, 2, 4, 6], [0, 3, 5, 6],
     [1, 2, 5, 6], [1, 3, 4, 6], [2, 3, 4, 5], [0, 1, 2, 4],
@@ -186,7 +217,7 @@ export function generateWheelingSystem(digits: number[]): WheelingResult {
     (idx) => `${d[idx[0]]}${d[idx[1]]}${d[idx[2]]}${d[idx[3]]}`
   );
 
-  // 4. Wheel 4D Full Combinations C(7, 4) - 35 Line
+  // 4. Wheel 4D Full Combinations C(7, 4) - 35 kombinasi tidak berurutan.
   const wheel4DFull: string[] = [];
   for (let i = 0; i < 7; i++) {
     for (let j = i + 1; j < 7; j++) {
@@ -203,8 +234,8 @@ export function generateWheelingSystem(digits: number[]): WheelingResult {
     wheel3DFull,
     wheel4D,
     wheel4DFull,
-    guarantee3D: 'Jaminan 100% Pasangan 2D Tercover (Hemat 93% Modal)',
-    guarantee4D: 'Jaminan 100% Triplet 3-in-4 Tercover (Hemat 96% Modal)'
+    guarantee3D: 'Coverage subset: setiap pasangan digit tercakup minimal sekali; bukan jaminan urutan straight 3D',
+    guarantee4D: 'Coverage subset: setiap triplet digit tercakup minimal sekali; bukan jaminan urutan straight 4D'
   };
 }
 

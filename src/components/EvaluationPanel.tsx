@@ -57,14 +57,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-semibold text-white tracking-tight">
-                  Evaluasi Walk-Forward Out-of-Sample
+                  Evaluasi Walk-Forward Lokal (TypeScript)
                 </h3>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 font-mono border border-white/[0.08]">
                   {marketName}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Simulasi backtesting ketat bergulir 1 putaran demi 1 putaran tanpa kebocoran data masa depan
+                Backtest lokal bergulir tanpa data masa depan; diagnostik ini bukan log performa production backend Python
               </p>
             </div>
           </div>
@@ -358,7 +358,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   Akurasi Prediksi Paito Makro & Finansial Sniper BOM
                 </h4>
                 <p className="text-xs text-slate-400">
-                  Performa out-of-sample penyaring paito dan simulasi taruhan hemat ~90% modal
+                  Hit-rate filter dihitung saat ada line aktif; PnL tetap mencakup seluruh putaran evaluasi
                 </p>
               </div>
             </div>
@@ -372,7 +372,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-white/[0.06] flex flex-col justify-between">
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>Top 3 Biji 2D</span>
-                <span className="text-[10px] font-mono text-slate-500">Teoretis: 30.0%</span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: {paitoStats.bijiBaseline.toFixed(1)}%</span>
               </div>
               <div className="my-2">
                 <div className="text-2xl font-bold font-mono text-cyan-300">
@@ -452,7 +452,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 <span className="flex items-center space-x-1">
                   <span>🐴 Top 3 Shio 2026</span>
                 </span>
-                <span className="text-[10px] font-mono text-slate-500">Teoretis: 25.0%</span>
+                <span className="text-[10px] font-mono text-slate-500">Teoretis: {(paitoStats.shioBaseline ?? 0).toFixed(1)}%</span>
               </div>
               <div className="my-2">
                 <div className="text-2xl font-bold font-mono text-amber-300">
@@ -487,7 +487,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   {paitoStats.sniperBomRate}%
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  Hit BOM: {paitoStats.sniperBomHits}x tembus
+                  Hit {paitoStats.sniperBomHits} dari {paitoStats.sniperActiveDraws} draw aktif • partisipasi {paitoStats.sniperParticipationRate}%
                 </div>
               </div>
               <div className="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[11px] font-mono">
@@ -513,7 +513,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   {paitoStats.superSniperRate ?? 0}%
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  Hit Super: {paitoStats.superSniperHits ?? 0}x tembus
+                  Hit {paitoStats.superSniperHits ?? 0} dari {paitoStats.superSniperActiveDraws ?? 0} draw aktif • partisipasi {paitoStats.superSniperParticipationRate ?? 0}%
                 </div>
               </div>
               <div className="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[11px] font-mono">
@@ -549,7 +549,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
             <span className="text-[11px] font-mono text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/25 self-start sm:self-auto">
-              Simulasi Riil Non-Twin
+              Line non-twin • twin dihitung loss
             </span>
           </div>
 

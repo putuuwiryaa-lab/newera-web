@@ -57,7 +57,9 @@ export const AIDashboard: React.FC<AIDashboardProps> = ({
 
   const activeDigits = ai[selectedTier] || ai[4];
   const activeDigitsStr = activeDigits.join(' ');
-  const polaTarungStr = `Kepala: ${activeDigits.join(',')} | Ekor: ${activeDigits.join(',')}`;
+  const polaTarungStr = prediction.polaTarung
+    ? `Kepala: ${prediction.polaTarung.rankedKepala.slice(0, 4).join(',')} | Ekor: ${prediction.polaTarung.rankedEkor.slice(0, 4).join(',')}`
+    : `AI-${selectedTier}: ${activeDigits.join(',')}`;
 
   const shareWA = () => {
     if (onOpenSingleShare) {

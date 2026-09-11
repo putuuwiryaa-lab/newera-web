@@ -7,12 +7,14 @@ export interface Market {
   history_days?: string | string[];
   order: number;
   updated_at?: string;
-  latest_prediction?: any;
+  next_prediction?: any;
+  latest_prediction?: any; // legacy compatibility
   last_audit?: any;
 }
 
 export interface PredictionResult {
   rankedDigits: number[];
+  tierRankedDigits?: Record<number, number[]>;
   ai: {
     3: number[];
     4: number[];
@@ -26,11 +28,11 @@ export interface PredictionResult {
     9: number[];
   };
   methodWeights: Record<string, number>;
-  tierMethodWeights: Record<number, Record<string, number>>; // Bobot spesifik per tier (3, 4, 5, 6)
-  bbfsTierWeights: Record<number, Record<string, number>>;   // Bobot spesifik 4 faktor per tier BBFS (6, 7, 8, 9)
+  tierMethodWeights: Record<number, Record<string, number>>;
+  bbfsTierWeights: Record<number, Record<string, number>>;
   confidenceScore: number;
   convergenceStatus: 'TINGGI' | 'SEDANG' | 'RENDAH';
-  deadDigits: number[]; // 2 Digit paling lemah
+  deadDigits: number[];
   paitoPrediction?: PaitoMacroPrediction;
   polaTarung?: PolaTarungPrediction;
   paitoBBFS7?: PaitoBBFS7Result;
@@ -78,13 +80,16 @@ export interface PaitoEvaluationStats {
   jalurBaseline?: number;
   superSniperHits?: number;
   superSniperRate?: number;
+  superSniperActiveDraws?: number;
+  superSniperParticipationRate?: number;
   avgSuperSniperLines?: number;
   superSniperPnlNet?: number;
   sniperBomHits: number;
   sniperBomRate: number;
+  sniperActiveDraws: number;
+  sniperParticipationRate: number;
   avgSniperLines: number;
   sniperPnlNet: number;
-  // Metrik Evaluasi BBFS-7 Paito Pro & Pola Tarung
   bbfs7PaitoProHits?: number;
   bbfs7PaitoProRate?: number;
   bbfs7PaitoProPnl?: number;
@@ -135,22 +140,23 @@ export interface HistoryItem {
 
 export interface TierAuditStatus {
   size: number;
-  name: string; // e.g. "AI-3", "BBFS-7"
-  parameter?: string; // e.g. "Parameter AI-3 (Seleksi 3 Digit)"
+  name: string;
+  parameter?: string;
   status: 'HIT' | 'LOSE';
   action: 'FREEZE' | 'CALIBRATED';
-  tuningDirective?: string; // e.g. "⚡ KALIBRASI: Ambang seleksi dikoreksi", "🔒 FREEZE: Parameter dipertahankan"
-  marginalNote?: string; // e.g. "Hit di Digit Rank 4", "Hit di Set BBFS-7"
+  tuningDirective?: string;
+  marginalNote?: string;
 }
 
 export interface AITuningDetail {
-  predictedTiers: Record<number, number[]>; // 3, 4, 5, 6
-  tierAudits: Record<number, TierAuditStatus>; // 3, 4, 5, 6
+  predictedTiers: Record<number, number[]>;
+  tierAudits: Record<number, TierAuditStatus>;
   hitDigits: number[];
   statusAI4: 'HIT' | 'LOSE';
   rewardedMethods: string[];
   penalizedMethods: string[];
   calibratedWeights: Record<string, number>;
+  calibratedTierWeights?: Record<number, Record<string, number>>;
   tierMethodWeights?: Record<number, Record<string, number>>;
   recoveredFromLoss?: boolean;
   streak: number;
@@ -159,10 +165,10 @@ export interface AITuningDetail {
 }
 
 export interface BBFSTuningDetail {
-  predictedTiers: Record<number, number[]>; // 6, 7, 8, 9
-  tierAudits: Record<number, TierAuditStatus>; // 6, 7, 8, 9
+  predictedTiers: Record<number, number[]>;
+  tierAudits: Record<number, TierAuditStatus>;
   deadDigits: number[];
-  deadDigitsClean: boolean; // true if neither dead digit landed on Kepala or Ekor
+  deadDigitsClean: boolean;
   statusBBFS7: 'HIT' | 'LOSE';
   isTwin: boolean;
   twinProtected: boolean;
@@ -202,8 +208,6 @@ export interface DayTuningLog {
   ai: AITuningDetail;
   bbfs: BBFSTuningDetail;
   paito?: PaitoTuningDetail;
-
-  // Backward compatibility fields
   predictedAI4: number[];
   predictedBBFS7: number[];
   statusAI: 'HIT' | 'LOSE';
@@ -237,8 +241,7 @@ export interface PaitoMacroPrediction {
   parityProbabilities: Record<string, number>;
   primaryMagnitude: 'Besar' | 'Kecil';
   magnitudeProbabilities: Record<string, number>;
-  // Shio 2026 (Tahun Kuda Api)
-  topShios: number[]; // Nomor Shio 1..12 (Top 3)
+  topShios: number[];
   primaryJalur: 1 | 2 | 3;
   shioProbabilities: Record<number, number>;
   jalurProbabilities: Record<number, number>;
@@ -248,18 +251,14 @@ export interface PaitoMacroPrediction {
   movement?: MovementDynamics;
 }
 
-// ==========================================
-// KINETIC MOVEMENT & POLA PERGERAKAN TYPES
-// ==========================================
-
 export interface MovementMagnitudeDetail {
   rhythm: 'ZIG_ZAG' | 'STREAK_REVERSAL' | 'TREND_FOLLOW';
   rhythmLabel: string;
-  flipRate: number; // 0.0 - 1.0
+  flipRate: number;
   currentStreak: number;
   currentStreakState: 'Besar' | 'Kecil';
   historicalMaxStreak: number;
-  velocitySlope: number; // pergerakan nilai 2D (+ naik, - turun)
+  velocitySlope: number;
   prediction: 'Besar' | 'Kecil';
   confidence: number;
   rationale: string;
@@ -270,7 +269,7 @@ export interface MovementParityDetail {
   kepalaOscillation: 'FLIP' | 'STICKY';
   ekorPolarity: 'Genap' | 'Ganjil';
   ekorOscillation: 'FLIP' | 'STICKY';
-  trajectoryFlow: string; // e.g. "Ganjil-Genap -> Genap-Ganjil -> Ganjil-Ganjil"
+  trajectoryFlow: string;
   primaryParity: 'Genap-Genap' | 'Genap-Ganjil' | 'Ganjil-Genap' | 'Ganjil-Ganjil';
   confidence: number;
   rationale: string;
@@ -288,7 +287,7 @@ export interface MovementJalurDetail {
 }
 
 export interface MovementBijiDetail {
-  dominantStepDelta: number; // e.g. +2, +3, etc.
+  dominantStepDelta: number;
   stepLabel: string;
   isMirrorReflection: boolean;
   targetBiji: number[];
@@ -318,25 +317,17 @@ export interface MovementDynamics {
   last5Draws: MovementHistoryPoint[];
 }
 
-// ==========================================
-// POLA TARUNG 2D (KEPALA VS EKOR) TYPES
-// ==========================================
-
 export interface PolaTarungPrediction {
-  rankedKepala: number[]; // 0-9
-  rankedEkor: number[];   // 0-9
+  rankedKepala: number[];
+  rankedEkor: number[];
   kepalaScores: Record<number, number>;
   ekorScores: Record<number, number>;
   kepalaDirection: 'NAIK' | 'TURUN' | 'STABIL';
   ekorDirection: 'NAIK' | 'TURUN' | 'STABIL';
-  tarung3x3: string[]; // 9 lines
-  tarung4x4: string[]; // 16 lines
-  tarung5x5: string[]; // 25 lines
+  tarung3x3: string[];
+  tarung4x4: string[];
+  tarung5x5: string[];
 }
-
-// ==========================================
-// HEATMAP & STATISTIK 2D TYPES
-// ==========================================
 
 export interface HeatmapCellData {
   comb2D: string;
@@ -366,38 +357,34 @@ export interface Heatmap2DStats {
   lookback: number;
   totalDraws: number;
   maxCount: number;
-  cells: Record<string, HeatmapCellData>; // "00".."99"
-  kepalaStats: Record<number, PositionalDigitStat>; // 0..9
-  ekorStats: Record<number, PositionalDigitStat>;   // 0..9
+  cells: Record<string, HeatmapCellData>;
+  kepalaStats: Record<number, PositionalDigitStat>;
+  ekorStats: Record<number, PositionalDigitStat>;
   kineticTrace: {
-    step: number; // 1 to 5
+    step: number;
     comb2D: string;
     kepala: number;
     ekor: number;
   }[];
 }
 
-// ==========================================
-// BBFS-7 PAITO PRO (GENERASI BARU) & WHEELING TYPES
-// ==========================================
-
 export interface DeadDigitDetail {
   digit: number;
-  safetyScore: number; // 0-100 (100 = paling aman dieliminasi / nol risiko keluar)
+  safetyScore: number;
   status: 'AMAN' | 'WASPADA' | 'NETRAL';
   reason: string;
   gap: number;
 }
 
 export interface PaitoBBFS7Result {
-  digits: number[]; // 7 digit terpilih
-  ranked7: number[]; // 7 digit terurut dari skor terkuat
-  nuklir6: string[]; // 6 line super nuklir (irisan sempurna Biji + Paritas + Shio)
-  bom12: string[]; // 12 line dari 4 digit terkuat P(4, 2)
-  invest20: string[]; // 20 line dari 5 digit terkuat P(5, 2)
-  full42: string[]; // 42 line non-twin dari 7 digit P(7, 2)
-  twin7: string[]; // 7 line twin jika anomali kembar
-  triadKumat: DeadDigitDetail[]; // 3 digit kumat/mati yang dibuang secara teruji
+  digits: number[];
+  ranked7: number[];
+  nuklir6: string[];
+  bom12: string[];
+  invest20: string[];
+  full42: string[];
+  twin7: string[];
+  triadKumat: DeadDigitDetail[];
   spectrumBalance: {
     besarCount: number;
     kecilCount: number;
@@ -415,11 +402,10 @@ export interface PaitoBBFS7Result {
 }
 
 export interface WheelingResult {
-  wheel3D: string[]; // 15 line covering design C(7, 3, 2)
-  wheel3DFull: string[]; // 35 line full combination C(7, 3)
-  wheel4D: string[]; // 14 line covering design C(7, 4, 3)
-  wheel4DFull: string[]; // 35 line full combination C(7, 4)
+  wheel3D: string[];
+  wheel3DFull: string[];
+  wheel4D: string[];
+  wheel4DFull: string[];
   guarantee3D: string;
   guarantee4D: string;
 }
-

@@ -1,106 +1,112 @@
-import type { EvaluationMetrics } from './types';
-import { AdaptiveEnsemble, computeDedicatedBBFSTiers } from './adaptiveEngine';
-import { predictPaitoMacro, computeBiji, getParity } from './paitoPredictor';
-import { generateSniperTrim } from './generator';
+import type { EvaluationMetrics, PredictionResult } from './types';
+import { generatePrediction } from './adaptiveEngine';
+import { auditAndCalibrate } from './smartCalibrator';
+import { computeBiji, getParity } from './paitoPredictor';
 import { getShioFor2D } from './shio';
-import { synthesizePaitoBBFS7 } from './paitoBBFS7';
-import { analyzePolaTarungMovement } from './movementPredictor';
 
-export const AI_BASELINES: Record<number, number> = {
-  3: 51.0,
-  4: 64.0,
-  5: 75.0,
-  6: 84.0
-};
+export const AI_BASELINES: Record<number, number> = { 3: 51.0, 4: 64.0, 5: 75.0, 6: 84.0 };
+export const BBFS_BASELINES: Record<number, number> = { 6: 30.0, 7: 42.0, 8: 56.0, 9: 72.0 };
 
-export const BBFS_BASELINES: Record<number, number> = {
-  6: 30.0,
-  7: 42.0,
-  8: 56.0,
-  9: 72.0
-};
+function predictionToSavedShape(pred: PredictionResult): any {
+  return {
+    ai3: pred.ai[3], ai4: pred.ai[4], ai5: pred.ai[5], ai6: pred.ai[6],
+    tier_method_weights: pred.tierMethodWeights,
+    bbfs6: pred.bbfs[6], bbfs7: pred.bbfs[7], bbfs8: pred.bbfs[8], bbfs9: pred.bbfs[9],
+    bbfs_tier_weights: pred.bbfsTierWeights,
+    dead_digits: pred.deadDigits
+  };
+}
+
+function settleLines(lines: string[], actual2D: string): { hit: boolean; cost: number; net: number } {
+  const cost = lines.length;
+  const hit = lines.includes(actual2D);
+  return { hit, cost, net: hit ? 70 - cost : -cost };
+}
+
+function getBBFSLines(digits: number[]): string[] {
+  const lines: string[] = [];
+  for (const k of digits) for (const e of digits) if (k !== e) lines.push(`${k}${e}`);
+  return lines;
+}
+
+function getBijiBaseline(targets: number[]): number {
+  return Array.from(new Set(targets)).reduce((sum, d) => sum + (d === 0 ? 0.01 : 0.11), 0);
+}
+
+function getShioBaseline(targets: number[]): number {
+  const targetSet = new Set(targets);
+  let hit = 0;
+  for (let n = 0; n < 100; n++) if (targetSet.has(getShioFor2D(n).no)) hit++;
+  return hit / 100;
+}
+
+function getJalurBaseline(target: number): number {
+  let hit = 0;
+  for (let n = 0; n < 100; n++) if (getShioFor2D(n).jalur === target) hit++;
+  return hit / 100;
+}
 
 /**
- * Menjalankan Evaluasi Walk-Forward Otomatis pada seluruh riwayat data 4D.
+ * Walk-forward stateful: prediction T dibuat sebelum result T diketahui,
+ * result T mengaudit prediction yang benar-benar dipakai, lalu state kalibrasi
+ * tersebut menghasilkan prediction T+1.
  */
-export function runWalkForwardEvaluation(
-  results4D: string[],
-  warmup = 50
-): EvaluationMetrics | null {
+export function runWalkForwardEvaluation(results4D: string[], warmup = 50): EvaluationMetrics | null {
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length <= warmup + 10) return null;
 
-  // Batasi subset evaluasi walk-forward maksimal 500 putaran terakhir agar simulasi browser instan (< 100ms)
-  const evalSubset = valid4D.length > 500 ? valid4D.slice(-500) : valid4D;
-
-  const history2D: [number, number][] = evalSubset.map((r) => [
-    parseInt(r[2], 10),
-    parseInt(r[3], 10)
-  ]);
-
-  const totalDraws = history2D.length;
-  const testDraws = totalDraws - warmup;
-  const ensemble = new AdaptiveEnsemble(20);
+  const evalSubset = valid4D.length > 250 ? valid4D.slice(-250) : valid4D;
+  const totalDraws = evalSubset.length;
+  const effectiveWarmup = Math.min(warmup, totalDraws - 10);
+  const testDraws = totalDraws - effectiveWarmup;
 
   const aiHits: Record<number, number> = { 3: 0, 4: 0, 5: 0, 6: 0 };
   const bbfsHits: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
-  let twinCount = 0;
-
-  const ai4Streaks = {
-    currentWin: 0,
-    maxWin: 0,
-    currentLose: 0,
-    maxLose: 0
-  };
-
-  // PnL: Asumsi 2D payout 70x, cost 1x per line
   const pnl: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
+  let twinCount = 0;
+  const ai4Streaks = { currentWin: 0, maxWin: 0, currentLose: 0, maxLose: 0 };
 
-  // Paito & Sniper BOM Tracking
-  let paitoBijiHits = 0;
-  let paitoParityHits = 0;
-  let paitoMagHits = 0;
-  let paitoShioHits = 0;
-  let paitoJalurHits = 0;
-  let sniperBomHits = 0;
-  let totalSniperLines = 0;
-  let sniperPnl = 0;
-  let superSniperHits = 0;
-  let totalSuperSniperLines = 0;
-  let superSniperPnl = 0;
+  let paitoBijiHits = 0, paitoParityHits = 0, paitoMagHits = 0, paitoShioHits = 0, paitoJalurHits = 0;
+  let bijiBaselineSum = 0, shioBaselineSum = 0, jalurBaselineSum = 0;
+  let sniperBomHits = 0, totalSniperLines = 0, sniperPnl = 0, sniperActiveDraws = 0;
+  let superSniperHits = 0, totalSuperSniperLines = 0, superSniperPnl = 0, superSniperActiveDraws = 0;
+  let bbfs7PaitoProHits = 0, bbfs7PaitoProPnl = 0;
+  let nuklir6Hits = 0, nuklir6Pnl = 0;
+  let bom12Hits = 0, bom12Pnl = 0;
+  let tarung4x4Hits = 0, tarung4x4Pnl = 0;
 
-  // Formasi Baru: BBFS-7 Paito Pro, Super Nuklir 6, BOM 12, dan Pola Tarung 4x4
-  let bbfs7PaitoProHits = 0;
-  let bbfs7PaitoProPnl = 0;
-  let nuklir6Hits = 0;
-  let nuklir6Pnl = 0;
-  let bom12Hits = 0;
-  let bom12Pnl = 0;
-  let tarung4x4Hits = 0;
-  let tarung4x4Pnl = 0;
+  const stateStart = Math.min(15, effectiveWarmup);
+  let currentPrediction: PredictionResult | null = generatePrediction(evalSubset.slice(0, stateStart));
+  if (!currentPrediction) return null;
 
-  for (let t = warmup; t < totalDraws; t++) {
-    const pastData = history2D.slice(0, t);
-    const past4D = evalSubset.slice(0, t);
-    const [actualK, actualE] = history2D[t];
+  for (let t = stateStart; t < effectiveWarmup; t++) {
+    const pred: PredictionResult = currentPrediction;
+    const historyIncludingActual = evalSubset.slice(0, t + 1);
+    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(pred));
+    currentPrediction = generatePrediction(historyIncludingActual, audit);
+    if (!currentPrediction) return null;
+  }
+
+  for (let t = effectiveWarmup; t < totalDraws; t++) {
+    const pred = currentPrediction;
+    if (!pred) return null;
+
+    const actualFull = evalSubset[t];
+    const actualK = Number(actualFull[2]);
+    const actualE = Number(actualFull[3]);
+    const actual2D = `${actualK}${actualE}`;
     const isTwin = actualK === actualE;
-    const actual2DStr = `${actualK}${actualE}`;
-
     if (isTwin) twinCount++;
 
-    // 1. Evaluasi AI Per-Tier (3, 4, 5, 6) secara independen
-    [3, 4, 5, 6].forEach((size) => {
-      const { ranked: tierRanked } = ensemble.rankDigitsForTier(pastData, size);
-      const aiSet = new Set(tierRanked.slice(0, size));
-      if (aiSet.has(actualK) || aiSet.has(actualE)) {
-        aiHits[size]++;
-        if (size === 4) {
+    ([3, 4, 5, 6] as const).forEach((size) => {
+      const hit = pred.ai[size].includes(actualK) || pred.ai[size].includes(actualE);
+      if (hit) aiHits[size]++;
+      if (size === 4) {
+        if (hit) {
           ai4Streaks.currentWin++;
           ai4Streaks.maxWin = Math.max(ai4Streaks.maxWin, ai4Streaks.currentWin);
           ai4Streaks.currentLose = 0;
-        }
-      } else {
-        if (size === 4) {
+        } else {
           ai4Streaks.currentLose++;
           ai4Streaks.maxLose = Math.max(ai4Streaks.maxLose, ai4Streaks.currentLose);
           ai4Streaks.currentWin = 0;
@@ -108,103 +114,76 @@ export function runWalkForwardEvaluation(
       }
     });
 
-    // 2. Evaluasi BBFS Khusus (6, 7, 8, 9) Menggunakan pastData (Bebas Data Leakage)
-    const bbfsResult = computeDedicatedBBFSTiers(pastData);
-    [6, 7, 8, 9].forEach((size) => {
-      const bbfsSet = new Set(bbfsResult.tiers[size as 6 | 7 | 8 | 9]);
-      const lines = size * (size - 1);
-      const isHitBBFS = !isTwin && bbfsSet.has(actualK) && bbfsSet.has(actualE);
-
-      if (isHitBBFS) {
-        bbfsHits[size]++;
-        pnl[size] += (70 - lines);
-      } else {
-        pnl[size] -= lines;
-      }
+    ([6, 7, 8, 9] as const).forEach((size) => {
+      const settlement = settleLines(getBBFSLines(pred.bbfs[size]), actual2D);
+      if (settlement.hit) bbfsHits[size]++;
+      pnl[size] += settlement.net;
     });
 
-    // 3. Evaluasi Prediksi Makro Paito & Sniper BOM
-    const paitoPred = predictPaitoMacro(pastData, 50, past4D);
-    const actualBiji = computeBiji(actualK, actualE);
-    const actualParity = getParity(actualK, actualE);
-    const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
-    const actualShio = getShioFor2D(actualK * 10 + actualE);
+    const paitoPred = pred.paitoPrediction;
+    if (paitoPred) {
+      const actualBiji = computeBiji(actualK, actualE);
+      const actualParity = getParity(actualK, actualE);
+      const actualMag = actualK * 10 + actualE >= 50 ? 'Besar' : 'Kecil';
+      const actualShio = getShioFor2D(actualK * 10 + actualE);
 
-    if (paitoPred.topBiji.includes(actualBiji)) {
-      paitoBijiHits++;
-    }
-    if (actualParity === paitoPred.primaryParity) {
-      paitoParityHits++;
-    }
-    if (actualMag === paitoPred.primaryMagnitude) {
-      paitoMagHits++;
-    }
-    if ((paitoPred.topShios || []).includes(actualShio.no)) {
-      paitoShioHits++;
-    }
-    if (actualShio.jalur === paitoPred.primaryJalur) {
-      paitoJalurHits++;
-    }
+      if (paitoPred.topBiji.includes(actualBiji)) paitoBijiHits++;
+      if (actualParity === paitoPred.primaryParity) paitoParityHits++;
+      if (actualMag === paitoPred.primaryMagnitude) paitoMagHits++;
+      if (paitoPred.topShios.includes(actualShio.no)) paitoShioHits++;
+      if (actualShio.jalur === paitoPred.primaryJalur) paitoJalurHits++;
 
-    // Evaluasi Sniper BOM dari BBFS-7
-    const sniperResult = generateSniperTrim(bbfsResult.tiers[7], paitoPred, false);
-    const isHitSniperBom = !isTwin && sniperResult.sniperTop.includes(actual2DStr);
-    const sniperLinesCount = sniperResult.sniperTop.length;
-    totalSniperLines += sniperLinesCount;
+      bijiBaselineSum += getBijiBaseline(paitoPred.topBiji);
+      shioBaselineSum += getShioBaseline(paitoPred.topShios);
+      jalurBaselineSum += getJalurBaseline(paitoPred.primaryJalur);
 
-    if (isHitSniperBom) {
-      sniperBomHits++;
-      sniperPnl += (70 - sniperLinesCount);
-    } else {
-      sniperPnl -= sniperLinesCount;
-    }
+      const sniperTop = pred.paitoBBFS7
+        ? pred.paitoBBFS7.full42.filter((line) => {
+            const k = Number(line[0]);
+            const e = Number(line[1]);
+            return paitoPred.topBiji.includes(computeBiji(k, e)) && getParity(k, e) === paitoPred.primaryParity;
+          })
+        : [];
+      const superSniper = sniperTop.filter((line) => paitoPred.topShios.includes(getShioFor2D(Number(line)).no));
 
-    // Evaluasi Super Sniper (BBFS ∩ Biji ∩ Paritas ∩ Shio 2026)
-    const isHitSuperSniper = !isTwin && (sniperResult.superSniperShio || []).includes(actual2DStr);
-    const superSniperLinesCount = (sniperResult.superSniperShio || []).length;
-    totalSuperSniperLines += superSniperLinesCount;
+      const sniperSettlement = settleLines(sniperTop, actual2D);
+      totalSniperLines += sniperSettlement.cost;
+      sniperPnl += sniperSettlement.net;
+      if (sniperSettlement.cost > 0) sniperActiveDraws++;
+      if (sniperSettlement.hit) sniperBomHits++;
 
-    if (isHitSuperSniper) {
-      superSniperHits++;
-      superSniperPnl += (70 - superSniperLinesCount);
-    } else {
-      superSniperPnl -= superSniperLinesCount;
+      const superSettlement = settleLines(superSniper, actual2D);
+      totalSuperSniperLines += superSettlement.cost;
+      superSniperPnl += superSettlement.net;
+      if (superSettlement.cost > 0) superSniperActiveDraws++;
+      if (superSettlement.hit) superSniperHits++;
     }
 
-    // 4. Evaluasi BBFS-7 Paito Pro & Formasi Hierarkis
-    const paitoBBFS = synthesizePaitoBBFS7(pastData, past4D, paitoPred);
-    if (!isTwin && paitoBBFS.full42.includes(actual2DStr)) {
-      bbfs7PaitoProHits++;
-      bbfs7PaitoProPnl += (70 - 42);
-    } else if (!isTwin) {
-      bbfs7PaitoProPnl -= 42;
+    const paitoBBFS = pred.paitoBBFS7;
+    if (paitoBBFS) {
+      const fullSettlement = settleLines(paitoBBFS.full42, actual2D);
+      bbfs7PaitoProPnl += fullSettlement.net;
+      if (fullSettlement.hit) bbfs7PaitoProHits++;
+
+      const nuklirSettlement = settleLines(paitoBBFS.nuklir6, actual2D);
+      nuklir6Pnl += nuklirSettlement.net;
+      if (nuklirSettlement.hit) nuklir6Hits++;
+
+      const bomSettlement = settleLines(paitoBBFS.bom12, actual2D);
+      bom12Pnl += bomSettlement.net;
+      if (bomSettlement.hit) bom12Hits++;
     }
 
-    if (!isTwin && paitoBBFS.nuklir6.includes(actual2DStr)) {
-      nuklir6Hits++;
-      nuklir6Pnl += (70 - 6);
-    } else if (!isTwin) {
-      nuklir6Pnl -= 6;
-    }
+    const tarungSettlement = settleLines(pred.polaTarung?.tarung4x4 || [], actual2D);
+    tarung4x4Pnl += tarungSettlement.net;
+    if (tarungSettlement.hit) tarung4x4Hits++;
 
-    if (!isTwin && paitoBBFS.bom12.includes(actual2DStr)) {
-      bom12Hits++;
-      bom12Pnl += (70 - 12);
-    } else if (!isTwin) {
-      bom12Pnl -= 12;
-    }
-
-    // Pola Tarung 4x4 (16 line)
-    const polaTarung = analyzePolaTarungMovement(pastData);
-    if (!isTwin && polaTarung.tarung4x4.includes(actual2DStr)) {
-      tarung4x4Hits++;
-      tarung4x4Pnl += (70 - 16);
-    } else if (!isTwin) {
-      tarung4x4Pnl -= 16;
-    }
+    const historyIncludingActual = evalSubset.slice(0, t + 1);
+    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(pred));
+    currentPrediction = generatePrediction(historyIncludingActual, audit);
+    if (!currentPrediction && t < totalDraws - 1) return null;
   }
 
-  // Format statistik AI
   const aiStats: EvaluationMetrics['aiStats'] = {};
   [3, 4, 5, 6].forEach((size) => {
     const actualRate = (aiHits[size] / testDraws) * 100;
@@ -217,7 +196,6 @@ export function runWalkForwardEvaluation(
     };
   });
 
-  // Format statistik BBFS
   const bbfsStats: EvaluationMetrics['bbfsStats'] = {};
   [6, 7, 8, 9].forEach((size) => {
     const actualRate = (bbfsHits[size] / testDraws) * 100;
@@ -232,11 +210,10 @@ export function runWalkForwardEvaluation(
     };
   });
 
-  // Format statistik Paito & Sniper BOM
   const paitoStats: EvaluationMetrics['paitoStats'] = {
     bijiHits: paitoBijiHits,
     bijiRate: Number(((paitoBijiHits / testDraws) * 100).toFixed(2)),
-    bijiBaseline: 30.0,
+    bijiBaseline: Number(((bijiBaselineSum / testDraws) * 100).toFixed(2)),
     parityHits: paitoParityHits,
     parityRate: Number(((paitoParityHits / testDraws) * 100).toFixed(2)),
     parityBaseline: 25.0,
@@ -245,17 +222,21 @@ export function runWalkForwardEvaluation(
     magnitudeBaseline: 50.0,
     shioHits: paitoShioHits,
     shioRate: Number(((paitoShioHits / testDraws) * 100).toFixed(2)),
-    shioBaseline: 25.0,
+    shioBaseline: Number(((shioBaselineSum / testDraws) * 100).toFixed(2)),
     jalurHits: paitoJalurHits,
     jalurRate: Number(((paitoJalurHits / testDraws) * 100).toFixed(2)),
-    jalurBaseline: 33.3,
+    jalurBaseline: Number(((jalurBaselineSum / testDraws) * 100).toFixed(2)),
     superSniperHits,
-    superSniperRate: Number(((superSniperHits / testDraws) * 100).toFixed(2)),
-    avgSuperSniperLines: Number((totalSuperSniperLines / testDraws).toFixed(1)),
+    superSniperRate: Number(((superSniperHits / Math.max(1, superSniperActiveDraws)) * 100).toFixed(2)),
+    superSniperActiveDraws,
+    superSniperParticipationRate: Number(((superSniperActiveDraws / testDraws) * 100).toFixed(2)),
+    avgSuperSniperLines: Number((totalSuperSniperLines / Math.max(1, superSniperActiveDraws)).toFixed(1)),
     superSniperPnlNet: superSniperPnl * 1000,
     sniperBomHits,
-    sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
-    avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),
+    sniperBomRate: Number(((sniperBomHits / Math.max(1, sniperActiveDraws)) * 100).toFixed(2)),
+    sniperActiveDraws,
+    sniperParticipationRate: Number(((sniperActiveDraws / testDraws) * 100).toFixed(2)),
+    avgSniperLines: Number((totalSniperLines / Math.max(1, sniperActiveDraws)).toFixed(1)),
     sniperPnlNet: sniperPnl * 1000,
     bbfs7PaitoProHits,
     bbfs7PaitoProRate: Number(((bbfs7PaitoProHits / testDraws) * 100).toFixed(2)),

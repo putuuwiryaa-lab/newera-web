@@ -53,8 +53,8 @@ export function analyzeMagnitudeMovement(
       historicalMaxStreak: 3,
       velocitySlope: 0,
       prediction: 'Besar',
-      confidence: 60,
-      rationale: 'Data historis terbatas, mengikuti status default.'
+      confidence: 50,
+      rationale: 'Data historis terbatas; sinyal belum cukup kuat.'
     };
   }
 
@@ -71,11 +71,8 @@ export function analyzeMagnitudeMovement(
   let currentStreak = 1;
   const lastState = states[n - 1];
   for (let i = n - 2; i >= 0; i--) {
-    if (states[i] === lastState) {
-      currentStreak++;
-    } else {
-      break;
-    }
+    if (states[i] === lastState) currentStreak++;
+    else break;
   }
 
   let maxStreak = 1;
@@ -86,12 +83,12 @@ export function analyzeMagnitudeMovement(
       tempStreak++;
     } else {
       streakLengths.push(tempStreak);
-      if (tempStreak > maxStreak) maxStreak = tempStreak;
+      maxStreak = Math.max(maxStreak, tempStreak);
       tempStreak = 1;
     }
   }
   streakLengths.push(tempStreak);
-  if (tempStreak > maxStreak) maxStreak = tempStreak;
+  maxStreak = Math.max(maxStreak, tempStreak);
 
   const avgStreak = streakLengths.length > 0
     ? streakLengths.reduce((a, b) => a + b, 0) / streakLengths.length
@@ -100,14 +97,16 @@ export function analyzeMagnitudeMovement(
   const recentValues = sub.slice(-4).map(([k, e]) => k * 10 + e);
   let velocitySlope = 0;
   if (recentValues.length >= 2) {
+    const intervals = recentValues.length - 1;
     velocitySlope = Number(
-      ((recentValues[recentValues.length - 1] - recentValues[0]) / recentValues.length).toFixed(1)
+      ((recentValues[recentValues.length - 1] - recentValues[0]) / intervals).toFixed(1)
     );
   }
 
   const oppositeState = lastState === 'Besar' ? 'Kecil' : 'Besar';
 
   if (flipRate >= 0.58) {
+    const flipStrength = Math.min(1, Math.max(0, (flipRate - 0.5) / 0.5));
     return {
       rhythm: 'ZIG_ZAG',
       rhythmLabel: `Osilasi Zig-Zag (${Math.round(flipRate * 100)}% Flip)`,
@@ -117,12 +116,13 @@ export function analyzeMagnitudeMovement(
       historicalMaxStreak: maxStreak,
       velocitySlope,
       prediction: oppositeState,
-      confidence: Math.min(88, Math.round(55 + flipRate * 35)),
-      rationale: `Pasaran bergerak dalam pola osilasi bolak-balik (Flip ${Math.round(flipRate * 100)}%). Setelah ${lastState} (${currentStreak}x), proyeksi berbalik ke ${oppositeState}.`
+      confidence: Math.round(50 + flipStrength * 35),
+      rationale: `Flip historis ${Math.round(flipRate * 100)}%; kekuatan sinyal dihitung dari jaraknya terhadap kondisi acak 50%.`
     };
   }
 
   if (currentStreak >= maxStreak || (currentStreak >= 3 && currentStreak >= Math.round(avgStreak + 1))) {
+    const excess = Math.max(0, currentStreak - avgStreak);
     return {
       rhythm: 'STREAK_REVERSAL',
       rhythmLabel: `Titik Jenuh Runtutan (${currentStreak}x ${lastState})`,
@@ -132,8 +132,8 @@ export function analyzeMagnitudeMovement(
       historicalMaxStreak: maxStreak,
       velocitySlope,
       prediction: oppositeState,
-      confidence: Math.min(90, Math.round(65 + currentStreak * 6)),
-      rationale: `Runtutan ${lastState} telah mencapai ambang batas jenuh (${currentStreak} draw beruntun, rata-rata ${avgStreak.toFixed(1)}x). Terbentuk sinyal pembalikan arah kuat ke ${oppositeState}.`
+      confidence: Math.min(88, Math.round(55 + excess * 8)),
+      rationale: `Runtutan ${lastState} ${currentStreak}x dibanding rata-rata historis ${avgStreak.toFixed(1)}x.`
     };
   }
 
@@ -147,8 +147,8 @@ export function analyzeMagnitudeMovement(
     historicalMaxStreak: maxStreak,
     velocitySlope,
     prediction: trendPrediction,
-    confidence: Math.min(80, Math.round(58 + Math.abs(velocitySlope) * 0.4)),
-    rationale: `Momentum pergerakan melanjutkan aliran tren (${lastState} streak ${currentStreak}x, slope kecepatan ${velocitySlope > 0 ? '+' : ''}${velocitySlope}).`
+    confidence: Math.min(80, Math.round(50 + Math.min(30, Math.abs(velocitySlope)) * 0.8)),
+    rationale: `Slope dihitung per interval aktual (${recentValues.length - 1} interval) sebesar ${velocitySlope > 0 ? '+' : ''}${velocitySlope}.`
   };
 }
 
@@ -168,8 +168,8 @@ export function analyzeParityMovement(
       ekorOscillation: 'FLIP',
       trajectoryFlow: 'Genap-Ganjil -> Genap-Ganjil',
       primaryParity: 'Genap-Ganjil',
-      confidence: 60,
-      rationale: 'Data terbatas, menggunakan default Genap-Ganjil.'
+      confidence: 50,
+      rationale: 'Data terbatas; menggunakan default dengan confidence netral.'
     };
   }
 
@@ -180,13 +180,8 @@ export function analyzeParityMovement(
   let kFlips = 0;
   let eFlips = 0;
   for (let i = 1; i < n; i++) {
-    const prevK = sub[i - 1][0] % 2;
-    const currK = sub[i][0] % 2;
-    if (prevK !== currK) kFlips++;
-
-    const prevE = sub[i - 1][1] % 2;
-    const currE = sub[i][1] % 2;
-    if (prevE !== currE) eFlips++;
+    if ((sub[i - 1][0] % 2) !== (sub[i][0] % 2)) kFlips++;
+    if ((sub[i - 1][1] % 2) !== (sub[i][1] % 2)) eFlips++;
   }
 
   const kFlipRate = kFlips / (n - 1);
@@ -228,8 +223,10 @@ export function analyzeParityMovement(
 
   let nGramTopParity: ParityState = particlePredictedParity;
   let topNGramCount = 0;
+  let nGramTotal = 0;
   if (candidates) {
     PARITY_STATES.forEach((p) => {
+      nGramTotal += candidates[p];
       if (candidates[p] > topNGramCount) {
         topNGramCount = candidates[p];
         nGramTopParity = p;
@@ -240,6 +237,14 @@ export function analyzeParityMovement(
   const primaryParity = topNGramCount >= 2 ? nGramTopParity : particlePredictedParity;
   const trajectoryFlow = `${parityHistory[n - 2]} ➔ ${parityHistory[n - 1]} ➔ Target: ${primaryParity}`;
 
+  // 50% flip adalah kondisi paling tidak informatif. Makin jauh dari 50%,
+  // perilaku flip/sticky makin konsisten. N-gram menambah evidence jika berulang.
+  const kConsistency = Math.abs(kFlipRate - 0.5) * 2;
+  const eConsistency = Math.abs(eFlipRate - 0.5) * 2;
+  const oscillationConsistency = Math.min(1, (kConsistency + eConsistency) / 2);
+  const nGramDominance = nGramTotal > 0 ? topNGramCount / nGramTotal : 0;
+  const confidence = Math.min(88, Math.round(45 + oscillationConsistency * 25 + nGramDominance * 18));
+
   return {
     kepalaPolarity: predKPolar,
     kepalaOscillation: kOsc,
@@ -247,8 +252,8 @@ export function analyzeParityMovement(
     ekorOscillation: eOsc,
     trajectoryFlow,
     primaryParity,
-    confidence: Math.min(87, Math.round(60 + (kFlipRate + eFlipRate) * 15)),
-    rationale: `Osilasi kutub Kepala (${kOsc} ${predKPolar}) dan Ekor (${eOsc} ${predEPolar}) bersinergi dengan lintasan n-gram 2-langkah menuju ${primaryParity}.`
+    confidence,
+    rationale: `Konsistensi flip/sticky ${(oscillationConsistency * 100).toFixed(0)}%; dominasi n-gram ${(nGramDominance * 100).toFixed(0)}%.`
   };
 }
 
@@ -268,8 +273,8 @@ export function analyzeJalurMovement(
       predictedJalur: 1,
       predictedShios: [1, 4, 7],
       shioStepRhythm: 'TRIAD_HARMONIC',
-      confidence: 65,
-      rationale: 'Orbit default putaran maju.'
+      confidence: 50,
+      rationale: 'Data terbatas; orbit default dengan confidence netral.'
     };
   }
 
@@ -286,9 +291,7 @@ export function analyzeJalurMovement(
     const currJ = jalurHistory[i];
     const d = (currJ - prevJ + 3) % 3;
     deltaCounts[d]++;
-    if (i >= n - 3) {
-      lastTransitions.push([prevJ, currJ]);
-    }
+    if (i >= n - 3) lastTransitions.push([prevJ, currJ]);
   }
 
   const lastJalur = jalurHistory[n - 1];
@@ -300,7 +303,7 @@ export function analyzeJalurMovement(
   let orbitLabel: string;
   let predictedJalur: 1 | 2 | 3;
 
-  if (jalurHistory.length >= 3 && jalurHistory[n - 1] === jalurHistory[n - 3] && jalurHistory[n - 1] !== jalurHistory[n - 2]) {
+  if (jalurHistory[n - 1] === jalurHistory[n - 3] && jalurHistory[n - 1] !== jalurHistory[n - 2]) {
     orbitDirection = 'PANTULAN';
     predictedJalur = jalurHistory[n - 2];
     orbitLabel = `Pantulan Rebound (J${lastJalur} ➔ J${predictedJalur} ➔ J${lastJalur})`;
@@ -315,9 +318,9 @@ export function analyzeJalurMovement(
     predictedJalur = nextJ;
     orbitLabel = `Putaran Mundur Orbit (-1: J${lastJalur} ➔ J${nextJ})`;
   } else if (lastDelta === 0) {
-    orbitDirection = 'PANTULAN';
-    predictedJalur = ((lastJalur % 3) + 1) as 1 | 2 | 3;
-    orbitLabel = `Pelepasan Jalur Bertahan (Breakout ke J${predictedJalur})`;
+    orbitDirection = 'BERTAHAN';
+    predictedJalur = lastJalur;
+    orbitLabel = `Orbit Bertahan di J${lastJalur}`;
   } else {
     orbitDirection = deltaCounts[1] >= deltaCounts[2] ? 'PUTARAN_MAJU' : 'PUTARAN_MUNDUR';
     const step = orbitDirection === 'PUTARAN_MAJU' ? 1 : 2;
@@ -330,15 +333,10 @@ export function analyzeJalurMovement(
   const shioStep = (lastShioNo - prevShioNo + 12) % 12;
 
   let shioStepRhythm: 'TRIAD_HARMONIC' | 'CIONG_OPPOSITE' | 'STEP_CREEP' | 'STABLE';
-  if (shioStep === 4 || shioStep === 8) {
-    shioStepRhythm = 'TRIAD_HARMONIC';
-  } else if (shioStep === 6) {
-    shioStepRhythm = 'CIONG_OPPOSITE';
-  } else if (shioStep === 1 || shioStep === 11 || shioStep === 2 || shioStep === 10) {
-    shioStepRhythm = 'STEP_CREEP';
-  } else {
-    shioStepRhythm = 'STABLE';
-  }
+  if (shioStep === 4 || shioStep === 8) shioStepRhythm = 'TRIAD_HARMONIC';
+  else if (shioStep === 6) shioStepRhythm = 'CIONG_OPPOSITE';
+  else if (shioStep === 1 || shioStep === 11 || shioStep === 2 || shioStep === 10) shioStepRhythm = 'STEP_CREEP';
+  else shioStepRhythm = 'STABLE';
 
   const candidateShios = JALUR_SHIO_MAP[predictedJalur];
   const scoredShios = candidateShios.map((sno) => {
@@ -353,6 +351,12 @@ export function analyzeJalurMovement(
   scoredShios.sort((a, b) => b.score - a.score);
   const predictedShios = scoredShios.map((x) => x.sno).slice(0, 3);
 
+  const transitionTotal = Math.max(1, n - 1);
+  const dominantTransitions = Math.max(deltaCounts[0], deltaCounts[1], deltaCounts[2]);
+  const dominance = dominantTransitions / transitionTotal;
+  const normalizedDominance = Math.max(0, Math.min(1, (dominance - 1 / 3) / (2 / 3)));
+  const confidence = Math.round(45 + normalizedDominance * 43);
+
   return {
     orbitDirection,
     orbitLabel,
@@ -360,8 +364,8 @@ export function analyzeJalurMovement(
     predictedJalur,
     predictedShios,
     shioStepRhythm,
-    confidence: Math.min(88, Math.round(62 + (deltaCounts[1] + deltaCounts[2]) * 0.8)),
-    rationale: `Orbit Jalur berotasi secara ${orbitDirection} (${orbitLabel}) memproyeksikan pergerakan menuju Jalur ${predictedJalur} dengan Shio ${predictedShios.join(', ')}.`
+    confidence,
+    rationale: `Dominasi pola transisi Jalur ${(dominance * 100).toFixed(0)}%; confidence tidak lagi naik hanya karena frekuensi perpindahan tinggi.`
   };
 }
 
@@ -375,12 +379,12 @@ export function analyzeBijiMovement(
 ): MovementBijiDetail {
   if (history2D.length < 5) {
     return {
-      dominantStepDelta: 2,
-      stepLabel: 'Step Modular +2',
+      dominantStepDelta: 0,
+      stepLabel: 'Step Modular 0',
       isMirrorReflection: false,
-      targetBiji: [2, 4, 7],
-      confidence: 60,
-      rationale: 'Data terbatas, default step +2.'
+      targetBiji: [0, 1, 2],
+      confidence: 40,
+      rationale: 'Data terbatas; belum ada step dominan yang dapat dipercaya.'
     };
   }
 
@@ -389,16 +393,21 @@ export function analyzeBijiMovement(
   const n = bijiSeq.length;
 
   const stepFreq: Record<number, number> = {};
-  for (let d = 0; d < 10; d++) stepFreq[d] = 0;
+  const bijiFreq: Record<number, number> = {};
+  for (let d = 0; d < 10; d++) {
+    stepFreq[d] = 0;
+    bijiFreq[d] = 0;
+  }
+  bijiSeq.forEach((b) => bijiFreq[b]++);
 
   for (let i = 1; i < n; i++) {
     const delta = (bijiSeq[i] - bijiSeq[i - 1] + 10) % 10;
     stepFreq[delta]++;
   }
 
-  let bestStep = 1;
+  let bestStep = 0;
   let maxStepCount = -1;
-  for (let d = 1; d < 10; d++) {
+  for (let d = 0; d < 10; d++) {
     if (stepFreq[d] > maxStepCount) {
       maxStepCount = stepFreq[d];
       bestStep = d;
@@ -411,21 +420,40 @@ export function analyzeBijiMovement(
   const mirrorBiji = (9 - lastBiji + 10) % 10;
   const isMirrorReflection = bijiSeq.length >= 3 && bijiSeq[n - 2] === mirrorBiji;
 
-  const targetBiji = Array.from(new Set([projectedBiji1, projectedBiji2, mirrorBiji])).slice(0, 3);
+  const targetSet = new Set<number>([projectedBiji1, projectedBiji2, mirrorBiji]);
+  const historicalRank = Array.from({ length: 10 }, (_, d) => d)
+    .sort((a, b) => bijiFreq[b] - bijiFreq[a] || a - b);
+  for (const d of historicalRank) {
+    if (targetSet.size >= 3) break;
+    targetSet.add(d);
+  }
+  const targetBiji = Array.from(targetSet).slice(0, 3);
+
+  const stepDominance = maxStepCount / Math.max(1, n - 1);
+  const confidence = Math.min(88, Math.round(40 + stepDominance * 48));
+  const stepLabel = bestStep === 0 ? 'Step Modular 0 (Stagnan)' : `Step Modular (+${bestStep} / -${bestStep})`;
 
   return {
     dominantStepDelta: bestStep,
-    stepLabel: `Step Modular (+${bestStep} / -${bestStep})`,
+    stepLabel,
     isMirrorReflection,
     targetBiji,
-    confidence: Math.min(85, Math.round(58 + maxStepCount * 2)),
-    rationale: `Biji 2D bergerak dalam ritme langkah modular ${bestStep} (${bijiSeq[n - 2]} ➔ ${lastBiji}), memproyeksikan pergeseran menuju Biji [${targetBiji.join(', ')}].`
+    confidence,
+    rationale: `Step Δ${bestStep} mendominasi ${(stepDominance * 100).toFixed(0)}% transisi; target dijaga tetap 3 biji unik.`
   };
 }
 
 // ============================================================================
 // 5. POLA TARUNG 2D (KEPALA VS EKOR BERBASIS POLA PERGERAKAN)
 // ============================================================================
+
+function circularSignedDelta(prev: number, curr: number): number {
+  let delta = (curr - prev + 10) % 10;
+  if (delta > 5) delta -= 10;
+  // Jarak 5 sama kuat ke dua arah; perlakukan netral agar tidak bias.
+  if (delta === 5) return 0;
+  return delta;
+}
 
 export function analyzePolaTarungMovement(
   history2D: [number, number][],
@@ -459,21 +487,20 @@ export function analyzePolaTarungMovement(
   const lastK = sub[n - 1][0];
   const lastE = sub[n - 1][1];
 
-  let kDriftSum = 0;
-  let eDriftSum = 0;
+  let kDriftWeighted = 0;
+  let eDriftWeighted = 0;
+  let driftWeightTotal = 0;
 
   for (let i = 1; i < n; i++) {
-    const dk = sub[i][0] - sub[i - 1][0];
-    const de = sub[i][1] - sub[i - 1][1];
-    kDriftSum += dk;
-    eDriftSum += de;
+    const recencyWeight = Math.exp(0.08 * (i - n + 1));
+    const dk = circularSignedDelta(sub[i - 1][0], sub[i][0]);
+    const de = circularSignedDelta(sub[i - 1][1], sub[i][1]);
+    kDriftWeighted += dk * recencyWeight;
+    eDriftWeighted += de * recencyWeight;
+    driftWeightTotal += recencyWeight;
 
-    if (sub[i - 1][0] === lastK) {
-      kepalaScores[sub[i][0]] += 3.5;
-    }
-    if (sub[i - 1][1] === lastE) {
-      ekorScores[sub[i][1]] += 3.5;
-    }
+    if (sub[i - 1][0] === lastK) kepalaScores[sub[i][0]] += 3.5;
+    if (sub[i - 1][1] === lastE) ekorScores[sub[i][1]] += 3.5;
   }
 
   sub.forEach(([k, e], idx) => {
@@ -487,14 +514,16 @@ export function analyzePolaTarungMovement(
   kepalaScores[(lastK + kStep) % 10] += 2.5;
   ekorScores[(lastE + eStep) % 10] += 2.5;
 
+  const kDriftAvg = driftWeightTotal > 0 ? kDriftWeighted / driftWeightTotal : 0;
+  const eDriftAvg = driftWeightTotal > 0 ? eDriftWeighted / driftWeightTotal : 0;
+
   const kepalaDirection: 'NAIK' | 'TURUN' | 'STABIL' =
-    kDriftSum > 2 ? 'NAIK' : kDriftSum < -2 ? 'TURUN' : 'STABIL';
+    kDriftAvg > 0.6 ? 'NAIK' : kDriftAvg < -0.6 ? 'TURUN' : 'STABIL';
   const ekorDirection: 'NAIK' | 'TURUN' | 'STABIL' =
-    eDriftSum > 2 ? 'NAIK' : eDriftSum < -2 ? 'TURUN' : 'STABIL';
+    eDriftAvg > 0.6 ? 'NAIK' : eDriftAvg < -0.6 ? 'TURUN' : 'STABIL';
 
   const rankedKepala = Array.from({ length: 10 }, (_, i) => i)
     .sort((a, b) => kepalaScores[b] - kepalaScores[a]);
-
   const rankedEkor = Array.from({ length: 10 }, (_, i) => i)
     .sort((a, b) => ekorScores[b] - ekorScores[a]);
 
@@ -515,9 +544,7 @@ export function analyzePolaTarungMovement(
   };
 }
 
-/**
- * Menghasilkan pasangan line 2D perkalian kartesian (Kepala x Ekor) tanpa bolak-balik (No BB).
- */
+/** Menghasilkan pasangan line 2D perkalian kartesian (Kepala x Ekor). */
 export function generatePolaTarungLines(
   kepalaDigits: number[],
   ekorDigits: number[],

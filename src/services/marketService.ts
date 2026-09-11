@@ -11,49 +11,96 @@ export interface MarketServiceResult {
   error?: string;
 }
 
+/** Decode generic Firestore REST Value recursively. */
+function decodeFirestoreValue(value: any): any {
+  if (!value || typeof value !== 'object') return value;
+  if ('nullValue' in value) return null;
+  if ('stringValue' in value) return value.stringValue;
+  if ('booleanValue' in value) return Boolean(value.booleanValue);
+  if ('integerValue' in value) return Number(value.integerValue);
+  if ('doubleValue' in value) return Number(value.doubleValue);
+  if ('timestampValue' in value) return value.timestampValue;
+  if ('arrayValue' in value) {
+    return (value.arrayValue?.values || []).map((v: any) => decodeFirestoreValue(v));
+  }
+  if ('mapValue' in value) {
+    const fields = value.mapValue?.fields || {};
+    return Object.fromEntries(
+      Object.entries(fields).map(([key, child]) => [key, decodeFirestoreValue(child)])
+    );
+  }
+  return undefined;
+}
+
+async function fetchAllFirestoreDocuments(): Promise<any[]> {
+  const documents: any[] = [];
+  let pageToken = '';
+
+  // pageSize besar mengurangi round-trip, tetapi nextPageToken tetap diikuti
+  // karena Firestore boleh mengembalikan lebih sedikit dari pageSize.
+  for (let page = 0; page < 20; page++) {
+    const url = new URL(FIRESTORE_REST_BASE);
+    url.searchParams.set('pageSize', '1000');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`Firestore REST ${res.status}`);
+
+    const data = await res.json();
+    if (Array.isArray(data.documents)) documents.push(...data.documents);
+
+    pageToken = typeof data.nextPageToken === 'string' ? data.nextPageToken : '';
+    if (!pageToken) break;
+  }
+
+  return documents;
+}
+
 export async function fetchAllMarkets(): Promise<MarketServiceResult> {
   const localMap: Record<string, Market> = initialMarketsData as unknown as Record<string, Market>;
-  let marketsList: Market[] = Object.values(localMap).sort(
-    (a, b) => a.order - b.order
-  );
+  const marketsList: Market[] = Object.values(localMap).sort((a, b) => a.order - b.order);
 
   try {
-    const res = await fetch(FIRESTORE_REST_BASE, { signal: AbortSignal.timeout(4000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.documents && Array.isArray(data.documents)) {
-        const liveMarkets: Market[] = data.documents.map((doc: any) => {
-          const f = doc.fields || {};
-          const id = f.id?.stringValue || doc.name.split('/').pop();
-          const historyDaysVal = f.history_days?.stringValue ||
-            (f.history_days?.arrayValue ? f.history_days.arrayValue.values?.map((v: any) => v.stringValue).join(' ') : '') || '';
+    const documents = await fetchAllFirestoreDocuments();
+    if (documents.length > 0) {
+      const liveMarkets: Market[] = documents.map((doc: any) => {
+        const f = doc.fields || {};
+        const id = f.id?.stringValue || doc.name.split('/').pop();
+        const decodedDays = decodeFirestoreValue(f.history_days);
+        const historyDaysVal = Array.isArray(decodedDays)
+          ? decodedDays.map(String)
+          : typeof decodedDays === 'string'
+            ? decodedDays
+            : '';
 
-          return {
-            id,
-            name: f.name?.stringValue || id,
-            history_data: f.history_data?.stringValue || '',
-            history_days: historyDaysVal,
-            order: parseInt(f.order?.integerValue || '99', 10),
-            updated_at: f.updated_at?.stringValue || ''
-          };
-        });
+        const nextPrediction = decodeFirestoreValue(f.next_prediction);
+        const legacyPrediction = decodeFirestoreValue(f.latest_prediction);
+        const lastAudit = decodeFirestoreValue(f.last_audit);
 
-        if (liveMarkets.length > 0) {
-          liveMarkets.sort((a, b) => a.order - b.order);
-          return { markets: liveMarkets, source: 'live' };
-        }
-      }
+        return {
+          id,
+          name: f.name?.stringValue || id,
+          history_data: f.history_data?.stringValue || '',
+          history_days: historyDaysVal,
+          order: Number(f.order?.integerValue || 99),
+          updated_at: f.updated_at?.stringValue || '',
+          next_prediction: nextPrediction || legacyPrediction || undefined,
+          latest_prediction: legacyPrediction || undefined,
+          last_audit: lastAudit || undefined
+        };
+      });
+
+      liveMarkets.sort((a, b) => a.order - b.order);
+      return { markets: liveMarkets, source: 'live' };
     }
   } catch {
-    // Fallback silent ke cached data
+    // Fallback silent ke cached data.
   }
 
   return { markets: marketsList, source: 'cached' };
 }
 
-/**
- * Helper default pola urutan hari per minggu jika pasaran belum memiliki history_days tersimpan
- */
+/** Helper default pola urutan hari per minggu jika history_days belum tersedia. */
 export function getDefaultDaysForMarket(marketName: string = ''): string[] {
   const m = marketName.toLowerCase();
   if (m.includes('sgp') || m.includes('singapore')) {
@@ -65,9 +112,7 @@ export function getDefaultDaysForMarket(marketName: string = ''): string[] {
   return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 }
 
-/**
- * Parsing history_data string ke HistoryItem array untuk tabel paito & analisis
- */
+/** Parsing history_data string ke HistoryItem array untuk tabel paito & analisis. */
 export function parseHistoryItems(
   historyStr: string,
   historyDays?: string | string[],
@@ -91,7 +136,6 @@ export function parseHistoryItems(
     const ekor = parseInt(full[3], 10);
     const isTwin = kepala === ekor;
 
-    // Hitung Biji / Jumlah 2D: (Kepala + Ekor) disederhanakan ke 1 digit
     let sum = kepala + ekor;
     while (sum >= 10) {
       sum = Math.floor(sum / 10) + (sum % 10);
@@ -99,14 +143,10 @@ export function parseHistoryItems(
 
     const val2D = kepala * 10 + ekor;
     const besarKecil = val2D >= 50 ? 'Besar' : 'Kecil';
-
     const kGenap = kepala % 2 === 0;
     const eGenap = ekor % 2 === 0;
     const ganjilGenap = `${kGenap ? 'Genap' : 'Ganjil'}-${eGenap ? 'Genap' : 'Ganjil'}`;
-
     const shio = getShioFor2D(val2D);
-
-    // Gunakan hari riil dari scraper jika ada, atau fallback ke default pola pasar
     const day = daysList[idx] || defaultSchema[idx % defaultSchema.length];
 
     return {
