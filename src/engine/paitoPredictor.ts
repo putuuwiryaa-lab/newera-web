@@ -11,12 +11,27 @@ import {
 // Re-export untuk kompatibilitas modul lain
 export { computeBiji, getParity, PARITY_STATES, type ParityState };
 
+/** Normalisasi bobot menjadi distribusi probabilitas yang totalnya tepat 1. */
+function normalizeProbabilities<T extends string | number>(raw: Record<T, number>): Record<T, number> {
+  const keys = Object.keys(raw) as T[];
+  const total = keys.reduce((sum, key) => sum + Math.max(0, raw[key]), 0);
+  const out = {} as Record<T, number>;
+
+  if (keys.length === 0) return out;
+  if (total <= 0) {
+    const p = 1 / keys.length;
+    keys.forEach((key) => { out[key] = p; });
+    return out;
+  }
+
+  keys.forEach((key) => {
+    out[key] = Math.max(0, raw[key]) / total;
+  });
+  return out;
+}
+
 /**
- * Memprediksi atribut makro paito berdasarkan DINAMIKA POLA PERGERAKAN:
- * 1. Biji 2D (Step modular aritmatika delta + Resonansi cermin)
- * 2. Pola Ganjil-Genap (Osilasi kutub partikel Kepala/Ekor + 2-step n-gram trajectory)
- * 3. Kategori Besar-Kecil (Deteksi ritme Zig-Zag vs Runtutan Jenuh Reversal)
- * 4. Shio & Jalur (Rotasi siklis orbit Z3 dan ritme harmonik Z12)
+ * Memprediksi atribut makro paito berdasarkan dinamika pola pergerakan.
  */
 export function predictPaitoMacro(
   history2D: [number, number][],
@@ -27,7 +42,7 @@ export function predictPaitoMacro(
     const defaultProbs: Record<number, number> = {};
     for (let d = 0; d < 10; d++) defaultProbs[d] = 0.1;
     const defaultShioProbs: Record<number, number> = {};
-    for (let s = 1; s <= 12; s++) defaultShioProbs[s] = Number((1 / 12).toFixed(3));
+    for (let s = 1; s <= 12; s++) defaultShioProbs[s] = 1 / 12;
     return {
       topBiji: [1, 2, 3],
       bijiProbabilities: defaultProbs,
@@ -43,71 +58,64 @@ export function predictPaitoMacro(
       topShios: [1, 2, 3],
       primaryJalur: 1,
       shioProbabilities: defaultShioProbs,
-      jalurProbabilities: { 1: 0.34, 2: 0.33, 3: 0.33 },
+      jalurProbabilities: { 1: 1 / 3, 2: 1 / 3, 3: 1 / 3 },
       overdueShios: [],
       overdueAlerts: [],
-      confidenceScore: 60
+      confidenceScore: 50
     };
   }
 
   const sub = history2D.slice(-lookback);
-
-  // 1. Eksekusi Analisis Pola Pergerakan Menyeluruh
   const movement = analyzeMovementDynamics(history2D, rawHistory4D);
 
-  // 2. Besar vs Kecil (Berdasarkan Pola Pergerakan Zig-Zag / Reversal Breakout)
+  // 1. Besar vs Kecil
   const primaryMagnitude: 'Besar' | 'Kecil' = movement.magnitude.prediction;
-  const magConf = movement.magnitude.confidence / 100;
-  const magnitudeProbabilities = {
-    Besar: primaryMagnitude === 'Besar' ? magConf : Number((1 - magConf).toFixed(3)),
-    Kecil: primaryMagnitude === 'Kecil' ? magConf : Number((1 - magConf).toFixed(3))
-  };
-
-  // 3. Genap vs Ganjil (Berdasarkan Osilasi Kutub Kepala/Ekor & Trajektori N-Gram)
-  const primaryParity = movement.parity.primaryParity;
-  const parityConf = movement.parity.confidence / 100;
-  const remainingParityProb = (1 - parityConf) / 3;
-  const parityProbabilities: Record<string, number> = {};
-  PARITY_STATES.forEach((p) => {
-    parityProbabilities[p] = p === primaryParity ? parityConf : Number(remainingParityProb.toFixed(3));
+  const magConf = Math.min(0.99, Math.max(0.5, movement.magnitude.confidence / 100));
+  const magnitudeProbabilities = normalizeProbabilities({
+    Besar: primaryMagnitude === 'Besar' ? magConf : 1 - magConf,
+    Kecil: primaryMagnitude === 'Kecil' ? magConf : 1 - magConf
   });
 
-  // 4. Jalur & Shio 2026 (Berdasarkan Rotasi Orbit Z3 & Ritme Harmonik Z12)
+  // 2. Genap vs Ganjil
+  const primaryParity = movement.parity.primaryParity;
+  const parityConf = Math.min(0.97, Math.max(0.25, movement.parity.confidence / 100));
+  const parityRaw: Record<string, number> = {};
+  const remainingParityProb = (1 - parityConf) / 3;
+  PARITY_STATES.forEach((p) => {
+    parityRaw[p] = p === primaryParity ? parityConf : remainingParityProb;
+  });
+  const parityProbabilities = normalizeProbabilities(parityRaw);
+
+  // 3. Jalur & Shio 2026
   const primaryJalur = movement.jalur.predictedJalur;
   const topShios = movement.jalur.predictedShios;
-
-  const jalurConf = movement.jalur.confidence / 100;
+  const jalurConf = Math.min(0.97, Math.max(1 / 3, movement.jalur.confidence / 100));
   const remainingJalurProb = (1 - jalurConf) / 2;
-  const jalurProbabilities: Record<number, number> = {
-    1: primaryJalur === 1 ? jalurConf : Number(remainingJalurProb.toFixed(3)),
-    2: primaryJalur === 2 ? jalurConf : Number(remainingJalurProb.toFixed(3)),
-    3: primaryJalur === 3 ? jalurConf : Number(remainingJalurProb.toFixed(3))
-  };
+  const jalurProbabilities = normalizeProbabilities<number>({
+    1: primaryJalur === 1 ? jalurConf : remainingJalurProb,
+    2: primaryJalur === 2 ? jalurConf : remainingJalurProb,
+    3: primaryJalur === 3 ? jalurConf : remainingJalurProb
+  });
 
-  // Shio Probabilities
-  const shioProbabilities: Record<number, number> = {};
+  const shioRaw: Record<number, number> = {};
   for (let s = 1; s <= 12; s++) {
-    if (topShios.includes(s)) {
-      shioProbabilities[s] = 0.18;
-    } else if (JALUR_SHIO_MAP[primaryJalur].includes(s)) {
-      shioProbabilities[s] = 0.10;
-    } else {
-      shioProbabilities[s] = 0.04;
-    }
+    if (topShios.includes(s)) shioRaw[s] = 0.18;
+    else if (JALUR_SHIO_MAP[primaryJalur].includes(s)) shioRaw[s] = 0.10;
+    else shioRaw[s] = 0.04;
   }
+  const shioProbabilities = normalizeProbabilities(shioRaw);
 
-  // 5. Biji 2D (Berdasarkan Step Modular Delta & Cermin Sumbu 9)
+  // 4. Biji 2D. Gunakan prior ruang sampel 00-99:
+  // Biji 0 = 1/100, Biji 1..9 = 11/100. Target diberi boost lalu dinormalisasi.
   const topBiji = movement.biji.targetBiji;
-  const bijiProbabilities: Record<number, number> = {};
+  const bijiRaw: Record<number, number> = {};
   for (let d = 0; d < 10; d++) {
-    if (topBiji.includes(d)) {
-      bijiProbabilities[d] = 0.22;
-    } else {
-      bijiProbabilities[d] = 0.048;
-    }
+    const base = d === 0 ? 0.01 : 0.11;
+    bijiRaw[d] = base * (topBiji.includes(d) ? 2.0 : 1.0);
   }
+  const bijiProbabilities = normalizeProbabilities(bijiRaw);
 
-  // 6. Overdue Gap Analysis (Untuk Sistem Peringatan Anomali)
+  // 5. Overdue Gap Analysis
   const parityHistory = sub.map(([k, e]) => getParity(k, e));
   const bijiHistory = sub.map(([k, e]) => computeBiji(k, e));
   const shioHistory = sub.map(([k, e]) => getShioFor2D(k * 10 + e).no);
