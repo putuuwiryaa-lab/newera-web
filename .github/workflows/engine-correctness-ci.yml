@@ -1,6 +1,6 @@
 name: Engine Correctness CI
 
-# Validate both proposed fixes and production main after merge.
+# Validate proposed fixes on the working branch and protect production main after merge.
 on:
   push:
     branches:
