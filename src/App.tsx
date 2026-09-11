@@ -74,8 +74,8 @@ export function App() {
       .filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   }, [currentMarket]);
 
-  // Firestore last_audit adalah source of truth ketika tersedia. Fallback ke
-  // rekonstruksi lokal hanya untuk cached/legacy market yang belum punya state.
+  // Untuk source live, hanya last_audit production yang boleh tampil sebagai audit aktif.
+  // Rekonstruksi lokal dipakai saat cached/offline, bukan untuk memalsukan audit live yang belum ada.
   const calibrationAudit = useMemo(() => {
     if (currentResults4D.length < 15) return null;
     const persisted = calibrationAuditFromServer(
@@ -83,8 +83,9 @@ export function App() {
       currentMarket?.next_prediction,
       currentResults4D
     );
-    return persisted || auditAndCalibrate(currentResults4D);
-  }, [currentResults4D, currentMarket]);
+    if (persisted) return persisted;
+    return dataSource === 'cached' ? auditAndCalibrate(currentResults4D) : null;
+  }, [currentResults4D, currentMarket, dataSource]);
 
   // Kalkulasi lokal menyediakan detail paito/heatmap, lalu tier AI/BBFS dan
   // bobot production dioverlay dari next_prediction Firestore jika tersedia.
@@ -290,10 +291,10 @@ export function App() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-tight">
-                    Memori Kalibrasi & Log Penyetelan
+                    Audit Production & Rekonstruksi Walk-Forward
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Pilih domain: Peluang marginal AI, densitas BBFS, atau Audit Paito Makro
+                    Audit aktif berasal dari Firestore; timeline 7 periode di bawah adalah rekonstruksi walk-forward
                   </p>
                 </div>
               </div>

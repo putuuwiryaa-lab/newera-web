@@ -80,14 +80,14 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <h3 className="text-sm font-semibold text-white tracking-tight">
-                Audit Respons Kalibrasi & Auto-Tuning
+                Rekonstruksi Walk-Forward 7 Periode
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 font-mono border border-white/[0.08]">
                 {marketName}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Riwayat adaptif 7 periode terakhir: deteksi akurasi, pembekuan bobot, dan pemulihan deterministik
+              Simulasi ulang dari history untuk diagnostik; bukan log production Firestore yang tersimpan
             </p>
           </div>
         </div>
@@ -177,7 +177,7 @@ export const TuningTimeline: React.FC<TuningTimelineProps> = ({
             <>
               <div className="px-2.5 py-1 bg-slate-900/80 border border-amber-500/25 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
                 <Award className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-slate-400">Strike &ge;2/3:</span>
+                <span className="text-slate-400">Strike &ge;2/4:</span>
                 <strong className="text-amber-300">{paitoStrikeRate}% ({paitoHits}/{logs.length})</strong>
               </div>
               <div className="px-2.5 py-1 bg-slate-900/80 border border-emerald-500/25 rounded-lg flex items-center space-x-1.5 font-mono text-[11px]">
