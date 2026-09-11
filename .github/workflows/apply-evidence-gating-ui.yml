@@ -1,0 +1,59 @@
+name: Apply Evaluation Evidence Gating UI
+
+on:
+  push:
+    branches: [feat/evaluation-evidence-gating]
+    paths: ['.github/workflows/apply-evidence-gating-ui.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/evaluation-evidence-gating
+      - name: Patch production evaluation evidence labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/ProductionEvaluationPanel.tsx')
+          s = p.read_text()
+
+          old = """  const positive = metric.lift_pp >= 0;\n  return (\n"""
+          new = """  const positive = metric.lift_pp >= 0;\n  const [ciLow = 0, ciHigh = 0] = metric.ci95_pct || [0, 0];\n  const evidence = ciLow > metric.baseline_pct\n    ? 'POSITIVE'\n    : ciHigh < metric.baseline_pct\n      ? 'NEGATIVE'\n      : 'INCONCLUSIVE';\n  const evidenceClass = evidence === 'POSITIVE'\n    ? 'text-emerald-400'\n    : evidence === 'NEGATIVE'\n      ? 'text-rose-400'\n      : 'text-slate-500';\n  return (\n"""
+          if old not in s:
+              raise SystemExit('MetricRow anchor missing')
+          s = s.replace(old, new, 1)
+
+          old = """      {showBrier && (\n        <td className=\"py-2.5 text-right font-mono text-amber-300\">\n          {typeof metric.brier_score === 'number' ? metric.brier_score.toFixed(4) : '—'}\n        </td>\n      )}\n"""
+          new = """      <td className={`py-2.5 text-right font-mono text-[10px] ${evidenceClass}`}>\n        {evidence === 'POSITIVE' ? 'Positive' : evidence === 'NEGATIVE' ? 'Negative' : 'Inconclusive'}\n      </td>\n      {showBrier && (\n        <td className=\"py-2.5 text-right font-mono text-amber-300\">\n          {typeof metric.brier_score === 'number' ? metric.brier_score.toFixed(4) : '—'}\n        </td>\n      )}\n"""
+          if old not in s:
+              raise SystemExit('Brier anchor missing')
+          s = s.replace(old, new, 1)
+
+          s = s.replace(
+              '<th className="text-right pb-2">95% CI</th></tr>',
+              '<th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th></tr>'
+          )
+          s = s.replace(
+              '<th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Brier</th></tr>',
+              '<th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th><th className="text-right pb-2">Brier</th></tr>'
+          )
+
+          old = """            <p className=\"text-[11px] text-slate-500\">Brier lebih kecil lebih baik; lift membandingkan pilihan engine dengan baseline uniform ruang 00–99.</p>\n"""
+          new = """            <p className=\"text-[11px] text-slate-500\">Brier lebih kecil lebih baik; Evidence baru dianggap Positive/Negative jika baseline berada di luar Wilson 95% CI. Selain itu = Inconclusive.</p>\n"""
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
+      - name: Commit evidence gating
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ProductionEvaluationPanel.tsx
+          git commit -m "feat(evaluation): gate lift claims by statistical evidence" || true
+          git push origin HEAD:feat/evaluation-evidence-gating
