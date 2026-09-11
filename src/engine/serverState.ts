@@ -1,6 +1,20 @@
 import type { PredictionResult, TierAuditStatus } from './types';
 import { auditAndCalibrate, type CalibrationAudit } from './smartCalibrator';
 
+export const PRODUCTION_ENGINE_VERSION = '2026.09.11-v2';
+
+export function serverPredictionMatchesHistory(server: any, results4D: string[]): boolean {
+  if (!server || typeof server !== 'object' || results4D.length === 0) return false;
+  const version = String(server.engine_version ?? server.engineVersion ?? '');
+  const basisCount = Number(server.basis_draw_count ?? server.basisDrawCount ?? -1);
+  const basisLastDraw = String(server.basis_last_draw ?? server.basisLastDraw ?? '');
+  return (
+    version === PRODUCTION_ENGINE_VERSION
+    && basisCount === results4D.length
+    && basisLastDraw === results4D[results4D.length - 1]
+  );
+}
+
 function intArray(
   value: any,
   fallback: number[],
@@ -91,9 +105,10 @@ function clampConfidence(value: any, fallback: number): number {
  */
 export function mergeServerPrediction(
   local: PredictionResult | null,
-  server: any
+  server: any,
+  results4D: string[]
 ): PredictionResult | null {
-  if (!local || !server || typeof server !== 'object') return local;
+  if (!local || !serverPredictionMatchesHistory(server, results4D)) return local;
 
   const tierMethodWeights = readTierWeights(server.tier_method_weights || server.tierMethodWeights)
     || local.tierMethodWeights;
@@ -262,8 +277,10 @@ export function calibrationAuditFromServer(
   results4D: string[]
 ): CalibrationAudit | null {
   if (!serverAudit || typeof serverAudit !== 'object') return null;
-  const actualFull = String(serverAudit.actual_result || results4D[results4D.length - 1] || '0000');
-  if (!/^\d{4}$/.test(actualFull)) return null;
+  if (!serverPredictionMatchesHistory(nextPrediction, results4D)) return null;
+  const currentLast = results4D[results4D.length - 1] || '';
+  const actualFull = String(serverAudit.actual_result || currentLast || '0000');
+  if (!/^\d{4}$/.test(actualFull) || actualFull !== currentLast) return null;
 
   const actualK = Number(actualFull[2]);
   const actualE = Number(actualFull[3]);

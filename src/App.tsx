@@ -91,7 +91,7 @@ export function App() {
   const prediction = useMemo(() => {
     if (currentResults4D.length < 10) return null;
     const localPrediction = generatePrediction(currentResults4D, calibrationAudit);
-    return mergeServerPrediction(localPrediction, currentMarket?.next_prediction);
+    return mergeServerPrediction(localPrediction, currentMarket?.next_prediction, currentResults4D);
   }, [currentResults4D, calibrationAudit, currentMarket]);
 
   const tuningLogs = useMemo(() => {

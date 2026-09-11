@@ -148,7 +148,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
       if (history4D.length >= 10) {
         try {
           const local = generatePrediction(history4D);
-          map.set(m.id, mergeServerPrediction(local, m.next_prediction));
+          map.set(m.id, mergeServerPrediction(local, m.next_prediction, history4D));
         } catch (err) {
           console.error('Failed to generate prediction for', m.name, err);
         }
