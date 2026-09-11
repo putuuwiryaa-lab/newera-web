@@ -1,9 +1,29 @@
 import type { PredictionResult, TierAuditStatus } from './types';
-import type { CalibrationAudit } from './smartCalibrator';
+import { auditAndCalibrate, type CalibrationAudit } from './smartCalibrator';
 
-function numberArray(value: any, fallback: number[]): number[] {
+function intArray(
+  value: any,
+  fallback: number[],
+  min = 0,
+  max = 9,
+  expectedLength?: number
+): number[] {
   if (!Array.isArray(value)) return fallback;
-  const out = value.map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 9);
+  const out = Array.from(new Set(
+    value
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= min && n <= max)
+  ));
+  if (expectedLength !== undefined && out.length !== expectedLength) return fallback;
+  return out.length ? out : fallback;
+}
+
+function lineArray(value: any, fallback: string[], expectedLength?: number): string[] {
+  if (!Array.isArray(value)) return fallback;
+  const out = Array.from(new Set(
+    value.map(String).filter((v) => /^\d{2,4}$/.test(v))
+  ));
+  if (expectedLength !== undefined && out.length !== expectedLength) return fallback;
   return out.length ? out : fallback;
 }
 
@@ -23,7 +43,52 @@ function readTierWeights(value: any): Record<number, Record<string, number>> | u
   return Object.keys(out).length ? out : undefined;
 }
 
-/** Backend Firestore adalah source of truth untuk tier AI/BBFS production. */
+function readStringNumberRecord(value: any, fallback: Record<string, number>): Record<string, number> {
+  if (!value || typeof value !== 'object') return fallback;
+  const out: Record<string, number> = {};
+  Object.entries(value).forEach(([key, raw]) => {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n >= 0) out[key] = n;
+  });
+  return Object.keys(out).length ? out : fallback;
+}
+
+function readNumberRecord(value: any, fallback: Record<number, number>): Record<number, number> {
+  if (!value || typeof value !== 'object') return fallback;
+  const out: Record<number, number> = {};
+  Object.entries(value).forEach(([key, raw]) => {
+    const k = Number(key);
+    const n = Number(raw);
+    if (Number.isFinite(k) && Number.isFinite(n) && n >= 0) out[k] = n;
+  });
+  return Object.keys(out).length ? out : fallback;
+}
+
+function normalizedNumberRecord(value: any, fallback: Record<number, number>): Record<number, number> {
+  const out = readNumberRecord(value, fallback);
+  const total = Object.values(out).reduce((a, b) => a + b, 0);
+  if (total <= 0) return fallback;
+  return Object.fromEntries(
+    Object.entries(out).map(([k, v]) => [Number(k), v / total])
+  );
+}
+
+function normalizedStringRecord(value: any, fallback: Record<string, number>): Record<string, number> {
+  const out = readStringNumberRecord(value, fallback);
+  const total = Object.values(out).reduce((a, b) => a + b, 0);
+  if (total <= 0) return fallback;
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v / total]));
+}
+
+function clampConfidence(value: any, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : fallback;
+}
+
+/**
+ * Backend Firestore adalah source of truth untuk prediction production.
+ * Metadata visual/diagnostik yang belum disimpan backend tetap memakai hasil lokal.
+ */
 export function mergeServerPrediction(
   local: PredictionResult | null,
   server: any
@@ -35,24 +100,127 @@ export function mergeServerPrediction(
   const bbfsTierWeights = readTierWeights(server.bbfs_tier_weights || server.bbfsTierWeights)
     || local.bbfsTierWeights;
 
+  let paitoPrediction = local.paitoPrediction;
+  const sp = server.paito;
+  if (paitoPrediction && sp && typeof sp === 'object') {
+    const parity = String(sp.primary_parity || sp.primaryParity || paitoPrediction.primaryParity);
+    const magnitude = String(sp.primary_magnitude || sp.primaryMagnitude || paitoPrediction.primaryMagnitude);
+    const jalurRaw = Number(sp.primary_jalur ?? sp.primaryJalur ?? paitoPrediction.primaryJalur);
+    const validParity = ['Genap-Genap', 'Genap-Ganjil', 'Ganjil-Genap', 'Ganjil-Ganjil'].includes(parity)
+      ? parity as typeof paitoPrediction.primaryParity
+      : paitoPrediction.primaryParity;
+    const validMagnitude = magnitude === 'Besar' || magnitude === 'Kecil'
+      ? magnitude
+      : paitoPrediction.primaryMagnitude;
+    const validJalur = jalurRaw === 1 || jalurRaw === 2 || jalurRaw === 3
+      ? jalurRaw as 1 | 2 | 3
+      : paitoPrediction.primaryJalur;
+
+    paitoPrediction = {
+      ...paitoPrediction,
+      topBiji: intArray(sp.top_biji || sp.topBiji, paitoPrediction.topBiji, 0, 9, 3),
+      bijiProbabilities: normalizedNumberRecord(
+        sp.biji_probabilities || sp.bijiProbabilities,
+        paitoPrediction.bijiProbabilities
+      ),
+      primaryParity: validParity,
+      parityProbabilities: normalizedStringRecord(
+        sp.parity_probabilities || sp.parityProbabilities,
+        paitoPrediction.parityProbabilities
+      ),
+      primaryMagnitude: validMagnitude,
+      magnitudeProbabilities: normalizedStringRecord(
+        sp.magnitude_probabilities || sp.magnitudeProbabilities,
+        paitoPrediction.magnitudeProbabilities
+      ),
+      topShios: intArray(sp.top_shios || sp.topShios, paitoPrediction.topShios, 1, 12, 3),
+      primaryJalur: validJalur,
+      shioProbabilities: normalizedNumberRecord(
+        sp.shio_probabilities || sp.shioProbabilities,
+        paitoPrediction.shioProbabilities
+      ),
+      jalurProbabilities: normalizedNumberRecord(
+        sp.jalur_probabilities || sp.jalurProbabilities,
+        paitoPrediction.jalurProbabilities
+      ),
+      confidenceScore: clampConfidence(
+        sp.confidence_score ?? sp.confidenceScore,
+        paitoPrediction.confidenceScore
+      )
+    };
+  }
+
+  let polaTarung = local.polaTarung;
+  const st = server.pola_tarung || server.polaTarung;
+  if (polaTarung && st && typeof st === 'object') {
+    const kd = String(st.kepala_direction || st.kepalaDirection || polaTarung.kepalaDirection);
+    const ed = String(st.ekor_direction || st.ekorDirection || polaTarung.ekorDirection);
+    const direction = (v: string, fallback: 'NAIK' | 'TURUN' | 'STABIL') =>
+      (v === 'NAIK' || v === 'TURUN' || v === 'STABIL') ? v : fallback;
+    polaTarung = {
+      ...polaTarung,
+      rankedKepala: intArray(st.ranked_kepala || st.rankedKepala, polaTarung.rankedKepala, 0, 9, 10),
+      rankedEkor: intArray(st.ranked_ekor || st.rankedEkor, polaTarung.rankedEkor, 0, 9, 10),
+      kepalaDirection: direction(kd, polaTarung.kepalaDirection),
+      ekorDirection: direction(ed, polaTarung.ekorDirection),
+      tarung3x3: lineArray(st.tarung_3x3 || st.tarung3x3, polaTarung.tarung3x3, 9),
+      tarung4x4: lineArray(st.tarung_4x4 || st.tarung4x4, polaTarung.tarung4x4, 16),
+      tarung5x5: lineArray(st.tarung_5x5 || st.tarung5x5, polaTarung.tarung5x5, 25)
+    };
+  }
+
+  let paitoBBFS7 = local.paitoBBFS7;
+  const sb = server.paito_bbfs7 || server.paitoBBFS7;
+  if (paitoBBFS7 && sb && typeof sb === 'object') {
+    const serverDigits = intArray(sb.digits || sb.ranked7, paitoBBFS7.digits, 0, 9, 7);
+    paitoBBFS7 = {
+      ...paitoBBFS7,
+      digits: serverDigits,
+      ranked7: serverDigits,
+      nuklir6: lineArray(sb.nuklir6, paitoBBFS7.nuklir6, 6),
+      bom12: lineArray(sb.bom12, paitoBBFS7.bom12, 12),
+      invest20: lineArray(sb.invest20, paitoBBFS7.invest20, 20),
+      full42: lineArray(sb.full42, paitoBBFS7.full42, 42),
+      twin7: lineArray(sb.twin7, paitoBBFS7.twin7, 7)
+    };
+  }
+
+  let wheeling7 = local.wheeling7;
+  const sw = server.wheeling7;
+  if (wheeling7 && sw && typeof sw === 'object') {
+    wheeling7 = {
+      ...wheeling7,
+      wheel3D: lineArray(sw.wheel_3d || sw.wheel3D, wheeling7.wheel3D),
+      wheel3DFull: lineArray(sw.wheel_3d_full || sw.wheel3DFull, wheeling7.wheel3DFull),
+      wheel4D: lineArray(sw.wheel_4d || sw.wheel4D, wheeling7.wheel4D),
+      wheel4DFull: lineArray(sw.wheel_4d_full || sw.wheel4DFull, wheeling7.wheel4DFull),
+      guarantee3D: String(sw.guarantee_3d || sw.guarantee3D || wheeling7.guarantee3D),
+      guarantee4D: String(sw.guarantee_4d || sw.guarantee4D || wheeling7.guarantee4D)
+    };
+  }
+
   return {
     ...local,
     ai: {
-      3: numberArray(server.ai3 || server.ai?.[3], local.ai[3]),
-      4: numberArray(server.ai4 || server.ai?.[4], local.ai[4]),
-      5: numberArray(server.ai5 || server.ai?.[5], local.ai[5]),
-      6: numberArray(server.ai6 || server.ai?.[6], local.ai[6])
+      3: intArray(server.ai3 || server.ai?.[3], local.ai[3], 0, 9, 3),
+      4: intArray(server.ai4 || server.ai?.[4], local.ai[4], 0, 9, 4),
+      5: intArray(server.ai5 || server.ai?.[5], local.ai[5], 0, 9, 5),
+      6: intArray(server.ai6 || server.ai?.[6], local.ai[6], 0, 9, 6)
     },
     bbfs: {
-      6: numberArray(server.bbfs6 || server.bbfs?.[6], local.bbfs[6]),
-      7: numberArray(server.bbfs7 || server.bbfs?.[7], local.bbfs[7]),
-      8: numberArray(server.bbfs8 || server.bbfs?.[8], local.bbfs[8]),
-      9: numberArray(server.bbfs9 || server.bbfs?.[9], local.bbfs[9])
+      6: intArray(server.bbfs6 || server.bbfs?.[6], local.bbfs[6], 0, 9, 6),
+      7: intArray(server.bbfs7 || server.bbfs?.[7], local.bbfs[7], 0, 9, 7),
+      8: intArray(server.bbfs8 || server.bbfs?.[8], local.bbfs[8], 0, 9, 8),
+      9: intArray(server.bbfs9 || server.bbfs?.[9], local.bbfs[9], 0, 9, 9)
     },
     tierMethodWeights,
     methodWeights: tierMethodWeights[4] || local.methodWeights,
     bbfsTierWeights,
-    deadDigits: numberArray(server.dead_digits || server.deadDigits, local.deadDigits)
+    deadDigits: intArray(server.dead_digits || server.deadDigits, local.deadDigits, 0, 9, 2),
+    paitoPrediction,
+    polaTarung,
+    paitoBBFS7,
+    wheeling7
   };
 }
 
@@ -107,9 +275,6 @@ export function calibrationAuditFromServer(
   const aiTierAudits = convertTierAudits(aiTuning.tier_audits || aiTuning.tierAudits, 'ai', [3, 4, 5, 6]);
   const bbfsTierAudits = convertTierAudits(bbfsTuning.tier_audits || bbfsTuning.tierAudits, 'bbfs', [6, 7, 8, 9]);
 
-  // Dokumen lama pernah menganggap twin sebagai HIT hanya karena digit twin ada
-  // di set BBFS. Normalisasi sebelum UI memakai state lama agar tidak menampilkan
-  // FREEZE palsu. Setelah backend baru berjalan, dokumen akan otomatis konsisten.
   if (isTwin) {
     [6, 7, 8, 9].forEach((size) => {
       bbfsTierAudits[size] = {
@@ -122,9 +287,18 @@ export function calibrationAuditFromServer(
     });
   }
 
-  const tierWeights = readTierWeights(nextPrediction?.tier_method_weights || nextPrediction?.tierMethodWeights) || {};
-  const bbfsWeights = readTierWeights(nextPrediction?.bbfs_tier_weights || nextPrediction?.bbfsTierWeights) || {};
-  const calibratedWeights = aiTuning.calibrated_weights || aiTuning.calibratedWeights || tierWeights[4] || {};
+  // Audit harus memakai bobot yang disimpan bersama last_audit. next_prediction
+  // hanya fallback legacy jika dokumen audit lama belum menyimpan bobot per-tier.
+  const tierWeights = readTierWeights(
+    aiTuning.tier_method_weights || aiTuning.tierMethodWeights
+  ) || readTierWeights(nextPrediction?.tier_method_weights || nextPrediction?.tierMethodWeights) || {};
+  const bbfsWeights = readTierWeights(
+    bbfsTuning.tier_factor_weights || bbfsTuning.tierFactorWeights
+  ) || readTierWeights(nextPrediction?.bbfs_tier_weights || nextPrediction?.bbfsTierWeights) || {};
+  const calibratedWeights = readStringNumberRecord(
+    aiTuning.calibrated_weights || aiTuning.calibratedWeights,
+    tierWeights[4] || {}
+  );
 
   let twinGap = 0;
   for (let i = results4D.length - 1; i >= 0; i--) {
@@ -150,21 +324,47 @@ export function calibrationAuditFromServer(
     ? (aiTuning.penalized_methods || aiTuning.penalizedMethods).map(String)
     : [];
 
+  // Server belum menyimpan semua metrik diagnostik lama. Rekonstruksi lokal hanya
+  // mengisi statistik sekunder; status/prediksi/tuning utama tetap milik server.
+  const localFallback = auditAndCalibrate(results4D);
+  const streak = Number.isFinite(Number(aiTuning.streak))
+    ? Number(aiTuning.streak)
+    : (localFallback?.streakCount || 0);
+  const regimeAI: CalibrationAudit['regime'] = localFallback?.regime || 'NORMAL';
+
+  const deadDigits = intArray(
+    bbfsTuning.dead_digits || bbfsTuning.deadDigits || prev.dead_digits || prev.deadDigits,
+    localFallback?.bbfsAudit.deadDigits || [],
+    0,
+    9,
+    2
+  );
+  const deadDigitsClean = Boolean(
+    bbfsTuning.dead_digits_clean ?? bbfsTuning.deadDigitsClean ?? localFallback?.bbfsAudit.deadDigitsClean ?? true
+  );
+  const rawIsolation = Number(
+    bbfsTuning.dead_digits_isolation_rate14 ?? bbfsTuning.deadDigitsIsolationRate14
+  );
+  const deadDigitsIsolationRate14 = Number.isFinite(rawIsolation)
+    ? rawIsolation
+    : (localFallback?.bbfsAudit.deadDigitsIsolationRate14 || 0);
+
   const aiDiagnosis = String(aiTuning.action_summary || aiTuning.actionSummary || 'Audit production dari Firestore');
   const bbfsDiagnosis = isTwin
     ? `Result ${actualK}${actualE} twin: semua BBFS non-twin dinormalisasi sebagai LOSE.`
     : String(bbfsTuning.action_summary || bbfsTuning.actionSummary || 'Audit BBFS production dari Firestore');
 
-  const regimeAI: CalibrationAudit['regime'] = 'NORMAL';
-  const regimeBBFS: CalibrationAudit['bbfsAudit']['regime'] = isTwin
-    ? 'TWIN_SHOCK'
-    : statusBBFS === 'LOSE' ? 'EXPANDED_DEFENSE' : 'NORMAL';
+  let regimeBBFS: CalibrationAudit['bbfsAudit']['regime'] = 'NORMAL';
+  if (isTwin) regimeBBFS = 'TWIN_SHOCK';
+  else if (!deadDigitsClean) regimeBBFS = 'DEAD_DIGIT_ALERT';
+  else if (bbfsTierAudits[6]?.action === 'FREEZE') regimeBBFS = 'HIGH_COUPLING';
+  else if (statusBBFS === 'LOSE') regimeBBFS = 'EXPANDED_DEFENSE';
 
   return {
     previousDraw: { full: actualFull, kepala: actualK, ekor: actualE },
     previousPrediction: {
-      ai4: numberArray(prev.ai4, []),
-      bbfs7: numberArray(prev.bbfs7, [])
+      ai4: intArray(prev.ai4, localFallback?.previousPrediction.ai4 || [], 0, 9, 4),
+      bbfs7: intArray(prev.bbfs7, localFallback?.previousPrediction.bbfs7 || [], 0, 9, 7)
     },
     statusAI,
     statusBBFS,
@@ -178,7 +378,7 @@ export function calibrationAuditFromServer(
     calibratedWeights,
     regime: regimeAI,
     recommendedTier: String(aiTuning.recommended_tier || aiTuning.recommendedTier || 'AI-4'),
-    streakCount: 0,
+    streakCount: streak,
     aiAudit: {
       tierAudits: aiTierAudits,
       hitDigits,
@@ -188,7 +388,7 @@ export function calibrationAuditFromServer(
       calibratedWeights,
       calibratedTierWeights: tierWeights,
       tierMethodWeights: tierWeights,
-      streak: 0,
+      streak,
       regime: regimeAI,
       recommendedTier: String(aiTuning.recommended_tier || aiTuning.recommendedTier || 'AI-4'),
       diagnosis: aiDiagnosis,
@@ -196,9 +396,9 @@ export function calibrationAuditFromServer(
     },
     bbfsAudit: {
       tierAudits: bbfsTierAudits,
-      deadDigits: numberArray(bbfsTuning.dead_digits || bbfsTuning.deadDigits || nextPrediction?.dead_digits, []),
-      deadDigitsClean: Boolean(bbfsTuning.dead_digits_clean ?? bbfsTuning.deadDigitsClean ?? true),
-      deadDigitsIsolationRate14: 0,
+      deadDigits,
+      deadDigitsClean,
+      deadDigitsIsolationRate14,
       statusBBFS7: statusBBFS,
       isTwin,
       twinStatus: !isTwin ? 'NON_TWIN' : 'TWIN_UNPROTECTED',
