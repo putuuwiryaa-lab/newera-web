@@ -4,31 +4,14 @@ import { auditAndCalibrate } from './smartCalibrator';
 import { computeBiji, getParity } from './paitoPredictor';
 import { getShioFor2D } from './shio';
 
-export const AI_BASELINES: Record<number, number> = {
-  3: 51.0,
-  4: 64.0,
-  5: 75.0,
-  6: 84.0
-};
-
-export const BBFS_BASELINES: Record<number, number> = {
-  6: 30.0,
-  7: 42.0,
-  8: 56.0,
-  9: 72.0
-};
+export const AI_BASELINES: Record<number, number> = { 3: 51.0, 4: 64.0, 5: 75.0, 6: 84.0 };
+export const BBFS_BASELINES: Record<number, number> = { 6: 30.0, 7: 42.0, 8: 56.0, 9: 72.0 };
 
 function predictionToSavedShape(pred: PredictionResult): any {
   return {
-    ai3: pred.ai[3],
-    ai4: pred.ai[4],
-    ai5: pred.ai[5],
-    ai6: pred.ai[6],
+    ai3: pred.ai[3], ai4: pred.ai[4], ai5: pred.ai[5], ai6: pred.ai[6],
     tier_method_weights: pred.tierMethodWeights,
-    bbfs6: pred.bbfs[6],
-    bbfs7: pred.bbfs[7],
-    bbfs8: pred.bbfs[8],
-    bbfs9: pred.bbfs[9],
+    bbfs6: pred.bbfs[6], bbfs7: pred.bbfs[7], bbfs8: pred.bbfs[8], bbfs9: pred.bbfs[9],
     bbfs_tier_weights: pred.bbfsTierWeights,
     dead_digits: pred.deadDigits
   };
@@ -42,49 +25,36 @@ function settleLines(lines: string[], actual2D: string): { hit: boolean; cost: n
 
 function getBBFSLines(digits: number[]): string[] {
   const lines: string[] = [];
-  for (const k of digits) {
-    for (const e of digits) {
-      if (k !== e) lines.push(`${k}${e}`);
-    }
-  }
+  for (const k of digits) for (const e of digits) if (k !== e) lines.push(`${k}${e}`);
   return lines;
 }
 
 function getBijiBaseline(targets: number[]): number {
-  const unique = Array.from(new Set(targets));
-  return unique.reduce((sum, d) => sum + (d === 0 ? 0.01 : 0.11), 0);
+  return Array.from(new Set(targets)).reduce((sum, d) => sum + (d === 0 ? 0.01 : 0.11), 0);
 }
 
 function getShioBaseline(targets: number[]): number {
   const targetSet = new Set(targets);
   let hit = 0;
-  for (let n = 0; n < 100; n++) {
-    if (targetSet.has(getShioFor2D(n).no)) hit++;
-  }
+  for (let n = 0; n < 100; n++) if (targetSet.has(getShioFor2D(n).no)) hit++;
   return hit / 100;
 }
 
 function getJalurBaseline(target: number): number {
   let hit = 0;
-  for (let n = 0; n < 100; n++) {
-    if (getShioFor2D(n).jalur === target) hit++;
-  }
+  for (let n = 0; n < 100; n++) if (getShioFor2D(n).jalur === target) hit++;
   return hit / 100;
 }
 
 /**
  * Walk-forward stateful: prediction T dibuat sebelum result T diketahui,
- * result T kemudian mengaudit prediction yang benar-benar dipakai, lalu hasil
- * kalibrasi tersebut dipakai untuk membuat prediction T+1.
+ * result T mengaudit prediction yang benar-benar dipakai, lalu state kalibrasi
+ * tersebut menghasilkan prediction T+1.
  */
-export function runWalkForwardEvaluation(
-  results4D: string[],
-  warmup = 50
-): EvaluationMetrics | null {
+export function runWalkForwardEvaluation(results4D: string[], warmup = 50): EvaluationMetrics | null {
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length <= warmup + 10) return null;
 
-  // Stateful replay lebih berat daripada evaluator lama. Batasi 250 draw terakhir.
   const evalSubset = valid4D.length > 250 ? valid4D.slice(-250) : valid4D;
   const totalDraws = evalSubset.length;
   const effectiveWarmup = Math.min(warmup, totalDraws - 10);
@@ -94,46 +64,33 @@ export function runWalkForwardEvaluation(
   const bbfsHits: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
   const pnl: Record<number, number> = { 6: 0, 7: 0, 8: 0, 9: 0 };
   let twinCount = 0;
-
   const ai4Streaks = { currentWin: 0, maxWin: 0, currentLose: 0, maxLose: 0 };
 
-  let paitoBijiHits = 0;
-  let paitoParityHits = 0;
-  let paitoMagHits = 0;
-  let paitoShioHits = 0;
-  let paitoJalurHits = 0;
-  let bijiBaselineSum = 0;
-  let shioBaselineSum = 0;
-  let jalurBaselineSum = 0;
+  let paitoBijiHits = 0, paitoParityHits = 0, paitoMagHits = 0, paitoShioHits = 0, paitoJalurHits = 0;
+  let bijiBaselineSum = 0, shioBaselineSum = 0, jalurBaselineSum = 0;
+  let sniperBomHits = 0, totalSniperLines = 0, sniperPnl = 0;
+  let superSniperHits = 0, totalSuperSniperLines = 0, superSniperPnl = 0;
+  let bbfs7PaitoProHits = 0, bbfs7PaitoProPnl = 0;
+  let nuklir6Hits = 0, nuklir6Pnl = 0;
+  let bom12Hits = 0, bom12Pnl = 0;
+  let tarung4x4Hits = 0, tarung4x4Pnl = 0;
 
-  let sniperBomHits = 0;
-  let totalSniperLines = 0;
-  let sniperPnl = 0;
-  let superSniperHits = 0;
-  let totalSuperSniperLines = 0;
-  let superSniperPnl = 0;
-  let bbfs7PaitoProHits = 0;
-  let bbfs7PaitoProPnl = 0;
-  let nuklir6Hits = 0;
-  let nuklir6Pnl = 0;
-  let bom12Hits = 0;
-  let bom12Pnl = 0;
-  let tarung4x4Hits = 0;
-  let tarung4x4Pnl = 0;
-
-  // Burn-in state dari awal subset hingga warmup, tanpa memasukkan statistik test.
   const stateStart = Math.min(15, effectiveWarmup);
-  let currentPrediction = generatePrediction(evalSubset.slice(0, stateStart));
+  let currentPrediction: PredictionResult | null = generatePrediction(evalSubset.slice(0, stateStart));
   if (!currentPrediction) return null;
 
   for (let t = stateStart; t < effectiveWarmup; t++) {
+    const pred: PredictionResult = currentPrediction;
     const historyIncludingActual = evalSubset.slice(0, t + 1);
-    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(currentPrediction));
+    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(pred));
     currentPrediction = generatePrediction(historyIncludingActual, audit);
     if (!currentPrediction) return null;
   }
 
   for (let t = effectiveWarmup; t < totalDraws; t++) {
+    const pred = currentPrediction;
+    if (!pred) return null;
+
     const actualFull = evalSubset[t];
     const actualK = Number(actualFull[2]);
     const actualE = Number(actualFull[3]);
@@ -141,9 +98,8 @@ export function runWalkForwardEvaluation(
     const isTwin = actualK === actualE;
     if (isTwin) twinCount++;
 
-    // 1. AI: prediction yang memang sudah dibuat sebelum draw T.
     ([3, 4, 5, 6] as const).forEach((size) => {
-      const hit = currentPrediction!.ai[size].includes(actualK) || currentPrediction!.ai[size].includes(actualE);
+      const hit = pred.ai[size].includes(actualK) || pred.ai[size].includes(actualE);
       if (hit) aiHits[size]++;
       if (size === 4) {
         if (hit) {
@@ -158,15 +114,13 @@ export function runWalkForwardEvaluation(
       }
     });
 
-    // 2. BBFS: line yang dibet adalah P(size,2) non-twin. Twin tetap membayar cost dan kalah.
     ([6, 7, 8, 9] as const).forEach((size) => {
-      const settlement = settleLines(getBBFSLines(currentPrediction!.bbfs[size]), actual2D);
+      const settlement = settleLines(getBBFSLines(pred.bbfs[size]), actual2D);
       if (settlement.hit) bbfsHits[size]++;
       pnl[size] += settlement.net;
     });
 
-    // 3. Paito macro dan baseline dinamis sesuai target yang benar-benar dipilih.
-    const paitoPred = currentPrediction.paitoPrediction;
+    const paitoPred = pred.paitoPrediction;
     if (paitoPred) {
       const actualBiji = computeBiji(actualK, actualE);
       const actualParity = getParity(actualK, actualE);
@@ -183,9 +137,8 @@ export function runWalkForwardEvaluation(
       shioBaselineSum += getShioBaseline(paitoPred.topShios);
       jalurBaselineSum += getJalurBaseline(paitoPred.primaryJalur);
 
-      // Sniper dibuat dari state prediction yang sama.
-      const sniperTop = currentPrediction.paitoBBFS7
-        ? currentPrediction.paitoBBFS7.full42.filter((line) => {
+      const sniperTop = pred.paitoBBFS7
+        ? pred.paitoBBFS7.full42.filter((line) => {
             const k = Number(line[0]);
             const e = Number(line[1]);
             return paitoPred.topBiji.includes(computeBiji(k, e)) && getParity(k, e) === paitoPred.primaryParity;
@@ -204,8 +157,7 @@ export function runWalkForwardEvaluation(
       if (superSettlement.hit) superSniperHits++;
     }
 
-    // 4. Paito BBFS hierarchy. Jangan special-case twin; membership line menentukan hit.
-    const paitoBBFS = currentPrediction.paitoBBFS7;
+    const paitoBBFS = pred.paitoBBFS7;
     if (paitoBBFS) {
       const fullSettlement = settleLines(paitoBBFS.full42, actual2D);
       bbfs7PaitoProPnl += fullSettlement.net;
@@ -220,14 +172,12 @@ export function runWalkForwardEvaluation(
       if (bomSettlement.hit) bom12Hits++;
     }
 
-    const polaTarungLines = currentPrediction.polaTarung?.tarung4x4 || [];
-    const tarungSettlement = settleLines(polaTarungLines, actual2D);
+    const tarungSettlement = settleLines(pred.polaTarung?.tarung4x4 || [], actual2D);
     tarung4x4Pnl += tarungSettlement.net;
     if (tarungSettlement.hit) tarung4x4Hits++;
 
-    // 5. Update state production untuk prediction T+1 menggunakan prediction T yang tersimpan.
     const historyIncludingActual = evalSubset.slice(0, t + 1);
-    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(currentPrediction));
+    const audit = auditAndCalibrate(historyIncludingActual, predictionToSavedShape(pred));
     currentPrediction = generatePrediction(historyIncludingActual, audit);
     if (!currentPrediction && t < totalDraws - 1) return null;
   }
