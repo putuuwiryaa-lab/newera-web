@@ -236,7 +236,7 @@ export const LineGeneratorModal: React.FC<LineGeneratorModalProps> = ({
             </button>
           ) : mode === 'wheeling' ? (
             <span className="text-amber-300 font-mono text-[11px] font-semibold">
-              ★ Covering Design Hemat Hingga 96%
+              ★ Coverage subset kombinasi — bukan jaminan straight
             </span>
           ) : (
             <span className="text-slate-400 font-mono text-[11px]">
