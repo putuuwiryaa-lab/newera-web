@@ -24,6 +24,15 @@ interface ProductionEvaluation {
   ai_stats: Record<string, RateMetric>;
   bbfs_stats: Record<string, RateMetric>;
   paito_stats: Record<string, RateMetric>;
+  prospective?: {
+    tested_draws: number;
+    minimum_draws: number;
+    ready: boolean;
+    twin_count: number;
+    ai_stats: Record<string, RateMetric>;
+    bbfs_stats: Record<string, RateMetric>;
+    paito_stats: Record<string, RateMetric>;
+  };
   sniper_stats?: RateMetric & {
     active_draws?: number;
     participation_rate_pct?: number;
@@ -89,6 +98,11 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
     );
   }
 
+  const prospective = metrics.prospective;
+  const prospectiveDraws = prospective?.tested_draws ?? metrics.live_draws ?? 0;
+  const prospectiveMinimum = prospective?.minimum_draws ?? 30;
+  const prospectiveReady = prospective?.ready ?? prospectiveDraws >= prospectiveMinimum;
+
   return (
     <div className="space-y-5">
       <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 shadow-xl">
@@ -122,6 +136,53 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
           </div>
         </div>
       </div>
+
+      <div className={`glass-panel rounded-2xl p-5 border ${prospectiveReady ? 'border-emerald-500/25' : 'border-amber-500/20'}`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-semibold text-white">Prospective Live Holdout</h4>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {prospectiveDraws === 0
+                ? 'Belum ada result live sejak evaluator dipasang. Historical replay tidak diperlakukan sebagai bukti prospective.'
+                : prospectiveReady
+                  ? 'Minimum observasi live tercapai. Tetap gunakan kolom Evidence/95% CI sebelum menyimpulkan ada edge.'
+                  : `Early sample: ${prospectiveDraws}/${prospectiveMinimum} live draw. Jangan gunakan hasil ini untuk tuning production.`}
+            </p>
+          </div>
+          <span className={`text-[10px] px-2.5 py-1 rounded-lg border font-mono ${prospectiveReady ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' : 'bg-amber-500/10 border-amber-500/25 text-amber-300'}`}>
+            {prospectiveReady ? 'PROSPECTIVE READY' : `COLLECTING ${prospectiveDraws}/${prospectiveMinimum}`}
+          </span>
+        </div>
+
+        {prospectiveDraws > 0 && prospective && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-4">
+            <div className="overflow-x-auto">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">AI Live-only</div>
+              <table className="w-full text-xs">
+                <thead className="text-slate-500 font-mono text-[10px] uppercase">
+                  <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th></tr>
+                </thead>
+                <tbody>
+                  {[3,4,5,6].map((tier) => <MetricRow key={`live-ai-${tier}`} label={`AI-${tier}`} metric={prospective.ai_stats?.[String(tier)]} />)}
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">BBFS Live-only</div>
+              <table className="w-full text-xs">
+                <thead className="text-slate-500 font-mono text-[10px] uppercase">
+                  <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th></tr>
+                </thead>
+                <tbody>
+                  {[6,7,8,9].map((tier) => <MetricRow key={`live-bbfs-${tier}`} label={`BBFS-${tier}`} metric={prospective.bbfs_stats?.[String(tier)]} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 px-1">Historical replay + accumulated total</div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <div className="glass-panel rounded-2xl p-5 border border-white/[0.08]">
