@@ -57,14 +57,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-semibold text-white tracking-tight">
-                  Evaluasi Walk-Forward Out-of-Sample
+                  Evaluasi Walk-Forward Lokal (TypeScript)
                 </h3>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/[0.06] text-slate-300 font-mono border border-white/[0.08]">
                   {marketName}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Simulasi backtesting ketat bergulir 1 putaran demi 1 putaran tanpa kebocoran data masa depan
+                Backtest lokal bergulir tanpa data masa depan; diagnostik ini bukan log performa production backend Python
               </p>
             </div>
           </div>
