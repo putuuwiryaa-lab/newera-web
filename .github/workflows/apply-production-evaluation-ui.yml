@@ -1,0 +1,88 @@
+name: Apply Production Evaluation UI
+
+on:
+  push:
+    branches: [feat/backend-production-evaluator-final]
+    paths: ['.github/workflows/apply-production-evaluation-ui.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/backend-production-evaluator-final
+      - name: Patch web integration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/engine/types.ts')
+          s = p.read_text()
+          if 'production_evaluation?: any;' not in s:
+              s = s.replace('  last_audit?: any;\n', '  last_audit?: any;\n  production_evaluation?: any;\n', 1)
+          p.write_text(s)
+
+          p = Path('src/services/marketService.ts')
+          s = p.read_text()
+          if 'const productionEvaluation = decodeFirestoreValue(f.production_evaluation);' not in s:
+              s = s.replace(
+                  '        const lastAudit = decodeFirestoreValue(f.last_audit);\n',
+                  '        const lastAudit = decodeFirestoreValue(f.last_audit);\n        const productionEvaluation = decodeFirestoreValue(f.production_evaluation);\n',
+                  1,
+              )
+              s = s.replace(
+                  '          last_audit: lastAudit || undefined\n',
+                  '          last_audit: lastAudit || undefined,\n          production_evaluation: productionEvaluation || undefined\n',
+                  1,
+              )
+          p.write_text(s)
+
+          p = Path('src/engine/serverState.ts')
+          s = p.read_text()
+          marker = 'export function serverEvaluationMatchesHistory'
+          if marker not in s:
+              anchor = '\nfunction intArray('
+              block = '''\nexport function serverEvaluationMatchesHistory(server: any, results4D: string[]): boolean {\n  if (!serverPredictionMatchesHistory(server, results4D)) return false;\n  const evaluatorVersion = String(server?.evaluator_version ?? server?.evaluatorVersion ?? '');\n  return evaluatorVersion.startsWith(`${PRODUCTION_ENGINE_VERSION}-prod-eval-`);\n}\n'''
+              if anchor not in s:
+                  raise SystemExit('serverState anchor missing')
+              s = s.replace(anchor, block + anchor, 1)
+          p.write_text(s)
+
+          p = Path('src/App.tsx')
+          s = p.read_text()
+          if "./components/ProductionEvaluationPanel" not in s:
+              s = s.replace(
+                  "import { EvaluationPanel } from './components/EvaluationPanel';\n",
+                  "import { EvaluationPanel } from './components/EvaluationPanel';\nimport { ProductionEvaluationPanel } from './components/ProductionEvaluationPanel';\n",
+                  1,
+              )
+          s = s.replace(
+              "import { calibrationAuditFromServer, mergeServerPrediction } from './engine/serverState';",
+              "import { calibrationAuditFromServer, mergeServerPrediction, serverEvaluationMatchesHistory } from './engine/serverState';",
+              1,
+          )
+          if 'const productionEvaluation = useMemo' not in s:
+              anchor = '''  const evaluation = useMemo(() => {\n    if (currentResults4D.length < 60) return null;\n    return runWalkForwardEvaluation(currentResults4D, 50);\n  }, [currentResults4D]);\n'''
+              addition = anchor + '''\n  const productionEvaluation = useMemo(() => {\n    const candidate = currentMarket?.production_evaluation;\n    return serverEvaluationMatchesHistory(candidate, currentResults4D) ? candidate : null;\n  }, [currentMarket, currentResults4D]);\n'''
+              if anchor not in s:
+                  raise SystemExit('App evaluation anchor missing')
+              s = s.replace(anchor, addition, 1)
+          old = '''        {activeTab === 'evaluation' && (\n          <EvaluationPanel\n            metrics={evaluation}\n            marketName={currentMarket ? currentMarket.name : ''}\n          />\n        )}\n'''
+          new = '''        {activeTab === 'evaluation' && (\n          <div className="space-y-6">\n            <ProductionEvaluationPanel\n              metrics={productionEvaluation}\n              marketName={currentMarket ? currentMarket.name : ''}\n            />\n            <EvaluationPanel\n              metrics={evaluation}\n              marketName={currentMarket ? currentMarket.name : ''}\n            />\n          </div>\n        )}\n'''
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif '<ProductionEvaluationPanel' not in s:
+              raise SystemExit('App evaluation render anchor missing')
+          p.write_text(s)
+          PY
+      - name: Commit web integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/engine/types.ts src/services/marketService.ts src/engine/serverState.ts src/App.tsx
+          git commit -m "feat(evaluation): show validated backend production metrics" || true
+          git push origin HEAD:feat/backend-production-evaluator-final
