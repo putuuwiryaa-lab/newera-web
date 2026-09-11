@@ -15,6 +15,7 @@ import { fetchAllMarkets, parseHistoryItems } from './services/marketService';
 import { generatePrediction } from './engine/adaptiveEngine';
 import { runWalkForwardEvaluation } from './engine/evaluator';
 import { auditAndCalibrate, reconstructLast7DaysTuningLogs } from './engine/smartCalibrator';
+import { calibrationAuditFromServer, mergeServerPrediction } from './engine/serverState';
 import type { Market } from './engine/types';
 import { Sparkles, TrendingUp, History, Sliders, Layers, Compass } from 'lucide-react';
 
@@ -34,7 +35,6 @@ export function App() {
     }, 2200);
   }, []);
 
-  // Generator modal state
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     digits: number[];
@@ -47,11 +47,9 @@ export function App() {
     initialMode: 'full'
   });
 
-  // Share prediction modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSingleShareOpen, setIsSingleShareOpen] = useState(false);
 
-  // Load markets
   const loadMarkets = async () => {
     setIsRefreshing(true);
     const result = await fetchAllMarkets();
@@ -64,12 +62,10 @@ export function App() {
     loadMarkets();
   }, []);
 
-  // Selected market
   const currentMarket = useMemo(() => {
     return markets.find((m) => m.id === selectedMarketId) || markets[0];
   }, [markets, selectedMarketId]);
 
-  // Parse 4D numbers
   const currentResults4D = useMemo(() => {
     if (!currentMarket || !currentMarket.history_data) return [];
     return currentMarket.history_data
@@ -78,31 +74,36 @@ export function App() {
       .filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   }, [currentMarket]);
 
-  // Audit & Kalibrasi Cerdas pada Result Terakhir
+  // Firestore last_audit adalah source of truth ketika tersedia. Fallback ke
+  // rekonstruksi lokal hanya untuk cached/legacy market yang belum punya state.
   const calibrationAudit = useMemo(() => {
     if (currentResults4D.length < 15) return null;
-    return auditAndCalibrate(currentResults4D);
-  }, [currentResults4D]);
+    const persisted = calibrationAuditFromServer(
+      currentMarket?.last_audit,
+      currentMarket?.next_prediction,
+      currentResults4D
+    );
+    return persisted || auditAndCalibrate(currentResults4D);
+  }, [currentResults4D, currentMarket]);
 
-  // Kalkulasi Prediksi Adaptif & Intelijen
+  // Kalkulasi lokal menyediakan detail paito/heatmap, lalu tier AI/BBFS dan
+  // bobot production dioverlay dari next_prediction Firestore jika tersedia.
   const prediction = useMemo(() => {
     if (currentResults4D.length < 10) return null;
-    return generatePrediction(currentResults4D, calibrationAudit);
-  }, [currentResults4D, calibrationAudit]);
+    const localPrediction = generatePrediction(currentResults4D, calibrationAudit);
+    return mergeServerPrediction(localPrediction, currentMarket?.next_prediction);
+  }, [currentResults4D, calibrationAudit, currentMarket]);
 
-  // Rekonstruksi Riwayat Kalibrasi 7 Hari Terakhir
   const tuningLogs = useMemo(() => {
     if (currentResults4D.length < 15) return [];
     return reconstructLast7DaysTuningLogs(currentResults4D);
   }, [currentResults4D]);
 
-  // Kalkulasi Evaluasi Otomatis (Backtesting)
   const evaluation = useMemo(() => {
     if (currentResults4D.length < 60) return null;
     return runWalkForwardEvaluation(currentResults4D, 50);
   }, [currentResults4D]);
 
-  // Paito Items
   const historyItems = useMemo(() => {
     if (!currentMarket) return [];
     return parseHistoryItems(currentMarket.history_data, currentMarket.history_days, currentMarket.name);
@@ -121,10 +122,8 @@ export function App() {
     });
   };
 
-  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if inside input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
@@ -166,10 +165,8 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#070A13] text-slate-100 flex flex-col font-sans">
-      {/* Toast Notification */}
       <Toast toast={toast} />
 
-      {/* Navbar */}
       <Navbar
         marketCount={markets.length}
         dataSource={dataSource}
@@ -179,9 +176,7 @@ export function App() {
         onOpenShare={() => setIsShareModalOpen(true)}
       />
 
-      {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5 pb-24 sm:pb-8">
-        {/* Selector Pasaran */}
         <MarketSelector
           markets={markets}
           selectedMarketId={selectedMarketId}
@@ -189,7 +184,6 @@ export function App() {
           onOpenSingleShare={() => setIsSingleShareOpen(true)}
         />
 
-        {/* Desktop Tab Navigation (Clean & Pill-based) */}
         <div className="hidden sm:flex items-center justify-between p-1.5 rounded-2xl bg-slate-900/80 border border-white/[0.08] shadow-lg backdrop-blur-md">
           <div className="flex items-center space-x-1.5">
             <button
@@ -264,7 +258,6 @@ export function App() {
           </div>
         </div>
 
-        {/* Dynamic Tab Contents */}
         {activeTab === 'ai' && (
           <AIDashboard
             prediction={prediction}
@@ -290,7 +283,6 @@ export function App() {
 
         {activeTab === 'tuning' && (
           <div className="space-y-6">
-            {/* Tuning Mode Switcher Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/70 border border-white/[0.08] p-4 rounded-2xl shadow-xl backdrop-blur-md">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -377,7 +369,6 @@ export function App() {
         )}
       </main>
 
-      {/* Floating Mobile Bottom Navigation Dock (sm:hidden) */}
       <nav className="fixed bottom-3 inset-x-3 sm:hidden z-40 bg-slate-950/90 backdrop-blur-xl border border-white/[0.12] rounded-2xl shadow-2xl shadow-black/80 px-2 py-1.5 flex items-center justify-around">
         <button
           onClick={() => handleTabChange('ai')}
@@ -440,7 +431,6 @@ export function App() {
         </button>
       </nav>
 
-      {/* Footer */}
       <footer className="border-t border-white/[0.06] py-6 bg-slate-950/60 mt-12 text-center text-xs text-slate-500 hidden sm:block">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
@@ -452,7 +442,6 @@ export function App() {
         </div>
       </footer>
 
-      {/* Line Generator & Smart Trimmer Modal */}
       <LineGeneratorModal
         key={`modal-${modalState.tierName}-${modalState.initialMode}-${modalState.isOpen ? 'open' : 'closed'}`}
         isOpen={modalState.isOpen}
@@ -464,14 +453,12 @@ export function App() {
         polaTarung={prediction?.polaTarung}
       />
 
-      {/* Multi-Market Share Prediction Modal */}
       <SharePredictionModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         markets={markets}
       />
 
-      {/* Single Market WhatsApp Share Modal */}
       <SingleMarketShareModal
         isOpen={isSingleShareOpen}
         onClose={() => setIsSingleShareOpen(false)}
