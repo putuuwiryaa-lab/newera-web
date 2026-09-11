@@ -45,6 +45,17 @@ const MetricRow: React.FC<{ label: string; metric?: RateMetric; showBrier?: bool
 }) => {
   if (!metric) return null;
   const positive = metric.lift_pp >= 0;
+  const [ciLow = 0, ciHigh = 0] = metric.ci95_pct || [0, 0];
+  const evidence = ciLow > metric.baseline_pct
+    ? 'POSITIVE'
+    : ciHigh < metric.baseline_pct
+      ? 'NEGATIVE'
+      : 'INCONCLUSIVE';
+  const evidenceClass = evidence === 'POSITIVE'
+    ? 'text-emerald-400'
+    : evidence === 'NEGATIVE'
+      ? 'text-rose-400'
+      : 'text-slate-500';
   return (
     <tr className="border-b border-white/[0.04] last:border-0">
       <td className="py-2.5 text-slate-200 font-medium">{label}</td>
@@ -56,6 +67,9 @@ const MetricRow: React.FC<{ label: string; metric?: RateMetric; showBrier?: bool
       </td>
       <td className="py-2.5 text-right font-mono text-slate-500">
         {metric.ci95_pct?.[0] ?? 0}–{metric.ci95_pct?.[1] ?? 0}%
+      </td>
+      <td className={`py-2.5 text-right font-mono text-[10px] ${evidenceClass}`}>
+        {evidence === 'POSITIVE' ? 'Positive' : evidence === 'NEGATIVE' ? 'Negative' : 'Inconclusive'}
       </td>
       {showBrier && (
         <td className="py-2.5 text-right font-mono text-amber-300">
@@ -118,7 +132,7 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-slate-500 font-mono text-[10px] uppercase">
-                <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th></tr>
+                <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th></tr>
               </thead>
               <tbody>
                 {[3,4,5,6].map((tier) => <MetricRow key={tier} label={`AI-${tier}`} metric={metrics.ai_stats?.[String(tier)]} />)}
@@ -135,7 +149,7 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-slate-500 font-mono text-[10px] uppercase">
-                <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th></tr>
+                <tr><th className="text-left pb-2">Tier</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th></tr>
               </thead>
               <tbody>
                 {[6,7,8,9].map((tier) => <MetricRow key={tier} label={`BBFS-${tier}`} metric={metrics.bbfs_stats?.[String(tier)]} />)}
@@ -150,13 +164,13 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
           <BarChart3 className="w-4 h-4 text-amber-400" />
           <div>
             <h4 className="text-sm font-semibold text-white">Paito Calibration Quality</h4>
-            <p className="text-[11px] text-slate-500">Brier lebih kecil lebih baik; lift membandingkan pilihan engine dengan baseline uniform ruang 00–99.</p>
+            <p className="text-[11px] text-slate-500">Brier lebih kecil lebih baik; Evidence baru dianggap Positive/Negative jika baseline berada di luar Wilson 95% CI. Selain itu = Inconclusive.</p>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="text-slate-500 font-mono text-[10px] uppercase">
-              <tr><th className="text-left pb-2">Domain</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Brier</th></tr>
+              <tr><th className="text-left pb-2">Domain</th><th className="text-right pb-2">Hit</th><th className="text-right pb-2">Rate</th><th className="text-right pb-2">Baseline</th><th className="text-right pb-2">Lift</th><th className="text-right pb-2">95% CI</th><th className="text-right pb-2">Evidence</th><th className="text-right pb-2">Brier</th></tr>
             </thead>
             <tbody>
               <MetricRow label="Biji Top" metric={metrics.paito_stats?.biji} showBrier />
