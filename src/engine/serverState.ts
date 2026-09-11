@@ -15,6 +15,12 @@ export function serverPredictionMatchesHistory(server: any, results4D: string[])
   );
 }
 
+export function serverEvaluationMatchesHistory(server: any, results4D: string[]): boolean {
+  if (!serverPredictionMatchesHistory(server, results4D)) return false;
+  const evaluatorVersion = String(server?.evaluator_version ?? server?.evaluatorVersion ?? '');
+  return evaluatorVersion.startsWith(`${PRODUCTION_ENGINE_VERSION}-prod-eval-`);
+}
+
 function intArray(
   value: any,
   fallback: number[],
