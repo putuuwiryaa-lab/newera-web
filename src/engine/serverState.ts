@@ -23,11 +23,7 @@ function readTierWeights(value: any): Record<number, Record<string, number>> | u
   return Object.keys(out).length ? out : undefined;
 }
 
-/**
- * Backend Firestore adalah source of truth untuk tier AI/BBFS dan bobot yang
- * sudah melalui audit production. Kalkulasi lokal tetap menyediakan detail
- * paito/heatmap serta fallback jika dokumen server belum punya prediction.
- */
+/** Backend Firestore adalah source of truth untuk tier AI/BBFS production. */
 export function mergeServerPrediction(
   local: PredictionResult | null,
   server: any
@@ -103,13 +99,28 @@ export function calibrationAuditFromServer(
 
   const actualK = Number(actualFull[2]);
   const actualE = Number(actualFull[3]);
-  const isTwin = Boolean(serverAudit.is_twin ?? actualK === actualE);
+  const isTwin = Boolean(serverAudit.is_twin ?? (actualK === actualE));
   const aiTuning = serverAudit.ai_tuning || serverAudit.aiTuning || {};
   const bbfsTuning = serverAudit.bbfs_tuning || serverAudit.bbfsTuning || {};
   const prev = serverAudit.previous_prediction || serverAudit.previousPrediction || {};
 
   const aiTierAudits = convertTierAudits(aiTuning.tier_audits || aiTuning.tierAudits, 'ai', [3, 4, 5, 6]);
   const bbfsTierAudits = convertTierAudits(bbfsTuning.tier_audits || bbfsTuning.tierAudits, 'bbfs', [6, 7, 8, 9]);
+
+  // Dokumen lama pernah menganggap twin sebagai HIT hanya karena digit twin ada
+  // di set BBFS. Normalisasi sebelum UI memakai state lama agar tidak menampilkan
+  // FREEZE palsu. Setelah backend baru berjalan, dokumen akan otomatis konsisten.
+  if (isTwin) {
+    [6, 7, 8, 9].forEach((size) => {
+      bbfsTierAudits[size] = {
+        ...bbfsTierAudits[size],
+        status: 'LOSE',
+        action: 'CALIBRATED',
+        tuningDirective: 'Twin kalah pada BBFS non-twin; kalibrasi tier',
+        marginalNote: `Twin ${actualK}${actualE} tidak ada di line non-twin`
+      };
+    });
+  }
 
   const tierWeights = readTierWeights(nextPrediction?.tier_method_weights || nextPrediction?.tierMethodWeights) || {};
   const bbfsWeights = readTierWeights(nextPrediction?.bbfs_tier_weights || nextPrediction?.bbfsTierWeights) || {};
@@ -125,8 +136,6 @@ export function calibrationAuditFromServer(
     twinGap >= 20 ? 'EKSTREM' : twinGap >= 14 ? 'MENINGKAT' : 'NORMAL';
 
   const statusAI = normalizeStatus(serverAudit.status_ai || serverAudit.statusAI || aiTuning.status_ai4);
-  // Untuk non-twin BBFS, backend lama mungkin pernah menandai twin sebagai HIT.
-  // Frontend menormalkan ulang agar rule baru konsisten.
   const statusBBFS: 'HIT' | 'LOSE' = isTwin
     ? 'LOSE'
     : normalizeStatus(serverAudit.status_bbfs || serverAudit.statusBBFS || bbfsTuning.status_bbfs7);
@@ -143,11 +152,13 @@ export function calibrationAuditFromServer(
 
   const aiDiagnosis = String(aiTuning.action_summary || aiTuning.actionSummary || 'Audit production dari Firestore');
   const bbfsDiagnosis = isTwin
-    ? `Result ${actualK}${actualE} twin: BBFS non-twin dinormalisasi sebagai LOSE.`
+    ? `Result ${actualK}${actualE} twin: semua BBFS non-twin dinormalisasi sebagai LOSE.`
     : String(bbfsTuning.action_summary || bbfsTuning.actionSummary || 'Audit BBFS production dari Firestore');
 
   const regimeAI: CalibrationAudit['regime'] = 'NORMAL';
-  const regimeBBFS: CalibrationAudit['bbfsAudit']['regime'] = isTwin ? 'TWIN_SHOCK' : statusBBFS === 'LOSE' ? 'EXPANDED_DEFENSE' : 'NORMAL';
+  const regimeBBFS: CalibrationAudit['bbfsAudit']['regime'] = isTwin
+    ? 'TWIN_SHOCK'
+    : statusBBFS === 'LOSE' ? 'EXPANDED_DEFENSE' : 'NORMAL';
 
   return {
     previousDraw: { full: actualFull, kepala: actualK, ekor: actualE },
