@@ -32,58 +32,75 @@ function decodeFirestoreValue(value: any): any {
   return undefined;
 }
 
+async function fetchAllFirestoreDocuments(): Promise<any[]> {
+  const documents: any[] = [];
+  let pageToken = '';
+
+  // pageSize besar mengurangi round-trip, tetapi nextPageToken tetap diikuti
+  // karena Firestore boleh mengembalikan lebih sedikit dari pageSize.
+  for (let page = 0; page < 20; page++) {
+    const url = new URL(FIRESTORE_REST_BASE);
+    url.searchParams.set('pageSize', '1000');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`Firestore REST ${res.status}`);
+
+    const data = await res.json();
+    if (Array.isArray(data.documents)) documents.push(...data.documents);
+
+    pageToken = typeof data.nextPageToken === 'string' ? data.nextPageToken : '';
+    if (!pageToken) break;
+  }
+
+  return documents;
+}
+
 export async function fetchAllMarkets(): Promise<MarketServiceResult> {
   const localMap: Record<string, Market> = initialMarketsData as unknown as Record<string, Market>;
   const marketsList: Market[] = Object.values(localMap).sort((a, b) => a.order - b.order);
 
   try {
-    const res = await fetch(FIRESTORE_REST_BASE, { signal: AbortSignal.timeout(4000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.documents && Array.isArray(data.documents)) {
-        const liveMarkets: Market[] = data.documents.map((doc: any) => {
-          const f = doc.fields || {};
-          const id = f.id?.stringValue || doc.name.split('/').pop();
-          const decodedDays = decodeFirestoreValue(f.history_days);
-          const historyDaysVal = Array.isArray(decodedDays)
-            ? decodedDays.map(String)
-            : typeof decodedDays === 'string'
-              ? decodedDays
-              : '';
+    const documents = await fetchAllFirestoreDocuments();
+    if (documents.length > 0) {
+      const liveMarkets: Market[] = documents.map((doc: any) => {
+        const f = doc.fields || {};
+        const id = f.id?.stringValue || doc.name.split('/').pop();
+        const decodedDays = decodeFirestoreValue(f.history_days);
+        const historyDaysVal = Array.isArray(decodedDays)
+          ? decodedDays.map(String)
+          : typeof decodedDays === 'string'
+            ? decodedDays
+            : '';
 
-          const nextPrediction = decodeFirestoreValue(f.next_prediction);
-          const legacyPrediction = decodeFirestoreValue(f.latest_prediction);
-          const lastAudit = decodeFirestoreValue(f.last_audit);
+        const nextPrediction = decodeFirestoreValue(f.next_prediction);
+        const legacyPrediction = decodeFirestoreValue(f.latest_prediction);
+        const lastAudit = decodeFirestoreValue(f.last_audit);
 
-          return {
-            id,
-            name: f.name?.stringValue || id,
-            history_data: f.history_data?.stringValue || '',
-            history_days: historyDaysVal,
-            order: Number(f.order?.integerValue || 99),
-            updated_at: f.updated_at?.stringValue || '',
-            next_prediction: nextPrediction || legacyPrediction || undefined,
-            latest_prediction: legacyPrediction || undefined,
-            last_audit: lastAudit || undefined
-          };
-        });
+        return {
+          id,
+          name: f.name?.stringValue || id,
+          history_data: f.history_data?.stringValue || '',
+          history_days: historyDaysVal,
+          order: Number(f.order?.integerValue || 99),
+          updated_at: f.updated_at?.stringValue || '',
+          next_prediction: nextPrediction || legacyPrediction || undefined,
+          latest_prediction: legacyPrediction || undefined,
+          last_audit: lastAudit || undefined
+        };
+      });
 
-        if (liveMarkets.length > 0) {
-          liveMarkets.sort((a, b) => a.order - b.order);
-          return { markets: liveMarkets, source: 'live' };
-        }
-      }
+      liveMarkets.sort((a, b) => a.order - b.order);
+      return { markets: liveMarkets, source: 'live' };
     }
   } catch {
-    // Fallback silent ke cached data
+    // Fallback silent ke cached data.
   }
 
   return { markets: marketsList, source: 'cached' };
 }
 
-/**
- * Helper default pola urutan hari per minggu jika pasaran belum memiliki history_days tersimpan
- */
+/** Helper default pola urutan hari per minggu jika history_days belum tersedia. */
 export function getDefaultDaysForMarket(marketName: string = ''): string[] {
   const m = marketName.toLowerCase();
   if (m.includes('sgp') || m.includes('singapore')) {
@@ -95,9 +112,7 @@ export function getDefaultDaysForMarket(marketName: string = ''): string[] {
   return ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 }
 
-/**
- * Parsing history_data string ke HistoryItem array untuk tabel paito & analisis
- */
+/** Parsing history_data string ke HistoryItem array untuk tabel paito & analisis. */
 export function parseHistoryItems(
   historyStr: string,
   historyDays?: string | string[],
