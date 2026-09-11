@@ -80,10 +80,14 @@ export interface PaitoEvaluationStats {
   jalurBaseline?: number;
   superSniperHits?: number;
   superSniperRate?: number;
+  superSniperActiveDraws?: number;
+  superSniperParticipationRate?: number;
   avgSuperSniperLines?: number;
   superSniperPnlNet?: number;
   sniperBomHits: number;
   sniperBomRate: number;
+  sniperActiveDraws: number;
+  sniperParticipationRate: number;
   avgSniperLines: number;
   sniperPnlNet: number;
   bbfs7PaitoProHits?: number;

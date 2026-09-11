@@ -68,8 +68,8 @@ export function runWalkForwardEvaluation(results4D: string[], warmup = 50): Eval
 
   let paitoBijiHits = 0, paitoParityHits = 0, paitoMagHits = 0, paitoShioHits = 0, paitoJalurHits = 0;
   let bijiBaselineSum = 0, shioBaselineSum = 0, jalurBaselineSum = 0;
-  let sniperBomHits = 0, totalSniperLines = 0, sniperPnl = 0;
-  let superSniperHits = 0, totalSuperSniperLines = 0, superSniperPnl = 0;
+  let sniperBomHits = 0, totalSniperLines = 0, sniperPnl = 0, sniperActiveDraws = 0;
+  let superSniperHits = 0, totalSuperSniperLines = 0, superSniperPnl = 0, superSniperActiveDraws = 0;
   let bbfs7PaitoProHits = 0, bbfs7PaitoProPnl = 0;
   let nuklir6Hits = 0, nuklir6Pnl = 0;
   let bom12Hits = 0, bom12Pnl = 0;
@@ -149,11 +149,13 @@ export function runWalkForwardEvaluation(results4D: string[], warmup = 50): Eval
       const sniperSettlement = settleLines(sniperTop, actual2D);
       totalSniperLines += sniperSettlement.cost;
       sniperPnl += sniperSettlement.net;
+      if (sniperSettlement.cost > 0) sniperActiveDraws++;
       if (sniperSettlement.hit) sniperBomHits++;
 
       const superSettlement = settleLines(superSniper, actual2D);
       totalSuperSniperLines += superSettlement.cost;
       superSniperPnl += superSettlement.net;
+      if (superSettlement.cost > 0) superSniperActiveDraws++;
       if (superSettlement.hit) superSniperHits++;
     }
 
@@ -225,12 +227,16 @@ export function runWalkForwardEvaluation(results4D: string[], warmup = 50): Eval
     jalurRate: Number(((paitoJalurHits / testDraws) * 100).toFixed(2)),
     jalurBaseline: Number(((jalurBaselineSum / testDraws) * 100).toFixed(2)),
     superSniperHits,
-    superSniperRate: Number(((superSniperHits / testDraws) * 100).toFixed(2)),
-    avgSuperSniperLines: Number((totalSuperSniperLines / testDraws).toFixed(1)),
+    superSniperRate: Number(((superSniperHits / Math.max(1, superSniperActiveDraws)) * 100).toFixed(2)),
+    superSniperActiveDraws,
+    superSniperParticipationRate: Number(((superSniperActiveDraws / testDraws) * 100).toFixed(2)),
+    avgSuperSniperLines: Number((totalSuperSniperLines / Math.max(1, superSniperActiveDraws)).toFixed(1)),
     superSniperPnlNet: superSniperPnl * 1000,
     sniperBomHits,
-    sniperBomRate: Number(((sniperBomHits / testDraws) * 100).toFixed(2)),
-    avgSniperLines: Number((totalSniperLines / testDraws).toFixed(1)),
+    sniperBomRate: Number(((sniperBomHits / Math.max(1, sniperActiveDraws)) * 100).toFixed(2)),
+    sniperActiveDraws,
+    sniperParticipationRate: Number(((sniperActiveDraws / testDraws) * 100).toFixed(2)),
+    avgSniperLines: Number((totalSniperLines / Math.max(1, sniperActiveDraws)).toFixed(1)),
     sniperPnlNet: sniperPnl * 1000,
     bbfs7PaitoProHits,
     bbfs7PaitoProRate: Number(((bbfs7PaitoProHits / testDraws) * 100).toFixed(2)),
