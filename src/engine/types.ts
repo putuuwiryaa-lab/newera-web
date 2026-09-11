@@ -10,6 +10,7 @@ export interface Market {
   next_prediction?: any;
   latest_prediction?: any; // legacy compatibility
   last_audit?: any;
+  production_evaluation?: any;
 }
 
 export interface PredictionResult {

@@ -6,6 +6,7 @@ import { BBFSDashboard } from './components/BBFSDashboard';
 import { SmartCalibrationCard } from './components/SmartCalibrationCard';
 import { TuningTimeline } from './components/TuningTimeline';
 import { EvaluationPanel } from './components/EvaluationPanel';
+import { ProductionEvaluationPanel } from './components/ProductionEvaluationPanel';
 import { HistoryPaitoTable } from './components/HistoryPaitoTable';
 import { LineGeneratorModal } from './components/LineGeneratorModal';
 import { SharePredictionModal } from './components/SharePredictionModal';
@@ -15,7 +16,7 @@ import { fetchAllMarkets, parseHistoryItems } from './services/marketService';
 import { generatePrediction } from './engine/adaptiveEngine';
 import { runWalkForwardEvaluation } from './engine/evaluator';
 import { auditAndCalibrate, reconstructLast7DaysTuningLogs } from './engine/smartCalibrator';
-import { calibrationAuditFromServer, mergeServerPrediction } from './engine/serverState';
+import { calibrationAuditFromServer, mergeServerPrediction, serverEvaluationMatchesHistory } from './engine/serverState';
 import type { Market } from './engine/types';
 import { Sparkles, TrendingUp, History, Sliders, Layers, Compass } from 'lucide-react';
 
@@ -104,6 +105,11 @@ export function App() {
     if (currentResults4D.length < 60) return null;
     return runWalkForwardEvaluation(currentResults4D, 50);
   }, [currentResults4D]);
+
+  const productionEvaluation = useMemo(() => {
+    const candidate = currentMarket?.production_evaluation;
+    return serverEvaluationMatchesHistory(candidate, currentResults4D) ? candidate : null;
+  }, [currentMarket, currentResults4D]);
 
   const historyItems = useMemo(() => {
     if (!currentMarket) return [];
@@ -353,10 +359,16 @@ export function App() {
         )}
 
         {activeTab === 'evaluation' && (
-          <EvaluationPanel
-            metrics={evaluation}
-            marketName={currentMarket ? currentMarket.name : ''}
-          />
+          <div className="space-y-6">
+            <ProductionEvaluationPanel
+              metrics={productionEvaluation}
+              marketName={currentMarket ? currentMarket.name : ''}
+            />
+            <EvaluationPanel
+              metrics={evaluation}
+              marketName={currentMarket ? currentMarket.name : ''}
+            />
+          </div>
         )}
 
         {activeTab === 'history' && (

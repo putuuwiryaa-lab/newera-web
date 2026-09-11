@@ -76,6 +76,7 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
         const nextPrediction = decodeFirestoreValue(f.next_prediction);
         const legacyPrediction = decodeFirestoreValue(f.latest_prediction);
         const lastAudit = decodeFirestoreValue(f.last_audit);
+        const productionEvaluation = decodeFirestoreValue(f.production_evaluation);
 
         return {
           id,
@@ -86,7 +87,8 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
           updated_at: f.updated_at?.stringValue || '',
           next_prediction: nextPrediction || legacyPrediction || undefined,
           latest_prediction: legacyPrediction || undefined,
-          last_audit: lastAudit || undefined
+          last_audit: lastAudit || undefined,
+          production_evaluation: productionEvaluation || undefined
         };
       });
 
