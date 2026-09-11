@@ -3,7 +3,8 @@ import type {
   TierAuditStatus,
   AITuningDetail,
   BBFSTuningDetail,
-  PaitoTuningDetail
+  PaitoTuningDetail,
+  PredictionResult
 } from './types';
 import {
   getMomentumScores,
@@ -18,15 +19,8 @@ import { getShioFor2D } from './shio';
 
 export interface CalibrationAudit {
   marketId?: string;
-  previousDraw: {
-    full: string;
-    kepala: number;
-    ekor: number;
-  };
-  previousPrediction: {
-    ai4: number[];
-    bbfs7: number[];
-  };
+  previousDraw: { full: string; kepala: number; ekor: number };
+  previousPrediction: { ai4: number[]; bbfs7: number[] };
   statusAI: 'HIT' | 'LOSE';
   statusBBFS: 'HIT' | 'LOSE';
   isTwin: boolean;
@@ -40,15 +34,14 @@ export interface CalibrationAudit {
   regime: 'NORMAL' | 'HIGH_MOMENTUM' | 'ANTI_STREAK_ALERT';
   recommendedTier: string;
   streakCount: number;
-
-  // Audit Spesifik AI (Per-Tier Freeze vs Calibrate & 4 Metode)
   aiAudit: {
-    tierAudits: Record<number, TierAuditStatus>; // 3, 4, 5, 6
+    tierAudits: Record<number, TierAuditStatus>;
     hitDigits: number[];
     statusAI4: 'HIT' | 'LOSE';
     rewardedMethods: string[];
     penalizedMethods: string[];
     calibratedWeights: Record<string, number>;
+    calibratedTierWeights: Record<number, Record<string, number>>;
     tierMethodWeights?: Record<number, Record<string, number>>;
     streak: number;
     regime: 'NORMAL' | 'HIGH_MOMENTUM' | 'ANTI_STREAK_ALERT';
@@ -56,10 +49,8 @@ export interface CalibrationAudit {
     diagnosis: string;
     actionSummary: string;
   };
-
-  // Audit Spesifik BBFS (Per-Tier Freeze vs Calibrate, Dead Digits & Trimmer)
   bbfsAudit: {
-    tierAudits: Record<number, TierAuditStatus>; // 6, 7, 8, 9
+    tierAudits: Record<number, TierAuditStatus>;
     deadDigits: number[];
     deadDigitsClean: boolean;
     deadDigitsIsolationRate14: number;
@@ -77,396 +68,269 @@ export interface CalibrationAudit {
   };
 }
 
+const AI_SIZES = [3, 4, 5, 6] as const;
+const BBFS_SIZES = [6, 7, 8, 9] as const;
+
+function hasSignal(scores: Record<number, number>): boolean {
+  return Object.values(scores).some((v) => Number.isFinite(v) && v > 0);
+}
+
+function getMethodScores(history: [number, number][]) {
+  return {
+    Momentum: getMomentumScores(history),
+    Markov: getMarkovScores(history),
+    Delta: getDeltaScores(history),
+    Mistik: getAdaptiveMistikScores(history)
+  };
+}
+
+function overlaySavedPrediction(
+  fallback: PredictionResult,
+  saved?: any
+): PredictionResult {
+  if (!saved || typeof saved !== 'object') return fallback;
+
+  const readTierWeights = (obj: any): Record<number, Record<string, number>> | undefined => {
+    if (!obj || typeof obj !== 'object') return undefined;
+    const out: Record<number, Record<string, number>> = {};
+    Object.entries(obj).forEach(([key, value]) => {
+      const n = Number(key);
+      if (Number.isFinite(n) && value && typeof value === 'object') {
+        out[n] = value as Record<string, number>;
+      }
+    });
+    return Object.keys(out).length ? out : undefined;
+  };
+
+  const tierMethodWeights = readTierWeights(saved.tier_method_weights || saved.tierMethodWeights)
+    || fallback.tierMethodWeights;
+  const bbfsTierWeights = readTierWeights(saved.bbfs_tier_weights || saved.bbfsTierWeights)
+    || fallback.bbfsTierWeights;
+
+  return {
+    ...fallback,
+    ai: {
+      3: saved.ai3 || saved.ai?.[3] || fallback.ai[3],
+      4: saved.ai4 || saved.ai?.[4] || fallback.ai[4],
+      5: saved.ai5 || saved.ai?.[5] || fallback.ai[5],
+      6: saved.ai6 || saved.ai?.[6] || fallback.ai[6]
+    },
+    bbfs: {
+      6: saved.bbfs6 || saved.bbfs?.[6] || fallback.bbfs[6],
+      7: saved.bbfs7 || saved.bbfs?.[7] || fallback.bbfs[7],
+      8: saved.bbfs8 || saved.bbfs?.[8] || fallback.bbfs[8],
+      9: saved.bbfs9 || saved.bbfs?.[9] || fallback.bbfs[9]
+    },
+    tierMethodWeights,
+    bbfsTierWeights,
+    deadDigits: saved.dead_digits || saved.deadDigits || fallback.deadDigits
+  };
+}
+
+function tuneMethodWeight(prev: number, hit: boolean): number {
+  const safePrev = Number.isFinite(prev) && prev > 0 ? prev : 1;
+  const eta = 0.10;
+  const target = safePrev * Math.exp(hit ? eta : -eta);
+  const smoothed = 0.7 * safePrev + 0.3 * target;
+  return Number(Math.max(0.5, Math.min(25, smoothed)).toFixed(2));
+}
+
+function tuneBBFSWeights(
+  base: Record<string, number>,
+  shouldCalibrate: boolean
+): Record<string, number> {
+  const out = { ...base };
+  if (!shouldCalibrate) return out;
+
+  // Koreksi nyata, bounded, dan konservatif. Pada miss, engine memperlebar
+  // coverage/momentum dan mengurangi ketergantungan pada pair/transition lama.
+  if (Number.isFinite(out['Coverage Proteksi'])) out['Coverage Proteksi'] *= 1.08;
+  if (Number.isFinite(out['Momentum Posisi'])) out['Momentum Posisi'] *= 1.04;
+  if (Number.isFinite(out['Densitas Pasangan'])) out['Densitas Pasangan'] *= 0.96;
+  if (Number.isFinite(out['Transisi Markov'])) out['Transisi Markov'] *= 0.96;
+
+  Object.keys(out).forEach((key) => {
+    out[key] = Number(Math.max(2, Math.min(24, out[key])).toFixed(2));
+  });
+  return out;
+}
+
 /**
- * Melakukan Audit & Kalibrasi Cerdas pada Result Terakhir:
- * 1. Merekonstruksi tebakan yang dibuat pada periode T-1.
- * 2. Membandingkan dengan Result aktual di periode T.
- * 3. Menghukum (penalti) metode yang meleset, dan memberi reward pada metode yang kena.
- * 4. Mendeteksi rezim (apakah sedang lose streak / twin anomaly).
+ * Audit result terakhir. savedPreviousPrediction harus berupa prediksi yang
+ * memang dibuat sebelum result terakhir keluar. Jika tidak tersedia, engine
+ * merekonstruksi fallback dari history T-1.
  */
-export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null {
+export function auditAndCalibrate(
+  results4D: string[],
+  savedPreviousPrediction?: any
+): CalibrationAudit | null {
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length < 15) return null;
 
-  // Periode T (Result Aktual Terakhir)
   const lastFull = valid4D[valid4D.length - 1];
-  const actualK = parseInt(lastFull[2], 10);
-  const actualE = parseInt(lastFull[3], 10);
+  const actualK = Number(lastFull[2]);
+  const actualE = Number(lastFull[3]);
   const isTwin = actualK === actualE;
-
-  // Data historis sampai T-1 (sebelum result terakhir keluar)
   const historyUntilTMinus1 = valid4D.slice(0, -1);
-  const predTMinus1 = generatePrediction(historyUntilTMinus1);
-
-  if (!predTMinus1) return null;
+  const fallback = generatePrediction(historyUntilTMinus1);
+  if (!fallback) return null;
+  const predTMinus1 = overlaySavedPrediction(fallback, savedPreviousPrediction);
 
   const ai4TMinus1 = predTMinus1.ai[4];
   const bbfs7TMinus1 = predTMinus1.bbfs[7];
+  const hitDigits = Array.from(new Set(ai4TMinus1.filter((d) => d === actualK || d === actualE)));
+  const statusAI: 'HIT' | 'LOSE' = hitDigits.length ? 'HIT' : 'LOSE';
 
-  // --------------------------------------------------------------------------
-  // 1. AUDIT PER-TIER AI (AI-3, AI-4, AI-5, AI-6): ZONK -> KALIBRASI, WIN -> FREEZE
-  // --------------------------------------------------------------------------
   const aiTierAudits: Record<number, TierAuditStatus> = {};
-  const aiSizes: (3 | 4 | 5 | 6)[] = [3, 4, 5, 6];
-  const hitDigits: number[] = [];
-  if (ai4TMinus1.includes(actualK)) hitDigits.push(actualK);
-  if (ai4TMinus1.includes(actualE) && !hitDigits.includes(actualE)) hitDigits.push(actualE);
-
-  aiSizes.forEach((sz) => {
+  AI_SIZES.forEach((sz) => {
     const tierDigits = predTMinus1.ai[sz];
-    const isHit = tierDigits.includes(actualK) || tierDigits.includes(actualE);
-    let marginalNote = '';
-
-    if (isHit) {
-      const matched = tierDigits.filter((d) => d === actualK || d === actualE);
-      marginalNote = `Hit via digit ${matched.join(' & ')}`;
-    } else {
-      const kIdx = predTMinus1.rankedDigits.indexOf(actualK);
-      const eIdx = predTMinus1.rankedDigits.indexOf(actualE);
-      const minRank = Math.min(kIdx >= 0 ? kIdx : 99, eIdx >= 0 ? eIdx : 99);
-      marginalNote = minRank < 10 ? `Digit tembus di Rank ke-${minRank + 1}` : 'Meleset total';
-    }
-
-    const paramLabel = sz === 3 ? 'Seleksi 3 Digit Ketat' : sz === 4 ? 'Seleksi 4 Digit Utama' : sz === 5 ? 'Seleksi 5 Digit Moderat' : 'Seleksi 6 Digit Proteksi';
+    const hit = tierDigits.includes(actualK) || tierDigits.includes(actualE);
+    const ranking = predTMinus1.tierRankedDigits?.[sz] || predTMinus1.rankedDigits;
+    const kIdx = ranking.indexOf(actualK);
+    const eIdx = ranking.indexOf(actualE);
+    const minRank = Math.min(kIdx >= 0 ? kIdx : 99, eIdx >= 0 ? eIdx : 99);
     aiTierAudits[sz] = {
       size: sz,
       name: `AI-${sz}`,
-      parameter: `Parameter AI-${sz} (${paramLabel})`,
-      status: isHit ? 'HIT' : 'LOSE',
-      action: isHit ? 'FREEZE' : 'CALIBRATED',
-      tuningDirective: isHit
-        ? `🔒 FREEZE: Parameter AI-${sz} dipertahankan stabil (Formasi valid)`
-        : `⚡ KALIBRASI: Parameter AI-${sz} dikalibrasi ulang (Koreksi bobot karena Zonk)`,
-      marginalNote
+      parameter: `Parameter AI-${sz}`,
+      status: hit ? 'HIT' : 'LOSE',
+      action: hit ? 'FREEZE' : 'CALIBRATED',
+      tuningDirective: hit ? 'Freeze bobot tier yang menang' : 'Kalibrasi bobot tier yang kalah',
+      marginalNote: hit
+        ? `Hit via digit ${tierDigits.filter((d) => d === actualK || d === actualE).join(' & ')}`
+        : minRank < 10 ? `Digit aktual berada di rank ${minRank + 1} tier ini` : 'Meleset total'
     };
   });
 
-  const statusAI: 'HIT' | 'LOSE' = hitDigits.length > 0 ? 'HIT' : 'LOSE';
-
-  // --------------------------------------------------------------------------
-  // 2. AUDIT PER-TIER BBFS (BBFS-6, 7, 8, 9): ZONK -> KALIBRASI, WIN -> FREEZE
-  // --------------------------------------------------------------------------
   const bbfsTierAudits: Record<number, TierAuditStatus> = {};
-  const bbfsSizes: (6 | 7 | 8 | 9)[] = [6, 7, 8, 9];
-
-  bbfsSizes.forEach((sz) => {
+  BBFS_SIZES.forEach((sz) => {
     const tierDigits = predTMinus1.bbfs[sz];
-    const bbfsSet = new Set(tierDigits);
-    const isHit = isTwin
-      ? bbfsSet.has(actualK)
-      : (bbfsSet.has(actualK) && bbfsSet.has(actualE));
-
-    let marginalNote = '';
-    if (isHit) {
-      marginalNote = `Tembus 2D [${actualK}${actualE}]`;
-    } else {
-      if (isTwin) {
-        marginalNote = 'Angka Kembar di luar himpunan';
-      } else {
-        const hasK = bbfsSet.has(actualK);
-        const hasE = bbfsSet.has(actualE);
-        if (hasK || hasE) {
-          marginalNote = `1 Digit Masuk (${hasK ? actualK : actualE}), 1 Lepas`;
-        } else {
-          marginalNote = 'Kedua digit di luar himpunan';
-        }
-      }
-    }
-
-    const bbfsParamLabel = sz === 6 ? 'Kombinasi 30 Line' : sz === 7 ? 'Kombinasi 42 Line' : sz === 8 ? 'Kombinasi 56 Line' : 'Kombinasi 72 Line';
+    const set = new Set(tierDigits);
+    // Semua set BBFS di sini non-twin. Twin tidak boleh dianggap HIT/freeze.
+    const hit = !isTwin && set.has(actualK) && set.has(actualE);
     bbfsTierAudits[sz] = {
       size: sz,
       name: `BBFS-${sz}`,
-      parameter: `Parameter BBFS-${sz} (${bbfsParamLabel})`,
-      status: isHit ? 'HIT' : 'LOSE',
-      action: isHit ? 'FREEZE' : 'CALIBRATED',
-      tuningDirective: isHit
-        ? `🔒 FREEZE: Parameter BBFS-${sz} dipertahankan stabil (2D tembus)`
-        : `⚡ KALIBRASI: Parameter BBFS-${sz} dikalibrasi ulang (Matriks pasangan zonk)`,
-      marginalNote
+      parameter: `Parameter BBFS-${sz} (${sz * (sz - 1)} line non-twin)`,
+      status: hit ? 'HIT' : 'LOSE',
+      action: hit ? 'FREEZE' : 'CALIBRATED',
+      tuningDirective: hit ? 'Freeze faktor tier yang menang' : 'Kalibrasi faktor tier yang kalah',
+      marginalNote: isTwin
+        ? `Twin ${actualK}${actualE}: kalah pada set non-twin`
+        : hit ? `Tembus 2D ${actualK}${actualE}` : 'Set tidak menutup kedua digit'
     };
   });
 
   const bbfsSet7 = new Set(bbfs7TMinus1);
-  const statusBBFS: 'HIT' | 'LOSE' = isTwin
-    ? bbfsSet7.has(actualK) ? 'HIT' : 'LOSE'
-    : (bbfsSet7.has(actualK) && bbfsSet7.has(actualE) ? 'HIT' : 'LOSE');
+  const statusBBFS: 'HIT' | 'LOSE' = !isTwin && bbfsSet7.has(actualK) && bbfsSet7.has(actualE)
+    ? 'HIT' : 'LOSE';
 
-  // --------------------------------------------------------------------------
-  // 3. AUDIT DEAD DIGITS & SMART TRIMMER ZONE (BBFS)
-  // --------------------------------------------------------------------------
   const deadDigits = predTMinus1.deadDigits;
   const deadDigitsClean = !deadDigits.includes(actualK) && !deadDigits.includes(actualE);
-
   const trimmerResult = generateSmartTrim(bbfs7TMinus1);
-  const target2DStr = `${actualK}${actualE}`;
+  const target2D = `${actualK}${actualE}`;
   let trimmerZone: 'BOM_10' | 'MEDIUM_15' | 'CADANGAN' | 'MISSED' = 'MISSED';
+  if (!isTwin && trimmerResult.top10.includes(target2D)) trimmerZone = 'BOM_10';
+  else if (!isTwin && trimmerResult.medium15.includes(target2D)) trimmerZone = 'MEDIUM_15';
+  else if (!isTwin && trimmerResult.cadangan.includes(target2D)) trimmerZone = 'CADANGAN';
 
-  if (trimmerResult.top10.includes(target2DStr)) {
-    trimmerZone = 'BOM_10';
-  } else if (trimmerResult.medium15.includes(target2DStr)) {
-    trimmerZone = 'MEDIUM_15';
-  } else if (trimmerResult.cadangan.includes(target2DStr)) {
-    trimmerZone = 'CADANGAN';
-  } else if (isTwin && bbfsSet7.has(actualK)) {
-    trimmerZone = 'CADANGAN';
-  }
+  const history2D: [number, number][] = historyUntilTMinus1.map((r) => [Number(r[2]), Number(r[3])]);
+  const methodScores = getMethodScores(history2D);
+  const calibratedTierWeights: Record<number, Record<string, number>> = {};
+  const rewarded = new Set<string>();
+  const penalized = new Set<string>();
 
-  // Hitung Isolasi Dead Digits 14 Draw Terakhir
+  AI_SIZES.forEach((sz) => {
+    const base = predTMinus1.tierMethodWeights?.[sz] || predTMinus1.methodWeights;
+    const next = { ...base };
+    if (aiTierAudits[sz].action === 'CALIBRATED') {
+      Object.entries(methodScores).forEach(([name, scores]) => {
+        if (!hasSignal(scores)) return; // ABSTAIN: no reward/no penalty.
+        const top = Object.keys(scores).map(Number)
+          .sort((a, b) => scores[b] - scores[a] || a - b)
+          .slice(0, sz);
+        const hit = top.includes(actualK) || top.includes(actualE);
+        next[name] = tuneMethodWeight(base[name] ?? 1, hit);
+        if (hit) rewarded.add(name);
+        else penalized.add(name);
+      });
+    }
+    calibratedTierWeights[sz] = next;
+  });
+
+  const calibratedWeights = calibratedTierWeights[4] || { ...predTMinus1.methodWeights };
+
+  const calibratedBBFSWeights: Record<number, Record<string, number>> = {};
+  BBFS_SIZES.forEach((sz) => {
+    calibratedBBFSWeights[sz] = tuneBBFSWeights(
+      predTMinus1.bbfsTierWeights?.[sz] || {},
+      bbfsTierAudits[sz].action === 'CALIBRATED'
+    );
+  });
+
   let cleanCount14 = 0;
-  let evaluatedDraws14 = 0;
-  for (let i = valid4D.length - 1; i >= Math.max(1, valid4D.length - 14); i--) {
-    const prevHist = valid4D.slice(0, i);
-    const prevP = generatePrediction(prevHist);
-    if (!prevP) continue;
-    const rK = parseInt(valid4D[i][2], 10);
-    const rE = parseInt(valid4D[i][3], 10);
-    evaluatedDraws14++;
-    if (!prevP.deadDigits.includes(rK) && !prevP.deadDigits.includes(rE)) {
-      cleanCount14++;
-    }
+  let evaluated14 = 0;
+  for (let i = Math.max(5, valid4D.length - 14); i < valid4D.length; i++) {
+    const p = generatePrediction(valid4D.slice(0, i));
+    if (!p) continue;
+    evaluated14++;
+    const k = Number(valid4D[i][2]);
+    const e = Number(valid4D[i][3]);
+    if (!p.deadDigits.includes(k) && !p.deadDigits.includes(e)) cleanCount14++;
   }
-  const deadDigitsIsolationRate14 = evaluatedDraws14 > 0
-    ? Number(((cleanCount14 / evaluatedDraws14) * 100).toFixed(1))
-    : 100;
+  const deadDigitsIsolationRate14 = evaluated14
+    ? Number(((cleanCount14 / evaluated14) * 100).toFixed(1)) : 0;
 
-  // --------------------------------------------------------------------------
-  // 4. PENYESUAIAN BOBOT 4 METODE ENSEMBLE AI (HANYA JIKA ADA TIER ZONK)
-  // --------------------------------------------------------------------------
-  const history2DUntilTMinus1: [number, number][] = historyUntilTMinus1.map((r) => [
-    parseInt(r[2], 10),
-    parseInt(r[3], 10)
-  ]);
-
-  const methodEvaluations = {
-    Momentum: getMomentumScores(history2DUntilTMinus1),
-    Markov: getMarkovScores(history2DUntilTMinus1),
-    Delta: getDeltaScores(history2DUntilTMinus1),
-    Mistik: getAdaptiveMistikScores(history2DUntilTMinus1)
-  };
-
-  const penaltyApplied: string[] = [];
-  const rewardApplied: string[] = [];
-  const calibratedWeights: Record<string, number> = { ...predTMinus1.methodWeights };
-
-  // Cek apakah seluruh parameter tier AI (AI-3 s/d AI-6) tembus / WIN (FREEZE)
-  const allAIFrozen = Object.values(aiTierAudits).every((t) => t.action === 'FREEZE');
-
-  if (!allAIFrozen) {
-    // --------------------------------------------------------------------------
-    // SMART BOBOT (ANTI-OSILASI): Streak-Aware, Symmetric Multiplier & EMA Smoothing
-    // --------------------------------------------------------------------------
-    // 1. Hitung streak historis masing-masing metode (apakah baru meleset 1x atau beruntun)
-    const methodStreaks: Record<string, number> = { Momentum: 0, Markov: 0, Delta: 0, Mistik: 0 };
-    for (const mName of Object.keys(methodEvaluations)) {
-      let mStreak = 0;
-      for (let i = valid4D.length - 2; i >= Math.max(0, valid4D.length - 8); i--) {
-        const hSub = valid4D.slice(0, i + 1).map((r) => [parseInt(r[2], 10), parseInt(r[3], 10)] as [number, number]);
-        const nextK = parseInt(valid4D[i + 1][2], 10);
-        const nextE = parseInt(valid4D[i + 1][3], 10);
-        let sMap: Record<number, number> = {};
-        if (mName === 'Momentum') sMap = getMomentumScores(hSub);
-        else if (mName === 'Markov') sMap = getMarkovScores(hSub);
-        else if (mName === 'Delta') sMap = getDeltaScores(hSub);
-        else if (mName === 'Mistik') sMap = getAdaptiveMistikScores(hSub);
-
-        const top3 = Object.keys(sMap).map(Number).sort((a, b) => sMap[b] - sMap[a]).slice(0, 3);
-        const wasHit = top3.includes(nextK) || top3.includes(nextE);
-
-        if (i === valid4D.length - 2) {
-          mStreak = wasHit ? 1 : -1;
-        } else {
-          if (mStreak > 0 && wasHit) mStreak++;
-          else if (mStreak < 0 && !wasHit) mStreak--;
-          else break;
-        }
-      }
-      methodStreaks[mName] = mStreak;
-    }
-
-    for (const [mName, scores] of Object.entries(methodEvaluations)) {
-      const top3 = Object.keys(scores)
-        .map(Number)
-        .sort((a, b) => scores[b] - scores[a])
-        .slice(0, 3);
-
-      const hitMethod = top3.includes(actualK) || top3.includes(actualE);
-      const prevW = calibratedWeights[mName] || 10.0;
-
-      // methodStreaks[mName] sudah mencakup evaluasi draw T (aktual)
-      const streakVal = methodStreaks[mName] || (hitMethod ? 1 : -1);
-      const currentStreakLen = Math.max(1, Math.abs(streakVal));
-
-      // 1. Streak-Aware Learning Rate (η):
-      // Streak 1 (fluktuasi harian biasa / noise): η = 0.08 (±8%)
-      // Streak 2 (mulai konsisten): η = 0.16 (±16%)
-      // Streak >= 3 (tren kuat / on fire): η = 0.25 (±25%)
-      let eta = 0.08;
-      if (currentStreakLen >= 3) eta = 0.25;
-      else if (currentStreakLen === 2) eta = 0.16;
-
-      // 2. Symmetric Multiplier (e^+η vs e^-η):
-      // e^+η * e^-η = 1.000 (Mencegah Volatility Drag & Efek Ping-Pong)
-      const multiplier = hitMethod ? Math.exp(eta) : Math.exp(-eta);
-      const targetWeight = prevW * multiplier;
-
-      // 3. Exponential Moving Average (EMA) Smoothing (Filter Inersia 70:30):
-      const beta = 0.70;
-      const smoothedWeight = beta * prevW + (1 - beta) * targetWeight;
-
-      // 4. Safety Bounds Clamping [4.0x - 16.0x]:
-      const clamped = Math.max(4.0, Math.min(16.0, smoothedWeight));
-      calibratedWeights[mName] = Number(clamped.toFixed(1));
-
-      if (hitMethod) {
-        rewardApplied.push(mName);
-      } else {
-        penaltyApplied.push(mName);
-      }
-    }
-  }
-
-  // Hitung AI-4 Streak Terakhir
   let streak = 0;
-  for (let i = valid4D.length - 1; i >= Math.max(0, valid4D.length - 6); i--) {
-    const rFull = valid4D[i];
-    const k = parseInt(rFull[2], 10);
-    const e = parseInt(rFull[3], 10);
-    const histBefore = valid4D.slice(0, i);
-    const p = generatePrediction(histBefore);
+  for (let i = valid4D.length - 1; i >= Math.max(5, valid4D.length - 7); i--) {
+    const p = generatePrediction(valid4D.slice(0, i));
     if (!p) break;
-    const isHit = p.ai[4].includes(k) || p.ai[4].includes(e);
-
-    if (i === valid4D.length - 1) {
-      streak = isHit ? 1 : -1;
-    } else {
-      if (streak > 0 && isHit) streak++;
-      else if (streak < 0 && !isHit) streak--;
-      else break;
-    }
+    const k = Number(valid4D[i][2]);
+    const e = Number(valid4D[i][3]);
+    const hit = p.ai[4].includes(k) || p.ai[4].includes(e);
+    if (streak === 0) streak = hit ? 1 : -1;
+    else if (streak > 0 && hit) streak++;
+    else if (streak < 0 && !hit) streak--;
+    else break;
   }
 
-  // Twin Gap
   let twinGap = 0;
   for (let i = valid4D.length - 1; i >= 0; i--) {
-    const k = parseInt(valid4D[i][2], 10);
-    const e = parseInt(valid4D[i][3], 10);
-    if (k === e) break;
+    if (valid4D[i][2] === valid4D[i][3]) break;
     twinGap++;
   }
+  const twinAnomalyLevel: 'NORMAL' | 'MENINGKAT' | 'EKSTREM' =
+    twinGap >= 20 ? 'EKSTREM' : twinGap >= 14 ? 'MENINGKAT' : 'NORMAL';
 
-  let twinAnomalyLevel: 'NORMAL' | 'MENINGKAT' | 'EKSTREM' = 'NORMAL';
-  if (twinGap >= 20) twinAnomalyLevel = 'EKSTREM';
-  else if (twinGap >= 14) twinAnomalyLevel = 'MENINGKAT';
+  const allAIFrozen = AI_SIZES.every((sz) => aiTierAudits[sz].action === 'FREEZE');
+  const aiCalibrated = AI_SIZES.filter((sz) => aiTierAudits[sz].action === 'CALIBRATED');
+  const regimeAI: CalibrationAudit['regime'] = streak <= -2
+    ? 'ANTI_STREAK_ALERT' : streak >= 3 ? 'HIGH_MOMENTUM' : 'NORMAL';
+  const recommendedTierAI = streak <= -2 ? 'AI-5' : aiTierAudits[3].action === 'FREEZE' ? 'AI-3' : 'AI-4';
+  const diagnosisAI = allAIFrozen
+    ? `Semua tier AI hit pada ${actualK}${actualE}; bobot masing-masing tier di-freeze.`
+    : `Tier ${aiCalibrated.map((x) => `AI-${x}`).join(', ')} dikalibrasi secara independen. Metode tanpa sinyal tidak ikut reward/penalty.`;
 
-  // --------------------------------------------------------------------------
-  // 5. DIAGNOSIS & REKOMENDASI TERPISAH (AI vs BBFS)
-  // --------------------------------------------------------------------------
-  const aiFrozen = Object.values(aiTierAudits).filter((t) => t.action === 'FREEZE').map((t) => t.name);
-  const aiCalib = Object.values(aiTierAudits).filter((t) => t.action === 'CALIBRATED').map((t) => t.name);
+  let regimeBBFS: CalibrationAudit['bbfsAudit']['regime'] = 'NORMAL';
+  if (isTwin) regimeBBFS = 'TWIN_SHOCK';
+  else if (!deadDigitsClean) regimeBBFS = 'DEAD_DIGIT_ALERT';
+  else if (bbfsTierAudits[6].action === 'FREEZE') regimeBBFS = 'HIGH_COUPLING';
+  else if (statusBBFS === 'LOSE') regimeBBFS = 'EXPANDED_DEFENSE';
 
-  let diagnosisAI = '';
-  let regimeAI: CalibrationAudit['regime'] = 'NORMAL';
-  let recommendedTierAI = 'AI-4 (Standar Utama)';
+  const recommendedTierBBFS = isTwin ? 'Twin Guard / jangan anggap BBFS non-twin menang'
+    : bbfsTierAudits[6].action === 'FREEZE' ? 'BBFS-6' : statusBBFS === 'LOSE' ? 'BBFS-8' : 'BBFS-7';
+  const diagnosisBBFS = isTwin
+    ? `Result ${actualK}${actualE} twin: semua tier BBFS non-twin dihitung LOSE dan tidak di-freeze.`
+    : statusBBFS === 'HIT'
+      ? `BBFS-7 menutup kedua digit ${actualK}${actualE}; tier yang hit di-freeze.`
+      : `BBFS-7 meleset; faktor coverage/momentum dinaikkan konservatif dan pair/transition diturunkan.`;
 
-  if (statusAI === 'HIT') {
-    if (allAIFrozen) {
-      regimeAI = streak >= 3 ? 'HIGH_MOMENTUM' : 'NORMAL';
-      diagnosisAI = `Akurasi optimal! Seluruh tier AI (AI-3 s/d AI-6) tembus 2D [${actualK}${actualE}] via digit ${hitDigits.join(
-        ' & '
-      )}. Seluruh parameter & bobot ensemble DIBEKUKAN (FREEZE) stabil tanpa mutasi bobot.`;
-      recommendedTierAI = 'AI-3 (On-Fire / Ketat)';
-    } else if (streak >= 3) {
-      regimeAI = 'HIGH_MOMENTUM';
-      diagnosisAI = `Akurasi tinggi! Tebakan menembus 2D [${actualK}${actualE}] via digit ${hitDigits.join(
-        ' & '
-      )}. Model AI berada dalam siklus High-Momentum (${streak}x win-streak). Tier ${aiFrozen.join(', ')} di-freeze, tier zonk dikalibrasi.`;
-      recommendedTierAI = aiTierAudits[3].action === 'FREEZE' ? 'AI-3 (On-Fire / Ketat)' : 'AI-4 (Konsisten)';
-    } else {
-      diagnosisAI = `Tebakan AI berhasil tembus (Digit ${hitDigits.join(
-        ' & '
-      )} hadir di 2D [${actualK}${actualE}]). Tier ${aiFrozen.join(', ')} di-freeze, tier zonk (${aiCalib.join(', ')}) dikalibrasi. Metode ${rewardApplied.join(', ')} diberi reward.`;
-      recommendedTierAI = aiTierAudits[3].action === 'FREEZE' ? 'AI-3 atau AI-4' : 'AI-4 (Rekomendasi Utama)';
-    }
-  } else {
-    if (streak <= -2) {
-      regimeAI = 'ANTI_STREAK_ALERT';
-      diagnosisAI = `Terdeteksi ${Math.abs(
-        streak
-      )}x Lose berturut-turut! Kalibrasi Darurat: Bobot ${penaltyApplied.join(', ')} dipangkas, disarankan menggunakan AI-5.`;
-      recommendedTierAI = 'AI-5 (Pelebaran Cakupan untuk Pengaman Modal)';
-    } else {
-      diagnosisAI = `Result [${actualK}${actualE}] meleset. Seluruh tier ZONK dikalibrasi penalti bobot untuk periode berikutnya.`;
-      recommendedTierAI = 'AI-4 atau AI-5';
-    }
-  }
-
-  const actionSummaryAI = allAIFrozen
-    ? 'Semua tier AI (3-6) WIN -> Bobot parameter di-freeze stabil (0 Penalti)'
-    : `${aiCalib.join(', ')} dikalibrasi; ${aiFrozen.length > 0 ? aiFrozen.join(', ') + ' di-freeze (stabil)' : 'semua tier evaluasi ulang'}`;
-
-  // BBFS Diagnosis & Regime
-  const bbfsFrozen = Object.values(bbfsTierAudits).filter((t) => t.action === 'FREEZE').map((t) => t.name);
-  const bbfsCalib = Object.values(bbfsTierAudits).filter((t) => t.action === 'CALIBRATED').map((t) => t.name);
-  const allBBFSFrozen = bbfsCalib.length === 0;
-
-  let rewardedFactorBBFS = 'Matriks Densitas Pasangan (+25%)';
-  let penalizedFactorBBFS = 'Dispersi Pasangan Anomali (-20%)';
-
-  if (allBBFSFrozen) {
-    rewardedFactorBBFS = 'Seluruh Tier BBFS (6-9) Tembus (Freeze Total)';
-    penalizedFactorBBFS = 'None (Formasi Terkunci Stabil)';
-  } else {
-    if (trimmerZone === 'BOM_10') {
-      rewardedFactorBBFS = 'Prioritas Top 10 BOM Hit (+40%)';
-    } else if (deadDigitsClean) {
-      rewardedFactorBBFS = 'Isolasi 2 Digit Lemah (+30%)';
-    }
-
-    if (!deadDigitsClean) {
-      penalizedFactorBBFS = 'Kebocoran Dead Digit ke 2D (-35%)';
-    } else if (isTwin && !bbfsSet7.has(actualK)) {
-      penalizedFactorBBFS = 'Anomali Kembar Tanpa Proteksi (-30%)';
-    }
-  }
-
-  let regimeBBFS: 'HIGH_COUPLING' | 'NORMAL' | 'TWIN_SHOCK' | 'DEAD_DIGIT_ALERT' | 'EXPANDED_DEFENSE' = 'NORMAL';
-  let recommendedTierBBFS = 'BBFS-7 (Standar Investasi Stabil)';
-
-  if (isTwin) {
-    regimeBBFS = 'TWIN_SHOCK';
-    recommendedTierBBFS = 'BBFS-7 (+Twin Defense Diaktifkan)';
-  } else if (!deadDigitsClean) {
-    regimeBBFS = 'DEAD_DIGIT_ALERT';
-    recommendedTierBBFS = 'BBFS-8 (Perketat Isolasi Digit Lemah)';
-  } else if (bbfsTierAudits[6].action === 'FREEZE') {
-    regimeBBFS = 'HIGH_COUPLING';
-    recommendedTierBBFS = 'BBFS-6 (Performa Tinggi / Hemat Line)';
-  } else if (statusBBFS === 'LOSE') {
-    regimeBBFS = 'EXPANDED_DEFENSE';
-    recommendedTierBBFS = 'BBFS-8 (Pelebaran Proteksi Modal)';
-  }
-
-  const diagnosisBBFS = statusBBFS === 'HIT'
-    ? `BBFS tembus 2D [${actualK}${actualE}] via zona ${trimmerZone}. 2 Digit Terlemah [${deadDigits.join(
-        ', '
-      )}] ${deadDigitsClean ? '100% AMAN terisolasi' : '⚠️ BOCOR'}. Tier ${bbfsFrozen.join(', ')} di-freeze.`
-    : `BBFS-7 meleset pada result 2D [${actualK}${actualE}]. ${bbfsCalib.join(', ')} dikalibrasi ulang untuk menyerap pola pasangan.`;
-
-  const actionSummaryBBFS = allBBFSFrozen
-    ? 'Semua tier BBFS (6-9) WIN -> Parameter di-freeze stabil (0 Penalti)'
-    : `${bbfsCalib.join(', ')} dikalibrasi; ${bbfsFrozen.length > 0 ? bbfsFrozen.join(', ') + ' di-freeze' : 're-scoring matriks pasangan'} (${deadDigitsClean ? '🛡️ Dead Digits Bersih' : '⚠️ Dead Digit Bocor'})`;
+  const rewardApplied = Array.from(rewarded);
+  const penaltyApplied = Array.from(penalized);
 
   return {
-    previousDraw: {
-      full: lastFull,
-      kepala: actualK,
-      ekor: actualE
-    },
-    previousPrediction: {
-      ai4: ai4TMinus1,
-      bbfs7: bbfs7TMinus1
-    },
+    previousDraw: { full: lastFull, kepala: actualK, ekor: actualE },
+    previousPrediction: { ai4: ai4TMinus1, bbfs7: bbfs7TMinus1 },
     statusAI,
     statusBBFS,
     isTwin,
@@ -480,8 +344,6 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
     regime: regimeAI,
     recommendedTier: recommendedTierAI,
     streakCount: streak,
-
-    // Audit Spesifik AI
     aiAudit: {
       tierAudits: aiTierAudits,
       hitDigits,
@@ -489,15 +351,15 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
       rewardedMethods: rewardApplied,
       penalizedMethods: penaltyApplied,
       calibratedWeights,
+      calibratedTierWeights,
       tierMethodWeights: predTMinus1.tierMethodWeights,
       streak,
       regime: regimeAI,
       recommendedTier: recommendedTierAI,
       diagnosis: diagnosisAI,
-      actionSummary: actionSummaryAI
+      actionSummary: allAIFrozen
+        ? 'Semua tier AI freeze' : `${aiCalibrated.map((x) => `AI-${x}`).join(', ')} dikalibrasi per-tier`
     },
-
-    // Audit Spesifik BBFS
     bbfsAudit: {
       tierAudits: bbfsTierAudits,
       deadDigits,
@@ -505,158 +367,115 @@ export function auditAndCalibrate(results4D: string[]): CalibrationAudit | null 
       deadDigitsIsolationRate14,
       statusBBFS7: statusBBFS,
       isTwin,
-      twinStatus: !isTwin ? 'NON_TWIN' : (bbfsSet7.has(actualK) ? 'TWIN_PROTECTED' : 'TWIN_UNPROTECTED'),
+      twinStatus: !isTwin ? 'NON_TWIN' : bbfsSet7.has(actualK) ? 'TWIN_PROTECTED' : 'TWIN_UNPROTECTED',
       trimmerZone,
-      rewardedFactor: rewardedFactorBBFS,
-      penalizedFactor: penalizedFactorBBFS,
+      rewardedFactor: statusBBFS === 'HIT' ? 'Freeze faktor tier hit' : 'Coverage/Momentum diperkuat pada tier miss',
+      penalizedFactor: statusBBFS === 'HIT' ? 'None' : 'Densitas/Transisi lama dikurangi pada tier miss',
       regime: regimeBBFS,
       recommendedTier: recommendedTierBBFS,
       diagnosis: diagnosisBBFS,
-      actionSummary: actionSummaryBBFS,
-      tierFactorWeights: predTMinus1.bbfsTierWeights || {}
+      actionSummary: isTwin
+        ? 'Twin = LOSE pada BBFS non-twin; seluruh tier dikalibrasi'
+        : BBFS_SIZES.filter((sz) => bbfsTierAudits[sz].action === 'CALIBRATED').map((sz) => `BBFS-${sz}`).join(', ') + ' dikalibrasi',
+      tierFactorWeights: calibratedBBFSWeights
     }
   };
 }
 
 /**
- * Merekonstruksi audit tebakan dan riwayat kalibrasi 7 periode terakhir secara deterministik.
+ * Riwayat 7 draw untuk UI. Ini memakai walk-forward causal (history hanya sampai
+ * sebelum target), dengan aturan twin konsisten. State production penuh diuji di evaluator.
  */
 export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLog[] {
   const valid4D = results4D.filter((r) => r.length === 4 && /^\d{4}$/.test(r));
   if (valid4D.length < 15) return [];
-
   const logs: DayTuningLog[] = [];
   const startIdx = Math.max(10, valid4D.length - 7);
-
   let previousWasLoss = false;
   let runningStreak = 0;
 
   for (let i = startIdx; i < valid4D.length; i++) {
-    const rFull = valid4D[i];
-    const k = parseInt(rFull[2], 10);
-    const e = parseInt(rFull[3], 10);
-    const isTwin = k === e;
-
-    const histBefore = valid4D.slice(0, i);
-    const pred = generatePrediction(histBefore);
+    const pred = generatePrediction(valid4D.slice(0, i));
     if (!pred) continue;
-
+    const k = Number(valid4D[i][2]);
+    const e = Number(valid4D[i][3]);
+    const isTwin = k === e;
     const ai4 = pred.ai[4];
     const bbfs7 = pred.bbfs[7];
-    const hitDigits = ai4.filter((d) => d === k || d === e);
-    const statusAI: 'HIT' | 'LOSE' = hitDigits.length > 0 ? 'HIT' : 'LOSE';
-
-    if (runningStreak > 0 && statusAI === 'HIT') {
-      runningStreak++;
-    } else if (runningStreak < 0 && statusAI === 'LOSE') {
-      runningStreak--;
-    } else {
-      runningStreak = statusAI === 'HIT' ? 1 : -1;
-    }
-
+    const hitDigits = Array.from(new Set(ai4.filter((d) => d === k || d === e)));
+    const statusAI: 'HIT' | 'LOSE' = hitDigits.length ? 'HIT' : 'LOSE';
     const bbfsSet = new Set(bbfs7);
-    const statusBBFS: 'HIT' | 'LOSE' = isTwin
-      ? bbfsSet.has(k) ? 'HIT' : 'LOSE'
-      : (bbfsSet.has(k) && bbfsSet.has(e) ? 'HIT' : 'LOSE');
+    const statusBBFS: 'HIT' | 'LOSE' = !isTwin && bbfsSet.has(k) && bbfsSet.has(e) ? 'HIT' : 'LOSE';
+
+    if (runningStreak === 0) runningStreak = statusAI === 'HIT' ? 1 : -1;
+    else if (runningStreak > 0 && statusAI === 'HIT') runningStreak++;
+    else if (runningStreak < 0 && statusAI === 'LOSE') runningStreak--;
+    else runningStreak = statusAI === 'HIT' ? 1 : -1;
 
     const recovered = previousWasLoss && statusAI === 'HIT';
     previousWasLoss = statusAI === 'LOSE';
 
-    // Evaluasi riil metode mana yang kena / meleset pada draw ini
-    const hSub2D: [number, number][] = histBefore.map((r) => [
-      parseInt(r[2], 10),
-      parseInt(r[3], 10)
-    ]);
-    const methodScoresDay: Record<string, Record<number, number>> = {
-      Momentum: getMomentumScores(hSub2D),
-      Markov: getMarkovScores(hSub2D),
-      Delta: getDeltaScores(hSub2D),
-      Mistik: getAdaptiveMistikScores(hSub2D)
-    };
+    const h2d: [number, number][] = valid4D.slice(0, i).map((r) => [Number(r[2]), Number(r[3])]);
+    const scores = getMethodScores(h2d);
     const dayHits: string[] = [];
     const dayMisses: string[] = [];
-    for (const [mName, sMap] of Object.entries(methodScoresDay)) {
-      const top3 = Object.keys(sMap).map(Number).sort((a, b) => sMap[b] - sMap[a]).slice(0, 3);
-      if (top3.includes(k) || top3.includes(e)) {
-        dayHits.push(mName);
-      } else {
-        dayMisses.push(mName);
-      }
-    }
+    Object.entries(scores).forEach(([name, map]) => {
+      if (!hasSignal(map)) return;
+      const top = Object.keys(map).map(Number).sort((a, b) => map[b] - map[a] || a - b).slice(0, 4);
+      (top.includes(k) || top.includes(e) ? dayHits : dayMisses).push(name);
+    });
 
-    // AI Tier Audits
     const aiTierAudits: Record<number, TierAuditStatus> = {};
-    [3, 4, 5, 6].forEach((sz) => {
-      const tierD = pred.ai[sz as 3 | 4 | 5 | 6];
-      const h = tierD.includes(k) || tierD.includes(e);
-      let mNote = '';
-      if (h) {
-        mNote = `Hit via digit ${tierD.filter((d) => d === k || d === e).join(' & ')}`;
-      } else {
-        const kIdx = pred.rankedDigits.indexOf(k);
-        const eIdx = pred.rankedDigits.indexOf(e);
-        const minRank = Math.min(kIdx >= 0 ? kIdx : 99, eIdx >= 0 ? eIdx : 99);
-        mNote = minRank < 10 ? `Rank ke-${minRank + 1}` : 'Meleset';
-      }
-      const pLabel = sz === 3 ? '3 Digit Ketat' : sz === 4 ? '4 Digit Utama' : sz === 5 ? '5 Digit Moderat' : '6 Digit Proteksi';
+    AI_SIZES.forEach((sz) => {
+      const digits = pred.ai[sz];
+      const hit = digits.includes(k) || digits.includes(e);
+      const ranking = pred.tierRankedDigits?.[sz] || pred.rankedDigits;
+      const rank = Math.min(
+        ranking.indexOf(k) >= 0 ? ranking.indexOf(k) : 99,
+        ranking.indexOf(e) >= 0 ? ranking.indexOf(e) : 99
+      );
       aiTierAudits[sz] = {
-        size: sz,
-        name: `AI-${sz}`,
-        parameter: `Parameter AI-${sz} (${pLabel})`,
-        status: h ? 'HIT' : 'LOSE',
-        action: h ? 'FREEZE' : 'CALIBRATED',
-        tuningDirective: h ? `🔒 Di-Freeze (Hit)` : `⚡ Dikalibrasi (Zonk)`,
-        marginalNote: mNote
+        size: sz, name: `AI-${sz}`, parameter: `AI-${sz}`,
+        status: hit ? 'HIT' : 'LOSE', action: hit ? 'FREEZE' : 'CALIBRATED',
+        tuningDirective: hit ? 'Freeze' : 'Kalibrasi',
+        marginalNote: hit ? 'Hit' : rank < 10 ? `Rank ${rank + 1}` : 'Meleset'
       };
     });
 
-    // BBFS Tier Audits
     const bbfsTierAudits: Record<number, TierAuditStatus> = {};
-    [6, 7, 8, 9].forEach((sz) => {
-      const tierD = pred.bbfs[sz as 6 | 7 | 8 | 9];
-      const s = new Set(tierD);
-      const h = isTwin ? s.has(k) : (s.has(k) && s.has(e));
+    BBFS_SIZES.forEach((sz) => {
+      const set = new Set(pred.bbfs[sz]);
+      const hit = !isTwin && set.has(k) && set.has(e);
       bbfsTierAudits[sz] = {
-        size: sz,
-        name: `BBFS-${sz}`,
-        parameter: `Parameter BBFS-${sz} (${sz} Digit)`,
-        status: h ? 'HIT' : 'LOSE',
-        action: h ? 'FREEZE' : 'CALIBRATED',
-        tuningDirective: h ? `🔒 Di-Freeze (Hit 2D)` : `⚡ Dikalibrasi (Zonk)`,
-        marginalNote: h ? `Tembus 2D [${k}${e}]` : 'Meleset'
+        size: sz, name: `BBFS-${sz}`, parameter: `BBFS-${sz}`,
+        status: hit ? 'HIT' : 'LOSE', action: hit ? 'FREEZE' : 'CALIBRATED',
+        tuningDirective: hit ? 'Freeze' : 'Kalibrasi',
+        marginalNote: isTwin ? 'Twin kalah pada non-twin lines' : hit ? 'Tembus 2D' : 'Meleset'
       };
     });
 
-    // Dead Digits & Trimmer
     const deadDigits = pred.deadDigits;
     const deadDigitsClean = !deadDigits.includes(k) && !deadDigits.includes(e);
-
-    const trimmer = generateSmartTrim(bbfs7);
     const target2D = `${k}${e}`;
+    const trimmer = generateSmartTrim(bbfs7);
     let trimmerZone: 'BOM_10' | 'MEDIUM_15' | 'CADANGAN' | 'MISSED' = 'MISSED';
-    if (trimmer.top10.includes(target2D)) trimmerZone = 'BOM_10';
-    else if (trimmer.medium15.includes(target2D)) trimmerZone = 'MEDIUM_15';
-    else if (trimmer.cadangan.includes(target2D)) trimmerZone = 'CADANGAN';
-    else if (isTwin && bbfsSet.has(k)) trimmerZone = 'CADANGAN';
-
-    const anyAICalibDay = Object.values(aiTierAudits).some((t) => t.action === 'CALIBRATED');
-    const allAIFrozenDay = !anyAICalibDay;
-
-    const anyBBFSCalibDay = Object.values(bbfsTierAudits).some((t) => t.action === 'CALIBRATED');
-    const allBBFSFrozenDay = !anyBBFSCalibDay;
+    if (!isTwin && trimmer.top10.includes(target2D)) trimmerZone = 'BOM_10';
+    else if (!isTwin && trimmer.medium15.includes(target2D)) trimmerZone = 'MEDIUM_15';
+    else if (!isTwin && trimmer.cadangan.includes(target2D)) trimmerZone = 'CADANGAN';
 
     const aiTuning: AITuningDetail = {
       predictedTiers: pred.ai,
       tierAudits: aiTierAudits,
       hitDigits,
       statusAI4: statusAI,
-      rewardedMethods: allAIFrozenDay ? [] : dayHits,
-      penalizedMethods: allAIFrozenDay ? [] : dayMisses,
+      rewardedMethods: dayHits,
+      penalizedMethods: dayMisses,
       calibratedWeights: pred.methodWeights,
+      tierMethodWeights: pred.tierMethodWeights,
       recoveredFromLoss: recovered,
       streak: runningStreak,
       recommendedTier: aiTierAudits[3].action === 'FREEZE' ? 'AI-3' : 'AI-4',
-      actionSummary: allAIFrozenDay ? 'Semua tier stabil (Freeze Total)' : `${Object.values(aiTierAudits).filter(t => t.action === 'CALIBRATED').map(t => t.name).join(', ')} dikalibrasi`
+      actionSummary: 'Walk-forward causal'
     };
 
     const bbfsTuning: BBFSTuningDetail = {
@@ -666,72 +485,62 @@ export function reconstructLast7DaysTuningLogs(results4D: string[]): DayTuningLo
       deadDigitsClean,
       statusBBFS7: statusBBFS,
       isTwin,
-      twinProtected: isTwin ? bbfsSet.has(k) : false,
+      twinProtected: false,
       trimmerZone,
-      rewardedFactor: allBBFSFrozenDay ? 'Seluruh Tier Tembus (Freeze Total)' : (trimmerZone === 'BOM_10' ? 'Top 10 BOM Hit' : (deadDigitsClean ? 'Dead Digits 100% Bersih' : 'Afinitas Pasangan')),
-      penalizedFactor: allBBFSFrozenDay ? 'None' : (!deadDigitsClean ? 'Dead Digit Bocor' : (statusBBFS === 'LOSE' ? 'Dispersi Pasangan' : 'None')),
+      rewardedFactor: statusBBFS === 'HIT' ? 'Tier hit' : 'None',
+      penalizedFactor: statusBBFS === 'LOSE' ? 'Tier miss' : 'None',
       recommendedTier: bbfsTierAudits[6].action === 'FREEZE' ? 'BBFS-6' : 'BBFS-7',
-      actionSummary: allBBFSFrozenDay ? 'Semua tier BBFS stabil (Freeze Total)' : `${Object.values(bbfsTierAudits).filter(t => t.action === 'CALIBRATED').map(t => t.name).join(', ')} dikalibrasi`,
+      actionSummary: isTwin ? 'Twin dihitung kalah pada non-twin lines' : 'Walk-forward causal',
       tierFactorWeights: pred.bbfsTierWeights
     };
 
-    let paitoTuning: PaitoTuningDetail | undefined;
+    let paito: PaitoTuningDetail | undefined;
     if (pred.paitoPrediction) {
       const actualBiji = computeBiji(k, e);
       const actualParity = getParity(k, e);
-      const actualMag = k * 10 + e >= 50 ? 'Besar' : 'Kecil';
-      const actualShio = getShioFor2D(k * 10 + e);
-
-      const hitBiji = pred.paitoPrediction.topBiji.includes(actualBiji);
-      const hitParity = actualParity === pred.paitoPrediction.primaryParity;
-      const hitMag = actualMag === pred.paitoPrediction.primaryMagnitude;
-      const hitShio = (pred.paitoPrediction.topShios || []).includes(actualShio.no);
-      const hitJalur = actualShio.jalur === pred.paitoPrediction.primaryJalur;
-
+      const actualMagnitude = k * 10 + e >= 50 ? 'Besar' : 'Kecil';
+      const shio = getShioFor2D(k * 10 + e);
       const sn = generateSniperTrim(bbfs7, pred.paitoPrediction, false);
-      let sniperZone: 'BOM_SNIPER' | 'SEKUNDER' | 'CADANGAN' | 'MISSED' = 'MISSED';
+      let sniperZone: PaitoTuningDetail['sniperZone'] = 'MISSED';
       if (!isTwin && sn.sniperTop.includes(target2D)) sniperZone = 'BOM_SNIPER';
       else if (!isTwin && sn.sniperSecondary.includes(target2D)) sniperZone = 'SEKUNDER';
       else if (!isTwin && sn.cadangan.includes(target2D)) sniperZone = 'CADANGAN';
-
-      paitoTuning = {
+      const hitBiji = pred.paitoPrediction.topBiji.includes(actualBiji);
+      const hitParity = pred.paitoPrediction.primaryParity === actualParity;
+      const hitMagnitude = pred.paitoPrediction.primaryMagnitude === actualMagnitude;
+      const hitShio = pred.paitoPrediction.topShios.includes(shio.no);
+      paito = {
         predictedTopBiji: pred.paitoPrediction.topBiji,
-        actualBiji,
-        hitBiji,
+        actualBiji, hitBiji,
         predictedParity: pred.paitoPrediction.primaryParity,
-        actualParity,
-        hitParity,
+        actualParity, hitParity,
         predictedMagnitude: pred.paitoPrediction.primaryMagnitude,
-        actualMagnitude: actualMag,
-        hitMagnitude: hitMag,
+        actualMagnitude, hitMagnitude,
         predictedTopShios: pred.paitoPrediction.topShios,
-        actualShio: actualShio.no,
-        hitShio,
+        actualShio: shio.no, hitShio,
         predictedJalur: pred.paitoPrediction.primaryJalur,
-        actualJalur: actualShio.jalur,
-        hitJalur,
+        actualJalur: shio.jalur,
+        hitJalur: pred.paitoPrediction.primaryJalur === shio.jalur,
         sniperZone,
-        strikeCount: (hitBiji ? 1 : 0) + (hitParity ? 1 : 0) + (hitMag ? 1 : 0) + (hitShio ? 1 : 0)
+        strikeCount: Number(hitBiji) + Number(hitParity) + Number(hitMagnitude) + Number(hitShio)
       };
     }
 
     logs.push({
       periodIndex: i + 1,
-      fullResult: rFull,
-      target2D: `${k}${e}`,
+      fullResult: valid4D[i],
+      target2D,
       isTwin,
       ai: aiTuning,
       bbfs: bbfsTuning,
-      paito: paitoTuning,
-
-      // Compatibility
+      paito,
       predictedAI4: ai4,
       predictedBBFS7: bbfs7,
       statusAI,
       statusBBFS,
       hitDigits,
-      rewardedMethod: allAIFrozenDay ? 'Freeze' : (dayHits.join(', ') || 'None'),
-      penalizedMethod: allAIFrozenDay ? 'None' : (dayMisses.join(', ') || 'None'),
+      rewardedMethod: dayHits.join(', ') || 'None',
+      penalizedMethod: dayMisses.join(', ') || 'None',
       recoveredFromPreviousLoss: recovered
     });
   }
