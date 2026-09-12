@@ -492,6 +492,7 @@ export function generatePrediction(
 
   return {
     rankedDigits: res4.ranked,
+    source: 'typescript-diagnostic',
     tierRankedDigits,
     ai: aiResults,
     bbfs: dedicatedBBFS.tiers,

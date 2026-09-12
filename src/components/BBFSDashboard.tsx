@@ -51,7 +51,7 @@ export const BBFSDashboard: React.FC<BBFSDashboardProps> = ({
   if (!prediction) {
     return (
       <div className="glass-panel border border-white/[0.08] rounded-2xl p-8 text-center text-slate-400 text-sm">
-        Memuat kalkulasi Engine BBFS...
+        Prediksi BBFS production belum tersedia atau state backend perlu diperbarui. Lihat status health di atas.
       </div>
     );
   }

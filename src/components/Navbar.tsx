@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-bold text-base sm:text-lg tracking-tight text-white font-sans">
                 VORTEX <span className="text-emerald-400 font-mono font-extrabold">2D</span>
               </span>
-              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="hidden sm:inline text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 PRO
               </span>
             </div>
@@ -119,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Mobile active market pill */}
-          <div className="flex lg:hidden items-center space-x-1.5 text-[11px] text-slate-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-white/[0.08]">
+          <div className="hidden sm:flex lg:hidden items-center space-x-1.5 text-[11px] text-slate-300 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-white/[0.08]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
             <span className="truncate max-w-[120px] font-medium text-slate-200">{activeMarketName}</span>
           </div>
@@ -129,12 +129,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
               dataSource === 'live'
                 ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25'
-                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                : 'bg-amber-500/10 text-amber-300 border-amber-500/25'
             }`}
-            title={dataSource === 'live' ? 'Terhubung langsung ke Cloud Firestore' : 'Menggunakan dataset tersinkronisasi'}
+            title={dataSource === 'live' ? 'Terhubung langsung ke Cloud Firestore' : 'Dataset cached/offline; freshness production belum terverifikasi'}
           >
             <Database className="w-3.5 h-3.5 text-cyan-400" />
-            <span>{dataSource === 'live' ? 'Live DB' : 'Synced'}</span>
+            <span>{dataSource === 'live' ? 'Live DB' : 'Cached'}</span>
             <span className="font-mono text-[10px] opacity-80">({marketCount})</span>
           </div>
 
@@ -147,7 +147,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Download className="w-3.5 h-3.5 text-cyan-300" />
               <span className="hidden sm:inline">Install App</span>
-              <span className="sm:hidden">Install</span>
             </button>
           )}
 
@@ -159,7 +158,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Share2 className="w-3.5 h-3.5 text-slate-950" />
             <span className="hidden sm:inline">Bagikan</span>
-            <span className="sm:hidden">Share</span>
           </button>
 
           {/* Refresh Button */}

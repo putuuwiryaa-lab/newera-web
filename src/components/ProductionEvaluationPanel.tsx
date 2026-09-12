@@ -21,6 +21,7 @@ interface ProductionEvaluation {
   live_draws: number;
   twin_count: number;
   twin_rate_pct: number;
+  unscored_draws?: number;
   ai_stats: Record<string, RateMetric>;
   bbfs_stats: Record<string, RateMetric>;
   paito_stats: Record<string, RateMetric>;
@@ -101,7 +102,7 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
   const prospective = metrics.prospective;
   const prospectiveDraws = prospective?.tested_draws ?? metrics.live_draws ?? 0;
   const prospectiveMinimum = prospective?.minimum_draws ?? 30;
-  const prospectiveReady = prospective?.ready ?? prospectiveDraws >= prospectiveMinimum;
+  const prospectiveReady = prospectiveDraws >= prospectiveMinimum;
 
   return (
     <div className="space-y-5">
@@ -121,6 +122,7 @@ export const ProductionEvaluationPanel: React.FC<Props> = ({ metrics, marketName
               <p className="text-xs text-slate-400 mt-0.5">
                 Lifecycle engine production yang sama; replay historis dipisahkan dari draw production live.
               </p>
+              {!!metrics.unscored_draws && <p className="text-xs text-amber-300 mt-1">{metrics.unscored_draws} draw terlewat tanpa prediction valid; tidak dihitung sebagai live holdout.</p>}
             </div>
           </div>
           <div className="flex flex-wrap gap-2 text-[11px] font-mono">

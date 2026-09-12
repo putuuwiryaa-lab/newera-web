@@ -1,0 +1,398 @@
+[
+  {
+    "fixture": "minimum-leading-zero",
+    "drawCount": 15,
+    "mode": "shared-state",
+    "python_digest": "9a7d7efefe052ae8dfdcafb06a4069b24b96bc5c6f6556a2efba1c7a833ad4b6",
+    "typescript_digest": "477886e5543f82078a3f604c16bc5299e985b92e2c8ea5e244586694d0def80a",
+    "differingFields": 34,
+    "differences_digest": "ec22fec6010427396c402f13fc3e6dade5f2cfd92fc4417f95b3fb032ab3d2e1"
+  },
+  {
+    "fixture": "minimum-leading-zero",
+    "drawCount": 15,
+    "mode": "independent-lifecycle",
+    "python_digest": "9a7d7efefe052ae8dfdcafb06a4069b24b96bc5c6f6556a2efba1c7a833ad4b6",
+    "typescript_digest": "477886e5543f82078a3f604c16bc5299e985b92e2c8ea5e244586694d0def80a",
+    "differingFields": 34,
+    "differences_digest": "ec22fec6010427396c402f13fc3e6dade5f2cfd92fc4417f95b3fb032ab3d2e1"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 25,
+    "mode": "shared-state",
+    "python_digest": "7148fc5f30df94d1c5de7bea729f533f0d09311beac46fc1195b3f6b07807c8d",
+    "typescript_digest": "a9b9c4794df66be4f71431c0e2b92c8d1bf806b1d6ecbfcc001b67ba31f46b32",
+    "differingFields": 43,
+    "differences_digest": "fbc8967cadaeb56500da8aec9aa2ee3233ad40fa29c5c4d5bc35a98e34f96ad0"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 25,
+    "mode": "independent-lifecycle",
+    "python_digest": "7148fc5f30df94d1c5de7bea729f533f0d09311beac46fc1195b3f6b07807c8d",
+    "typescript_digest": "a9b9c4794df66be4f71431c0e2b92c8d1bf806b1d6ecbfcc001b67ba31f46b32",
+    "differingFields": 43,
+    "differences_digest": "fbc8967cadaeb56500da8aec9aa2ee3233ad40fa29c5c4d5bc35a98e34f96ad0"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 26,
+    "mode": "shared-state",
+    "python_digest": "d4b17557c6cf8c32e749075d52ff3354198d3cc9229a92cfceeba9565223f757",
+    "typescript_digest": "15be17033e595920f22e9a044fd5af43c799bf3574e38f1a96b0cc5fceea9d00",
+    "differingFields": 44,
+    "differences_digest": "ad204d4843937e14c675a489bd6eba1d386285bde1b7118b5f999af2533b137d"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 26,
+    "mode": "independent-lifecycle",
+    "python_digest": "d4b17557c6cf8c32e749075d52ff3354198d3cc9229a92cfceeba9565223f757",
+    "typescript_digest": "15be17033e595920f22e9a044fd5af43c799bf3574e38f1a96b0cc5fceea9d00",
+    "differingFields": 44,
+    "differences_digest": "ad204d4843937e14c675a489bd6eba1d386285bde1b7118b5f999af2533b137d"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 27,
+    "mode": "shared-state",
+    "python_digest": "93ef3450497e8c368181f3de481e95d5e0d32e5bc6ac012f5e8022ad6f2f1903",
+    "typescript_digest": "68a5b05b72659601ffb0d8db291ed64c5e27dc54a08683324732e33bce8a980d",
+    "differingFields": 42,
+    "differences_digest": "d3dcae38e745195d0535784f665152bc91621f15858eaf38b51bd302c5384ec9"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 27,
+    "mode": "independent-lifecycle",
+    "python_digest": "93ef3450497e8c368181f3de481e95d5e0d32e5bc6ac012f5e8022ad6f2f1903",
+    "typescript_digest": "68a5b05b72659601ffb0d8db291ed64c5e27dc54a08683324732e33bce8a980d",
+    "differingFields": 42,
+    "differences_digest": "d3dcae38e745195d0535784f665152bc91621f15858eaf38b51bd302c5384ec9"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 28,
+    "mode": "shared-state",
+    "python_digest": "526cc0b71c8ebdbf72e96105e6ceccbac1567666fdb3121695f8b475f994727f",
+    "typescript_digest": "04c4b3945d81f9bc15da8133ceba226f8bc7430e763f44112a59814c616aef83",
+    "differingFields": 29,
+    "differences_digest": "6b57b6c526b0744a7ea440f39be6a398dbf95466d302c1d02816857e7e1815c5"
+  },
+  {
+    "fixture": "rolling-weight-threshold",
+    "drawCount": 28,
+    "mode": "independent-lifecycle",
+    "python_digest": "526cc0b71c8ebdbf72e96105e6ceccbac1567666fdb3121695f8b475f994727f",
+    "typescript_digest": "3d4d95f0cd3846df85b8ebb9c71875d42ea7e29f3af77404fc54a04ed5e0b4ec",
+    "differingFields": 43,
+    "differences_digest": "988abcbecc43db20eb605ca779b007cb0665d9cad75958eab29cdcc958ff4c24"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 65,
+    "mode": "shared-state",
+    "python_digest": "b724fc842f5bfe0748f2658f6bf7ced4a5db894e513316c5dfc3beba89014bd1",
+    "typescript_digest": "e515ec517b84a17f758a6077e4f0685c7bd6e70e6042acd5b4a40757b1b60495",
+    "differingFields": 27,
+    "differences_digest": "4a50b54779c6b188dc931eac47372af80c9e02e3acf9b4bee33649de5df81ec5"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 65,
+    "mode": "independent-lifecycle",
+    "python_digest": "b724fc842f5bfe0748f2658f6bf7ced4a5db894e513316c5dfc3beba89014bd1",
+    "typescript_digest": "e515ec517b84a17f758a6077e4f0685c7bd6e70e6042acd5b4a40757b1b60495",
+    "differingFields": 27,
+    "differences_digest": "4a50b54779c6b188dc931eac47372af80c9e02e3acf9b4bee33649de5df81ec5"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 66,
+    "mode": "shared-state",
+    "python_digest": "19bdcd8823dcbea47250083d49df6180ae503ed0ddf12bf16e47838c7e37e1e1",
+    "typescript_digest": "37c33a6a179a1f381c9aa7d76f0da43efc4b42b0590c96e9a7deb1a9021765e0",
+    "differingFields": 27,
+    "differences_digest": "658518774d78fce752ec985fca7f04129fd1374730c4a7ebbd5d712d9804d82c"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 66,
+    "mode": "independent-lifecycle",
+    "python_digest": "19bdcd8823dcbea47250083d49df6180ae503ed0ddf12bf16e47838c7e37e1e1",
+    "typescript_digest": "37c33a6a179a1f381c9aa7d76f0da43efc4b42b0590c96e9a7deb1a9021765e0",
+    "differingFields": 27,
+    "differences_digest": "658518774d78fce752ec985fca7f04129fd1374730c4a7ebbd5d712d9804d82c"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 67,
+    "mode": "shared-state",
+    "python_digest": "fd5b66f8b6216fed20e1bd1c8950ef747cbd39de9891a3707e0766b7f8ae5a04",
+    "typescript_digest": "26f6170e07acd68de2b34d08169fd913eca28a670527d8f8b41f8d8cdba3cf5b",
+    "differingFields": 26,
+    "differences_digest": "0db3d7aa2d6be8e010e1a68fa2078bc28e7d92e955702fa549936c1de811d4a1"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 67,
+    "mode": "independent-lifecycle",
+    "python_digest": "fd5b66f8b6216fed20e1bd1c8950ef747cbd39de9891a3707e0766b7f8ae5a04",
+    "typescript_digest": "26f6170e07acd68de2b34d08169fd913eca28a670527d8f8b41f8d8cdba3cf5b",
+    "differingFields": 26,
+    "differences_digest": "0db3d7aa2d6be8e010e1a68fa2078bc28e7d92e955702fa549936c1de811d4a1"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 68,
+    "mode": "shared-state",
+    "python_digest": "64b5dab636deeeeaed86be12a29c0c183245939f0977625d3bb6ba0cd6cac70b",
+    "typescript_digest": "0929515f2d0cb599e60411ab2c7a9879f0f4be885e7af570a0a4c8a6b7382ed3",
+    "differingFields": 25,
+    "differences_digest": "34a36b21ef23ec9c4182781d69a1b3de82d0ed45d8802ab3d5fb066e1c60bcce"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 68,
+    "mode": "independent-lifecycle",
+    "python_digest": "64b5dab636deeeeaed86be12a29c0c183245939f0977625d3bb6ba0cd6cac70b",
+    "typescript_digest": "0929515f2d0cb599e60411ab2c7a9879f0f4be885e7af570a0a4c8a6b7382ed3",
+    "differingFields": 25,
+    "differences_digest": "34a36b21ef23ec9c4182781d69a1b3de82d0ed45d8802ab3d5fb066e1c60bcce"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 69,
+    "mode": "shared-state",
+    "python_digest": "3a9ae5546392a95818cfe5d5e2e08a376929d735ad12195ea4ac50c8d22970fb",
+    "typescript_digest": "60f7dc339eec8d4cc5907b0990f19e44f521d037cf1a899dd17d49c46654e14f",
+    "differingFields": 27,
+    "differences_digest": "a5481244ce2543dd4929c41a029954bdc67989e4ae931af3a5cf830aaec4e947"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 69,
+    "mode": "independent-lifecycle",
+    "python_digest": "3a9ae5546392a95818cfe5d5e2e08a376929d735ad12195ea4ac50c8d22970fb",
+    "typescript_digest": "60f7dc339eec8d4cc5907b0990f19e44f521d037cf1a899dd17d49c46654e14f",
+    "differingFields": 27,
+    "differences_digest": "a5481244ce2543dd4929c41a029954bdc67989e4ae931af3a5cf830aaec4e947"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 70,
+    "mode": "shared-state",
+    "python_digest": "f84f1a6fa4ac48de3c8d53dd3213db986de486aa95a9ec76f66f0302c3081aca",
+    "typescript_digest": "c7447ed7c3d53427388f7205ba5e5d98112b27bce7d8b17e382f8d66d23f7b4a",
+    "differingFields": 44,
+    "differences_digest": "c68c703f8eccad23050165fd40b65c6524739bfee511731f42ccab3bc6ed50d0"
+  },
+  {
+    "fixture": "mixed-persisted-lifecycle",
+    "drawCount": 70,
+    "mode": "independent-lifecycle",
+    "python_digest": "f84f1a6fa4ac48de3c8d53dd3213db986de486aa95a9ec76f66f0302c3081aca",
+    "typescript_digest": "c7447ed7c3d53427388f7205ba5e5d98112b27bce7d8b17e382f8d66d23f7b4a",
+    "differingFields": 44,
+    "differences_digest": "c68c703f8eccad23050165fd40b65c6524739bfee511731f42ccab3bc6ed50d0"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 36,
+    "mode": "shared-state",
+    "python_digest": "c0bc8af9efab72a603d0e20635ba6349118cf45b34611b4272533d26c2ff6d13",
+    "typescript_digest": "50908c2fa757d2085908028e4cd8901971f44f1d53f9c6b953db48e089138d06",
+    "differingFields": 44,
+    "differences_digest": "d50ad42edac84010d9947ad57e9d0375bfc2de7bca7e6335d100d3b572f4d983"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 36,
+    "mode": "independent-lifecycle",
+    "python_digest": "c0bc8af9efab72a603d0e20635ba6349118cf45b34611b4272533d26c2ff6d13",
+    "typescript_digest": "50908c2fa757d2085908028e4cd8901971f44f1d53f9c6b953db48e089138d06",
+    "differingFields": 44,
+    "differences_digest": "d50ad42edac84010d9947ad57e9d0375bfc2de7bca7e6335d100d3b572f4d983"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 37,
+    "mode": "shared-state",
+    "python_digest": "423b06227b6777cc8605346529d6d5d69fbebafdcccf88bdb7b44efff9d6f355",
+    "typescript_digest": "9a7ba389204cc8c2b90705f9cb2d629c56beb3ffd40d94bee09f13611a2f9b41",
+    "differingFields": 43,
+    "differences_digest": "cfbe87328512d44b590d0d48308793cd75b8d3cf0d740789fd112c32e7f35133"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 37,
+    "mode": "independent-lifecycle",
+    "python_digest": "423b06227b6777cc8605346529d6d5d69fbebafdcccf88bdb7b44efff9d6f355",
+    "typescript_digest": "9a7ba389204cc8c2b90705f9cb2d629c56beb3ffd40d94bee09f13611a2f9b41",
+    "differingFields": 43,
+    "differences_digest": "cfbe87328512d44b590d0d48308793cd75b8d3cf0d740789fd112c32e7f35133"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 38,
+    "mode": "shared-state",
+    "python_digest": "679ce9fd086e70022941050ab8fb77c17d34b73fd3640a7290689cf47da3669a",
+    "typescript_digest": "0dd6a95820e001120473d286b0c954b1a56f2aade985835172619bb2930671e6",
+    "differingFields": 43,
+    "differences_digest": "e8e8054b3520ba25cb94cb223ef0448345ef35374ee01893ae9b9c758eefab5b"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 38,
+    "mode": "independent-lifecycle",
+    "python_digest": "679ce9fd086e70022941050ab8fb77c17d34b73fd3640a7290689cf47da3669a",
+    "typescript_digest": "0dd6a95820e001120473d286b0c954b1a56f2aade985835172619bb2930671e6",
+    "differingFields": 43,
+    "differences_digest": "e8e8054b3520ba25cb94cb223ef0448345ef35374ee01893ae9b9c758eefab5b"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 39,
+    "mode": "shared-state",
+    "python_digest": "b2d5dad3f6e930f63ad52cbc8042d224c3598a803a7df90b06110f3f84f2e4f6",
+    "typescript_digest": "8b1ccb51863a7ce8258e0dbfe73a202bfe8f1f30eb2662dbed63dda511814732",
+    "differingFields": 44,
+    "differences_digest": "79ac33be886f39122c59f1af47642476a4b8a0e9a672d4c6f74cab04707c7bf1"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 39,
+    "mode": "independent-lifecycle",
+    "python_digest": "b2d5dad3f6e930f63ad52cbc8042d224c3598a803a7df90b06110f3f84f2e4f6",
+    "typescript_digest": "8b1ccb51863a7ce8258e0dbfe73a202bfe8f1f30eb2662dbed63dda511814732",
+    "differingFields": 44,
+    "differences_digest": "79ac33be886f39122c59f1af47642476a4b8a0e9a672d4c6f74cab04707c7bf1"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 40,
+    "mode": "shared-state",
+    "python_digest": "31cce8e4ee31dcce3746aa603c9fa49dacb75810c4bf2ead9a81693e2c2245d1",
+    "typescript_digest": "b8385d8de38f1dc80ee313648aff25ccc160f99e5e4e379c41bbf49d53ac7bc0",
+    "differingFields": 28,
+    "differences_digest": "e9245fa76001e2213e695a06b519ad8164123d321b12903337ad0d9cf1b27755"
+  },
+  {
+    "fixture": "consecutive-duplicates-twins",
+    "drawCount": 40,
+    "mode": "independent-lifecycle",
+    "python_digest": "31cce8e4ee31dcce3746aa603c9fa49dacb75810c4bf2ead9a81693e2c2245d1",
+    "typescript_digest": "ae37402ebe7d563dc4c7685fa063d51464ca5d5e6202b165cec33d3bec442fc8",
+    "differingFields": 46,
+    "differences_digest": "131704fac62d0d9b47a5548a77d5cf1f50dee13ab7e4a29776a3050f9eb01897"
+  },
+  {
+    "fixture": "markov-abstention",
+    "drawCount": 15,
+    "mode": "shared-state",
+    "python_digest": "334b8f678e2174eff3db53ad6036ce9069873e57d37ff216de233f08cedf9e01",
+    "typescript_digest": "8f37706f1eb0d17fee144729f009a1e4e2b7b5863e72134bce9284392083025a",
+    "differingFields": 41,
+    "differences_digest": "773d3543c97de178ae51a83354bacfa0b598d20bb165269e8c576d7f782596cb"
+  },
+  {
+    "fixture": "markov-abstention",
+    "drawCount": 15,
+    "mode": "independent-lifecycle",
+    "python_digest": "334b8f678e2174eff3db53ad6036ce9069873e57d37ff216de233f08cedf9e01",
+    "typescript_digest": "8f37706f1eb0d17fee144729f009a1e4e2b7b5863e72134bce9284392083025a",
+    "differingFields": 41,
+    "differences_digest": "773d3543c97de178ae51a83354bacfa0b598d20bb165269e8c576d7f782596cb"
+  },
+  {
+    "fixture": "markov-abstention",
+    "drawCount": 16,
+    "mode": "shared-state",
+    "python_digest": "3202dc51f0f013ead8ea70e0cafdd1f97dd3d50ec84c82ebef9c55c65843cfb7",
+    "typescript_digest": "e3c2ee5167c2f7b36ba0eec2e7d4b37d851a072429098647e018ff8fa4922c03",
+    "differingFields": 44,
+    "differences_digest": "075f7dbf29db52d38f1565aacf9dae01efe6d3c850897f23801a0f221e5a4679"
+  },
+  {
+    "fixture": "markov-abstention",
+    "drawCount": 16,
+    "mode": "independent-lifecycle",
+    "python_digest": "3202dc51f0f013ead8ea70e0cafdd1f97dd3d50ec84c82ebef9c55c65843cfb7",
+    "typescript_digest": "e3c2ee5167c2f7b36ba0eec2e7d4b37d851a072429098647e018ff8fa4922c03",
+    "differingFields": 44,
+    "differences_digest": "075f7dbf29db52d38f1565aacf9dae01efe6d3c850897f23801a0f221e5a4679"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 15,
+    "mode": "shared-state",
+    "python_digest": "01acdb62e25c73065c32d5b5c076fae1554d3dbcb7a67d0b2946deeed17fcf81",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "5d08753fc43cab3c8adb2a94325bafca9ae1900d759d3a7e18ec5802216a96be"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 15,
+    "mode": "independent-lifecycle",
+    "python_digest": "01acdb62e25c73065c32d5b5c076fae1554d3dbcb7a67d0b2946deeed17fcf81",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "5d08753fc43cab3c8adb2a94325bafca9ae1900d759d3a7e18ec5802216a96be"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 16,
+    "mode": "shared-state",
+    "python_digest": "fb9df3836a0fe64a2303da8eef01d25ef0df507f4bee5665986459939914638b",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "eb18157ddff7ea59726a1c898845dd0217ee8619e06585c37388a67d9f660113"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 16,
+    "mode": "independent-lifecycle",
+    "python_digest": "fb9df3836a0fe64a2303da8eef01d25ef0df507f4bee5665986459939914638b",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "eb18157ddff7ea59726a1c898845dd0217ee8619e06585c37388a67d9f660113"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 17,
+    "mode": "shared-state",
+    "python_digest": "bf5d2785049eba6c4be88f5b7cc77ff32c2055a96e0b965f9c11c2629d752d98",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "aabaed2ed627622a6bdbc1d0f8a0ec247a51f9c1819a7fb6e393063ab8f8a9cb"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 17,
+    "mode": "independent-lifecycle",
+    "python_digest": "bf5d2785049eba6c4be88f5b7cc77ff32c2055a96e0b965f9c11c2629d752d98",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "aabaed2ed627622a6bdbc1d0f8a0ec247a51f9c1819a7fb6e393063ab8f8a9cb"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 18,
+    "mode": "shared-state",
+    "python_digest": "8252489913fe0ea779b044bdbd46dd38bd8169665f1f6eab1846380f34ad02eb",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "152ae6b8e509d85a6632066768f43486aa54c310c568569b95793871cfae020d"
+  },
+  {
+    "fixture": "zero-tie-order",
+    "drawCount": 18,
+    "mode": "independent-lifecycle",
+    "python_digest": "8252489913fe0ea779b044bdbd46dd38bd8169665f1f6eab1846380f34ad02eb",
+    "typescript_digest": "e30c7b8558aab9eb636406558f76e786c441f05a167c1d8e1e51852739c3cc4a",
+    "differingFields": 42,
+    "differences_digest": "152ae6b8e509d85a6632066768f43486aa54c310c568569b95793871cfae020d"
+  }
+]

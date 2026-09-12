@@ -1,24 +1,24 @@
-import type { PredictionResult, TierAuditStatus } from './types';
+import type { Market, PredictionResult, TierAuditStatus } from './types';
 import { auditAndCalibrate, type CalibrationAudit } from './smartCalibrator';
+import { matchesBasis, predictionIntegrityErrors, PRODUCTION_EVALUATOR_VERSION, MAX_CHECK_AGE_MS } from './productionContract';
+import { evaluationIntegrityErrors } from './marketHealth';
 
-export const PRODUCTION_ENGINE_VERSION = '2026.09.11-v2';
+export { PRODUCTION_ENGINE_VERSION } from './productionContract';
 
 export function serverPredictionMatchesHistory(server: any, results4D: string[]): boolean {
-  if (!server || typeof server !== 'object' || results4D.length === 0) return false;
-  const version = String(server.engine_version ?? server.engineVersion ?? '');
-  const basisCount = Number(server.basis_draw_count ?? server.basisDrawCount ?? -1);
-  const basisLastDraw = String(server.basis_last_draw ?? server.basisLastDraw ?? '');
-  return (
-    version === PRODUCTION_ENGINE_VERSION
-    && basisCount === results4D.length
-    && basisLastDraw === results4D[results4D.length - 1]
-  );
+  return matchesBasis(server, results4D) && predictionIntegrityErrors(server).length === 0;
 }
 
 export function serverEvaluationMatchesHistory(server: any, results4D: string[]): boolean {
-  if (!serverPredictionMatchesHistory(server, results4D)) return false;
-  const evaluatorVersion = String(server?.evaluator_version ?? server?.evaluatorVersion ?? '');
-  return evaluatorVersion.startsWith(`${PRODUCTION_ENGINE_VERSION}-prod-eval-`);
+  return matchesBasis(server, results4D) && server.evaluator_version === PRODUCTION_EVALUATOR_VERSION
+    && evaluationIntegrityErrors(server, true).length === 0;
+}
+
+export function mergeMarketPrediction(local: PredictionResult | null, market: Market | undefined, history: string[], now = Date.now()): PredictionResult | null {
+  if (!market || market.data_source === 'cached' || market.health_error) return null;
+  const age = now - Date.parse(market.last_checked_at || market.updated_at || '');
+  if (!Number.isFinite(age) || age > MAX_CHECK_AGE_MS || age < -300000) return null;
+  return mergeServerPrediction(local, market.next_prediction, history);
 }
 
 function intArray(
@@ -114,7 +114,7 @@ export function mergeServerPrediction(
   server: any,
   results4D: string[]
 ): PredictionResult | null {
-  if (!local || !serverPredictionMatchesHistory(server, results4D)) return local;
+  if (!local || !serverPredictionMatchesHistory(server, results4D)) return null;
 
   const tierMethodWeights = readTierWeights(server.tier_method_weights || server.tierMethodWeights)
     || local.tierMethodWeights;
@@ -167,7 +167,9 @@ export function mergeServerPrediction(
       confidenceScore: clampConfidence(
         sp.confidence_score ?? sp.confidenceScore,
         paitoPrediction.confidenceScore
-      )
+      ),
+      overdueAlerts: sp.overdue_alerts || [],
+      overdueShios: sp.overdue_shios || []
     };
   }
 
@@ -222,6 +224,10 @@ export function mergeServerPrediction(
 
   return {
     ...local,
+    source: 'python',
+    diagnosticFields: ['Confidence AI / convergence', 'Movement / overdue / Triad details', 'Reconstructed tuning timeline', ...(!server.tier_ranked_digits ? ['Full AI rankings (legacy state)'] : [])],
+    rankedDigits: server.tier_ranked_digits?.[4] || local.rankedDigits,
+    tierRankedDigits: server.tier_ranked_digits || local.tierRankedDigits,
     ai: {
       3: intArray(server.ai3 || server.ai?.[3], local.ai[3], 0, 9, 3),
       4: intArray(server.ai4 || server.ai?.[4], local.ai[4], 0, 9, 4),

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Market } from '../engine/types';
+import type { MarketHealth } from '../engine/marketHealth';
 import { Search, ChevronDown, Check, X, MessageCircle } from 'lucide-react';
 
 interface MarketSelectorProps {
   markets: Market[];
+  healthByMarket?: Record<string, MarketHealth>;
   selectedMarketId: string;
   onSelectMarket: (marketId: string) => void;
   onOpenSingleShare?: () => void;
@@ -29,6 +31,7 @@ const POPULAR_IDS = [
 
 export const MarketSelector: React.FC<MarketSelectorProps> = ({
   markets,
+  healthByMarket,
   selectedMarketId,
   onSelectMarket,
   onOpenSingleShare
@@ -292,6 +295,7 @@ export const MarketSelector: React.FC<MarketSelectorProps> = ({
                           <div className="w-4 h-4 shrink-0" />
                         )}
                         <span className="text-xs">{m.name}</span>
+                        <span className="text-[10px] font-mono text-slate-400 ml-2">{healthByMarket?.[m.id]?.status ?? 'STALE'}</span>
                       </div>
                       <span className="text-[11px] font-mono text-slate-400">
                         {count} data
