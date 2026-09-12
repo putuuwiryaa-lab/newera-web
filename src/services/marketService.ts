@@ -50,10 +50,10 @@ async function fetchAllFirestoreDocuments(): Promise<any[]> {
     if (Array.isArray(data.documents)) documents.push(...data.documents);
 
     pageToken = typeof data.nextPageToken === 'string' ? data.nextPageToken : '';
-    if (!pageToken) break;
+    if (!pageToken) return documents;
   }
 
-  return documents;
+  throw new Error('Firestore pagination incomplete');
 }
 
 export async function fetchAllMarkets(): Promise<MarketServiceResult> {
@@ -85,21 +85,26 @@ export async function fetchAllMarkets(): Promise<MarketServiceResult> {
           history_days: historyDaysVal,
           order: Number(f.order?.integerValue || 99),
           updated_at: f.updated_at?.stringValue || '',
-          next_prediction: nextPrediction || legacyPrediction || undefined,
+          next_prediction: nextPrediction || undefined,
           latest_prediction: legacyPrediction || undefined,
           last_audit: lastAudit || undefined,
-          production_evaluation: productionEvaluation || undefined
+          production_evaluation: productionEvaluation || undefined,
+          production_health: decodeFirestoreValue(f.production_health),
+          last_checked_at: decodeFirestoreValue(f.last_checked_at),
+          health_error: decodeFirestoreValue(f.health_error),
+          evaluation_blocked_reason: decodeFirestoreValue(f.evaluation_blocked_reason),
+          data_source: 'live'
         };
       });
 
       liveMarkets.sort((a, b) => a.order - b.order);
       return { markets: liveMarkets, source: 'live' };
     }
-  } catch {
-    // Fallback silent ke cached data.
+  } catch (error) {
+    return { markets: marketsList.map(m => ({ ...m, data_source: 'cached' })), source: 'cached', error: error instanceof Error ? error.message : 'Firestore unavailable' };
   }
 
-  return { markets: marketsList, source: 'cached' };
+  return { markets: marketsList.map(m => ({ ...m, data_source: 'cached' })), source: 'cached', error: 'Firestore returned no markets' };
 }
 
 /** Helper default pola urutan hari per minggu jika history_days belum tersedia. */

@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - fix/engine-correctness
+      - feat/engine-parity-health
   pull_request:
     branches:
       - main
@@ -16,10 +17,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: putuuwiryaa-lab/newera
+          ref: 7f3ea5db56a4c5366f162ebe6190f23f78aa7669
+          path: backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements-dev.txt
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: python backend/scripts/export_health_fixture.py --output tests/fixtures/healthy-market.json
+      - run: git diff --exit-code -- tests/fixtures/healthy-market.json
+      - run: npm test
+      - run: npx tsc -p tsconfig.test.json
+      - run: npm run parity -- --backend ./backend
       - run: npm run build
       - run: npm run lint
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: engine-parity-report
+          path: work/parity-report.json

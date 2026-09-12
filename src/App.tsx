@@ -7,6 +7,7 @@ import { SmartCalibrationCard } from './components/SmartCalibrationCard';
 import { TuningTimeline } from './components/TuningTimeline';
 import { EvaluationPanel } from './components/EvaluationPanel';
 import { ProductionEvaluationPanel } from './components/ProductionEvaluationPanel';
+import { MarketHealthPanel } from './components/MarketHealthPanel';
 import { HistoryPaitoTable } from './components/HistoryPaitoTable';
 import { LineGeneratorModal } from './components/LineGeneratorModal';
 import { SharePredictionModal } from './components/SharePredictionModal';
@@ -16,7 +17,9 @@ import { fetchAllMarkets, parseHistoryItems } from './services/marketService';
 import { generatePrediction } from './engine/adaptiveEngine';
 import { runWalkForwardEvaluation } from './engine/evaluator';
 import { auditAndCalibrate, reconstructLast7DaysTuningLogs } from './engine/smartCalibrator';
-import { calibrationAuditFromServer, mergeServerPrediction, serverEvaluationMatchesHistory } from './engine/serverState';
+import { calibrationAuditFromServer, mergeMarketPrediction, serverEvaluationMatchesHistory } from './engine/serverState';
+import { assessMarketHealth } from './engine/marketHealth';
+import { compareMarketEngines } from './engine/marketParity';
 import type { Market } from './engine/types';
 import { Sparkles, TrendingUp, History, Sliders, Layers, Compass } from 'lucide-react';
 
@@ -28,6 +31,11 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'ai' | 'bbfs' | 'tuning' | 'evaluation' | 'history'>('ai');
   const [tuningSubTab, setTuningSubTab] = useState<'ai' | 'bbfs' | 'paito'>('ai');
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [healthNow, setHealthNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setHealthNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const showToast = useCallback((message: string, type: 'success' | 'info' = 'success') => {
     setToast({ id: Date.now().toString(), message, type });
@@ -51,17 +59,19 @@ export function App() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSingleShareOpen, setIsSingleShareOpen] = useState(false);
 
-  const loadMarkets = async () => {
+  const loadMarkets = useCallback(async () => {
     setIsRefreshing(true);
     const result = await fetchAllMarkets();
     setMarkets(result.markets);
     setDataSource(result.source);
+    setHealthNow(Date.now());
+    if (result.error) showToast(`Data cached: ${result.error}`, 'info');
     setIsRefreshing(false);
-  };
+  }, [showToast]);
 
   useEffect(() => {
     loadMarkets();
-  }, []);
+  }, [loadMarkets]);
 
   const currentMarket = useMemo(() => {
     return markets.find((m) => m.id === selectedMarketId) || markets[0];
@@ -93,8 +103,14 @@ export function App() {
   const prediction = useMemo(() => {
     if (currentResults4D.length < 10) return null;
     const localPrediction = generatePrediction(currentResults4D, calibrationAudit);
-    return mergeServerPrediction(localPrediction, currentMarket?.next_prediction, currentResults4D);
-  }, [currentResults4D, calibrationAudit, currentMarket]);
+    return mergeMarketPrediction(localPrediction, currentMarket, currentResults4D, healthNow);
+  }, [currentResults4D, calibrationAudit, currentMarket, healthNow]);
+
+  const marketParity = useMemo(() => Object.fromEntries(markets.map(m => [m.id, compareMarketEngines(m)])), [markets]);
+
+  const marketHealth = useMemo(() => Object.fromEntries(markets.map(m => [m.id,
+    assessMarketHealth(m, healthNow, marketParity[m.id])
+  ])), [markets, healthNow, marketParity]);
 
   const tuningLogs = useMemo(() => {
     if (currentResults4D.length < 15) return [];
@@ -108,8 +124,8 @@ export function App() {
 
   const productionEvaluation = useMemo(() => {
     const candidate = currentMarket?.production_evaluation;
-    return serverEvaluationMatchesHistory(candidate, currentResults4D) ? candidate : null;
-  }, [currentMarket, currentResults4D]);
+    return !currentMarket?.evaluation_blocked_reason && dataSource === 'live' && serverEvaluationMatchesHistory(candidate, currentResults4D) ? candidate : null;
+  }, [currentMarket, currentResults4D, dataSource]);
 
   const historyItems = useMemo(() => {
     if (!currentMarket) return [];
@@ -186,10 +202,13 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5 pb-24 sm:pb-8">
         <MarketSelector
           markets={markets}
+          healthByMarket={marketHealth}
           selectedMarketId={selectedMarketId}
           onSelectMarket={(id) => setSelectedMarketId(id)}
           onOpenSingleShare={() => setIsSingleShareOpen(true)}
         />
+
+        {currentMarket && marketHealth[currentMarket.id] && <MarketHealthPanel health={marketHealth[currentMarket.id]} productionAvailable={prediction?.source === 'python'} />}
 
         <div className="hidden sm:flex items-center justify-between p-1.5 rounded-2xl bg-slate-900/80 border border-white/[0.08] shadow-lg backdrop-blur-md">
           <div className="flex items-center space-x-1.5">

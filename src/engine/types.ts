@@ -11,9 +11,16 @@ export interface Market {
   latest_prediction?: any; // legacy compatibility
   last_audit?: any;
   production_evaluation?: any;
+  production_health?: any;
+  last_checked_at?: string;
+  health_error?: string;
+  evaluation_blocked_reason?: string;
+  data_source?: 'live' | 'cached';
 }
 
 export interface PredictionResult {
+  source?: 'python' | 'typescript-diagnostic';
+  diagnosticFields?: string[];
   rankedDigits: number[];
   tierRankedDigits?: Record<number, number[]>;
   ai: {

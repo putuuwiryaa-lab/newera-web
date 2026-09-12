@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { Market } from '../engine/types';
 import { generatePrediction } from '../engine/adaptiveEngine';
-import { mergeServerPrediction } from '../engine/serverState';
+import { mergeMarketPrediction } from '../engine/serverState';
 import { generateSniperTrim } from '../engine/generator';
 import {
   Share2,
@@ -148,7 +148,7 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
       if (history4D.length >= 10) {
         try {
           const local = generatePrediction(history4D);
-          map.set(m.id, mergeServerPrediction(local, m.next_prediction, history4D));
+          map.set(m.id, mergeMarketPrediction(local, m, history4D));
         } catch (err) {
           console.error('Failed to generate prediction for', m.name, err);
         }
@@ -234,17 +234,18 @@ export const SharePredictionModal: React.FC<SharePredictionModalProps> = ({
         : MARKET_SHORT_CODES[m.name] || m.name.replace(/\s+POOLS$/i, '').trim();
       if (isLower) code = code.toLowerCase();
       else if (isUpper) code = code.toUpperCase();
-      const digits = getDigitsForType(predictionsMap.get(m.id) || null, predType) || '----';
+      const digits = getDigitsForType(predictionsMap.get(m.id) || null, predType) || '[production tidak tersedia]';
       return `${code} ${delimiter} ${digits}`;
     });
 
-    if (layout === 'inline') return `${typePrefix} ${items.join(' ')}`;
+    const source = predType === 'movement' ? 'Diagnostik TypeScript — bukan prediksi production' : 'Sumber: Python / Firestore; lines diturunkan dari digit tersimpan';
+    if (layout === 'inline') return `${source}\n${typePrefix} ${items.join(' ')}`;
     const banner = isUpper
       ? `🔥 PREDIKSI ${typePrefix.toUpperCase()} VORTEX 2D 🔥`
       : isLower
         ? `🔥 prediksi ${typePrefix.toLowerCase()} vortex 2d 🔥`
         : `🔥 Prediksi ${typePrefix} Vortex 2D 🔥`;
-    return `${banner}\n${items.join('\n')}`;
+    return `${source}\n${banner}\n${items.join('\n')}`;
   }, [markets, selectedIds, predType, delimiter, layout, letterCase, nameFormat, predictionsMap]);
 
   const toggleSelectAll = (select: boolean) => {

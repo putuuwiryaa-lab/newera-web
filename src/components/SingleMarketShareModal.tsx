@@ -64,9 +64,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
     const bbfs7 = prediction.paitoBBFS7?.digits || prediction.bbfs?.[7] || [];
     const ai4 = prediction.ai?.[4] || [];
     const ai3 = prediction.ai?.[3] || [];
-    const deadDigits = (prediction.paitoBBFS7?.triadKumat && prediction.paitoBBFS7.triadKumat.length > 0)
-      ? prediction.paitoBBFS7.triadKumat.map((t) => t.digit)
-      : (prediction.deadDigits || []);
+    const deadDigits = prediction.deadDigits || [];
     const paito = prediction.paitoPrediction;
 
     // Top AI 1 Digit: digit peringkat #1 skor tertinggi
@@ -239,7 +237,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
       lines.push('╔══════════════════════════════════════╗');
       lines.push(`  🔥 PREDIKSI RESMI ${d.marketName.toUpperCase()} 🔥`);
       lines.push(`  🗓️ ${d.dateStr}`);
-      lines.push(`  ⚡ TINGKAT AKURASI : ${d.confidenceScore}% (${d.convergenceStatus})`);
+      lines.push(`  ⚡ SKOR DIAGNOSTIK TS : ${d.confidenceScore} (${d.convergenceStatus}; bukan akurasi)`);
       lines.push('╚══════════════════════════════════════╝');
       lines.push('');
 
@@ -249,7 +247,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
         lines.push(`  ▸ AI Main (2D)   : ${d.ai4Str}`);
         lines.push(`  ▸ BBFS Racikan   : ${d.bbfs7Str} (7 Digit)`);
         if (d.deadDigitsStr) {
-          lines.push(`  ▸ Angka Mati 2D  : [ ${d.deadDigitsStr} ] (Peluang Keluar < 1%)`);
+          lines.push(`  ▸ Angka Mati 2D  : [ ${d.deadDigitsStr} ] (ranking backend)`);
         }
         lines.push(`  ▸ Status Twin    : ${d.twinStatusFull}`);
         lines.push('');
@@ -313,7 +311,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
         lines.push('🚀 Salam JP Paus Beruntun | VORTEX 2D');
       }
 
-      return lines.join('\n');
+      return 'Sumber: Python / Firestore. Movement, confidence, dan variasi line: diagnostik TypeScript.\n' + lines.join('\n');
     } else if (formatStyle === 'ringkas') {
       // 2. FORMAT RINGKAS (Fast Bet)
       const lines: string[] = [];
@@ -353,7 +351,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
         lines.push('');
         lines.push('⚠️ UPS | VORTEX 2D');
       }
-      return lines.join('\n');
+      return 'Sumber: Python / Firestore. Movement, confidence, dan variasi line: diagnostik TypeScript.\n' + lines.join('\n');
     } else {
       // 3. FORMAT KHUSUS BOM SNIPER
       const lines: string[] = [];
@@ -386,7 +384,7 @@ export const SingleMarketShareModal: React.FC<SingleMarketShareModalProps> = ({
         lines.push('');
         lines.push('⚠️ UPS | Gaspol JP Paus! 🚀');
       }
-      return lines.join('\n');
+      return 'Sumber: Python / Firestore. Movement, confidence, dan variasi line: diagnostik TypeScript.\n' + lines.join('\n');
     }
   }, [calculatedData, formatStyle, showAiBbfs, showShio, showPaito, showTarung, showMovement, showBom, showFooter]);
 

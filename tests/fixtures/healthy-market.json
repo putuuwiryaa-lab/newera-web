@@ -1,0 +1,1080 @@
+{
+  "id": "FIXTURE",
+  "name": "FIXTURE",
+  "order": 1,
+  "history_data": "1608 8342 9941 6685 9014 9048 1547 3991 2420 7754 7153 3297 1826 4460 6759 4603 7232 9166 0365 7909 8638 1872 7971 3215 6044 2578 9577 0521 9450 1284 5183 9827 8856 7990 4789 1133 4262 2696 8395 4439 5668 5402 6001 9745 3074 6108 7607 7051 6480 4814 3213 6357 5886 1520 2819 7663 1292 6226 6425 0969 2698 8932 4031 6275 0104 9638 5637 3581 3510 8344 0011 1234",
+  "next_prediction": {
+    "engine_version": "2026.09.11-v2",
+    "basis_draw_count": 72,
+    "basis_last_draw": "1234",
+    "ai3": [
+      8,
+      3,
+      7
+    ],
+    "ai4": [
+      8,
+      3,
+      7,
+      6
+    ],
+    "ai5": [
+      8,
+      3,
+      7,
+      6,
+      9
+    ],
+    "ai6": [
+      8,
+      3,
+      7,
+      9,
+      4,
+      6
+    ],
+    "tier_ranked_digits": {
+      "3": [
+        8,
+        3,
+        7,
+        6,
+        4,
+        1,
+        9,
+        5,
+        2,
+        0
+      ],
+      "4": [
+        8,
+        3,
+        7,
+        6,
+        9,
+        4,
+        1,
+        5,
+        2,
+        0
+      ],
+      "5": [
+        8,
+        3,
+        7,
+        6,
+        9,
+        4,
+        1,
+        5,
+        2,
+        0
+      ],
+      "6": [
+        8,
+        3,
+        7,
+        9,
+        4,
+        6,
+        1,
+        5,
+        2,
+        0
+      ]
+    },
+    "tier_method_weights": {
+      "3": {
+        "Momentum": 12.77,
+        "Markov": 21.04,
+        "Delta": 17.03,
+        "Mistik": 13.21
+      },
+      "4": {
+        "Momentum": 13.41,
+        "Markov": 20.4,
+        "Delta": 19.43,
+        "Mistik": 17.49
+      },
+      "5": {
+        "Momentum": 15.47,
+        "Markov": 20.4,
+        "Delta": 20.4,
+        "Mistik": 18.46
+      },
+      "6": {
+        "Momentum": 17.54,
+        "Markov": 20.4,
+        "Delta": 20.4,
+        "Mistik": 20.63
+      }
+    },
+    "bbfs6": [
+      3,
+      8,
+      1,
+      6,
+      4,
+      7
+    ],
+    "bbfs7": [
+      3,
+      8,
+      1,
+      6,
+      4,
+      7,
+      0
+    ],
+    "bbfs8": [
+      3,
+      8,
+      1,
+      6,
+      4,
+      7,
+      0,
+      2
+    ],
+    "bbfs9": [
+      3,
+      8,
+      1,
+      6,
+      4,
+      7,
+      0,
+      2,
+      9
+    ],
+    "bbfs_tier_weights": {
+      "6": {
+        "Densitas Pasangan": 9.22,
+        "Transisi Markov": 9.03,
+        "Momentum Posisi": 15.58,
+        "Coverage Proteksi": 7.46
+      },
+      "7": {
+        "Densitas Pasangan": 7.37,
+        "Transisi Markov": 8.85,
+        "Momentum Posisi": 16.66,
+        "Coverage Proteksi": 10.96
+      },
+      "8": {
+        "Densitas Pasangan": 6.45,
+        "Transisi Markov": 6.45,
+        "Momentum Posisi": 21.63,
+        "Coverage Proteksi": 16.79
+      },
+      "9": {
+        "Densitas Pasangan": 4.61,
+        "Transisi Markov": 5.53,
+        "Momentum Posisi": 21.63,
+        "Coverage Proteksi": 22.4
+      }
+    },
+    "dead_digits": [
+      9,
+      5
+    ],
+    "paito": {
+      "top_biji": [
+        6,
+        8,
+        2
+      ],
+      "biji_probabilities": {
+        "0": 0.007518796992481203,
+        "1": 0.08270676691729323,
+        "2": 0.16541353383458646,
+        "3": 0.08270676691729323,
+        "4": 0.08270676691729323,
+        "5": 0.08270676691729323,
+        "6": 0.16541353383458646,
+        "7": 0.08270676691729323,
+        "8": 0.16541353383458646,
+        "9": 0.08270676691729323
+      },
+      "primary_parity": "Ganjil-Genap",
+      "parity_probabilities": {
+        "Genap-Genap": 0.22556123563934125,
+        "Genap-Ganjil": 0.19324457038388082,
+        "Ganjil-Genap": 0.3025470245808591,
+        "Ganjil-Ganjil": 0.27864716939591894
+      },
+      "primary_magnitude": "Kecil",
+      "magnitude_probabilities": {
+        "Besar": 0.3435787919196215,
+        "Kecil": 0.6564212080803785
+      },
+      "top_shios": [
+        8,
+        2,
+        9
+      ],
+      "primary_jalur": 2,
+      "shio_probabilities": {
+        "1": 0.09388081790991244,
+        "2": 0.13400626634604862,
+        "3": 0.08941932457106129,
+        "4": 0.05851827762044774,
+        "5": 0.041523658614899484,
+        "6": 0.04116208285821761,
+        "7": 0.07650857392459623,
+        "8": 0.1396777373412851,
+        "9": 0.10409513079324592,
+        "10": 0.10012700146811072,
+        "11": 0.07833297528323603,
+        "12": 0.042748153268938764
+      },
+      "jalur_probabilities": {
+        "1": 0.32903467092306715,
+        "2": 0.39354063758546926,
+        "3": 0.2774246914914636
+      },
+      "overdue_shios": [],
+      "overdue_alerts": [],
+      "confidence_score": 42
+    },
+    "pola_tarung": {
+      "ranked_kepala": [
+        3,
+        8,
+        7,
+        1,
+        5,
+        4,
+        0,
+        2,
+        9,
+        6
+      ],
+      "ranked_ekor": [
+        8,
+        1,
+        4,
+        7,
+        3,
+        0,
+        5,
+        2,
+        9,
+        6
+      ],
+      "kepala_direction": "NAIK",
+      "ekor_direction": "NAIK",
+      "tarung_3x3": [
+        "38",
+        "31",
+        "34",
+        "88",
+        "81",
+        "84",
+        "78",
+        "71",
+        "74"
+      ],
+      "tarung_4x4": [
+        "38",
+        "31",
+        "34",
+        "37",
+        "88",
+        "81",
+        "84",
+        "87",
+        "78",
+        "71",
+        "74",
+        "77",
+        "18",
+        "11",
+        "14",
+        "17"
+      ],
+      "tarung_5x5": [
+        "38",
+        "31",
+        "34",
+        "37",
+        "33",
+        "88",
+        "81",
+        "84",
+        "87",
+        "83",
+        "78",
+        "71",
+        "74",
+        "77",
+        "73",
+        "18",
+        "11",
+        "14",
+        "17",
+        "13",
+        "58",
+        "51",
+        "54",
+        "57",
+        "53"
+      ]
+    },
+    "paito_bbfs7": {
+      "digits": [
+        8,
+        3,
+        1,
+        9,
+        2,
+        0,
+        6
+      ],
+      "ranked7": [
+        8,
+        3,
+        1,
+        9,
+        2,
+        0,
+        6
+      ],
+      "nuklir6": [
+        "38",
+        "92",
+        "98",
+        "96",
+        "02",
+        "08"
+      ],
+      "bom12": [
+        "83",
+        "81",
+        "89",
+        "38",
+        "31",
+        "39",
+        "18",
+        "13",
+        "19",
+        "98",
+        "93",
+        "91"
+      ],
+      "invest20": [
+        "83",
+        "81",
+        "89",
+        "82",
+        "38",
+        "31",
+        "39",
+        "32",
+        "18",
+        "13",
+        "19",
+        "12",
+        "98",
+        "93",
+        "91",
+        "92",
+        "28",
+        "23",
+        "21",
+        "29"
+      ],
+      "full42": [
+        "83",
+        "81",
+        "89",
+        "82",
+        "80",
+        "86",
+        "38",
+        "31",
+        "39",
+        "32",
+        "30",
+        "36",
+        "18",
+        "13",
+        "19",
+        "12",
+        "10",
+        "16",
+        "98",
+        "93",
+        "91",
+        "92",
+        "90",
+        "96",
+        "28",
+        "23",
+        "21",
+        "29",
+        "20",
+        "26",
+        "08",
+        "03",
+        "01",
+        "09",
+        "02",
+        "06",
+        "68",
+        "63",
+        "61",
+        "69",
+        "62",
+        "60"
+      ],
+      "twin7": [
+        "88",
+        "33",
+        "11",
+        "99",
+        "22",
+        "00",
+        "66"
+      ],
+      "dead_digits": [
+        4,
+        5,
+        7
+      ]
+    },
+    "wheeling7": {
+      "wheel_3d": [
+        "831",
+        "892",
+        "806",
+        "390",
+        "326",
+        "196",
+        "120",
+        "832",
+        "810",
+        "896",
+        "319",
+        "306",
+        "126",
+        "920",
+        "839"
+      ],
+      "wheel_3d_full": [
+        "831",
+        "839",
+        "832",
+        "830",
+        "836",
+        "819",
+        "812",
+        "810",
+        "816",
+        "892",
+        "890",
+        "896",
+        "820",
+        "826",
+        "806",
+        "319",
+        "312",
+        "310",
+        "316",
+        "392",
+        "390",
+        "396",
+        "320",
+        "326",
+        "306",
+        "192",
+        "190",
+        "196",
+        "120",
+        "126",
+        "106",
+        "920",
+        "926",
+        "906",
+        "206"
+      ],
+      "wheel_4d": [
+        "8319",
+        "8320",
+        "8126",
+        "8906",
+        "3106",
+        "3926",
+        "1920",
+        "8312",
+        "8310",
+        "8316",
+        "8392",
+        "8390",
+        "8196",
+        "8206"
+      ],
+      "wheel_4d_full": [
+        "8319",
+        "8312",
+        "8310",
+        "8316",
+        "8392",
+        "8390",
+        "8396",
+        "8320",
+        "8326",
+        "8306",
+        "8192",
+        "8190",
+        "8196",
+        "8120",
+        "8126",
+        "8106",
+        "8920",
+        "8926",
+        "8906",
+        "8206",
+        "3192",
+        "3190",
+        "3196",
+        "3120",
+        "3126",
+        "3106",
+        "3920",
+        "3926",
+        "3906",
+        "3206",
+        "1920",
+        "1926",
+        "1906",
+        "1206",
+        "9206"
+      ],
+      "guarantee_3d": "Coverage subset: setiap pasangan digit tercakup; bukan jaminan urutan straight 3D",
+      "guarantee_4d": "Coverage subset: setiap triplet digit tercakup; bukan jaminan urutan straight 4D"
+    }
+  },
+  "production_evaluation": {
+    "evaluator_version": "2026.09.11-v2-prod-eval-v1",
+    "engine_version": "2026.09.11-v2",
+    "basis_draw_count": 72,
+    "basis_last_draw": "1234",
+    "tested_draws": 22,
+    "replay_draws": 20,
+    "live_draws": 2,
+    "replay_window_draws": 70,
+    "twin_count": 2,
+    "twin_rate_pct": 9.09,
+    "ai_stats": {
+      "3": {
+        "hits": 17,
+        "tested": 22,
+        "hit_rate_pct": 77.27,
+        "baseline_pct": 51.0,
+        "lift_pp": 26.27,
+        "ci95_pct": [
+          56.56,
+          89.88
+        ]
+      },
+      "4": {
+        "hits": 19,
+        "tested": 22,
+        "hit_rate_pct": 86.36,
+        "baseline_pct": 64.0,
+        "lift_pp": 22.36,
+        "ci95_pct": [
+          66.66,
+          95.25
+        ]
+      },
+      "5": {
+        "hits": 19,
+        "tested": 22,
+        "hit_rate_pct": 86.36,
+        "baseline_pct": 75.0,
+        "lift_pp": 11.36,
+        "ci95_pct": [
+          66.66,
+          95.25
+        ]
+      },
+      "6": {
+        "hits": 21,
+        "tested": 22,
+        "hit_rate_pct": 95.45,
+        "baseline_pct": 84.0,
+        "lift_pp": 11.45,
+        "ci95_pct": [
+          78.2,
+          99.19
+        ]
+      }
+    },
+    "bbfs_stats": {
+      "6": {
+        "hits": 15,
+        "tested": 22,
+        "hit_rate_pct": 68.18,
+        "baseline_pct": 30.0,
+        "lift_pp": 38.18,
+        "ci95_pct": [
+          47.32,
+          83.64
+        ]
+      },
+      "7": {
+        "hits": 16,
+        "tested": 22,
+        "hit_rate_pct": 72.73,
+        "baseline_pct": 42.0,
+        "lift_pp": 30.73,
+        "ci95_pct": [
+          51.85,
+          86.85
+        ]
+      },
+      "8": {
+        "hits": 18,
+        "tested": 22,
+        "hit_rate_pct": 81.82,
+        "baseline_pct": 56.0,
+        "lift_pp": 25.82,
+        "ci95_pct": [
+          61.48,
+          92.69
+        ]
+      },
+      "9": {
+        "hits": 20,
+        "tested": 22,
+        "hit_rate_pct": 90.91,
+        "baseline_pct": 72.0,
+        "lift_pp": 18.91,
+        "ci95_pct": [
+          72.18,
+          97.47
+        ]
+      }
+    },
+    "paito_stats": {
+      "biji": {
+        "hits": 11,
+        "tested": 22,
+        "hit_rate_pct": 50.0,
+        "baseline_pct": 30.73,
+        "lift_pp": 19.27,
+        "ci95_pct": [
+          30.72,
+          69.28
+        ],
+        "brier_score": 0.870725
+      },
+      "parity": {
+        "hits": 1,
+        "tested": 22,
+        "hit_rate_pct": 4.55,
+        "baseline_pct": 25.0,
+        "lift_pp": -20.45,
+        "ci95_pct": [
+          0.81,
+          21.8
+        ],
+        "brier_score": 0.786348
+      },
+      "magnitude": {
+        "hits": 9,
+        "tested": 22,
+        "hit_rate_pct": 40.91,
+        "baseline_pct": 50.0,
+        "lift_pp": -9.09,
+        "ci95_pct": [
+          23.26,
+          61.27
+        ],
+        "brier_score": 0.493569
+      },
+      "shio": {
+        "hits": 8,
+        "tested": 22,
+        "hit_rate_pct": 36.36,
+        "baseline_pct": 25.45,
+        "lift_pp": 10.91,
+        "ci95_pct": [
+          19.73,
+          57.05
+        ],
+        "brier_score": 0.909695
+      },
+      "jalur": {
+        "hits": 9,
+        "tested": 22,
+        "hit_rate_pct": 40.91,
+        "baseline_pct": 33.0,
+        "lift_pp": 7.91,
+        "ci95_pct": [
+          23.26,
+          61.27
+        ],
+        "brier_score": 0.686441
+      }
+    },
+    "trimmer_stats": {
+      "bom10": 3,
+      "medium15": 6,
+      "cadangan": 7,
+      "missed": 6
+    },
+    "sniper_stats": {
+      "hits": 8,
+      "tested": 22,
+      "hit_rate_pct": 36.36,
+      "baseline_pct": 13.0,
+      "lift_pp": 23.36,
+      "ci95_pct": [
+        19.73,
+        57.05
+      ],
+      "active_draws": 22,
+      "participation_rate_pct": 100.0,
+      "top_hits": 1,
+      "secondary_hits": 7,
+      "super_hits": 0
+    },
+    "prospective": {
+      "tested_draws": 2,
+      "minimum_draws": 30,
+      "ready": false,
+      "twin_count": 1,
+      "ai_stats": {
+        "3": {
+          "hits": 0,
+          "tested": 2,
+          "hit_rate_pct": 0.0,
+          "baseline_pct": 51.0,
+          "lift_pp": -51.0,
+          "ci95_pct": [
+            0.0,
+            65.76
+          ]
+        },
+        "4": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 64.0,
+          "lift_pp": -14.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        },
+        "5": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 75.0,
+          "lift_pp": -25.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        },
+        "6": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 84.0,
+          "lift_pp": -34.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        }
+      },
+      "bbfs_stats": {
+        "6": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 30.0,
+          "lift_pp": 20.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        },
+        "7": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 42.0,
+          "lift_pp": 8.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        },
+        "8": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 56.0,
+          "lift_pp": -6.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        },
+        "9": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 72.0,
+          "lift_pp": -22.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ]
+        }
+      },
+      "paito_stats": {
+        "biji": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 33.0,
+          "lift_pp": 17.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ],
+          "brier_score": 0.875064
+        },
+        "parity": {
+          "hits": 0,
+          "tested": 2,
+          "hit_rate_pct": 0.0,
+          "baseline_pct": 25.0,
+          "lift_pp": -25.0,
+          "ci95_pct": [
+            0.0,
+            65.76
+          ],
+          "brier_score": 0.741781
+        },
+        "magnitude": {
+          "hits": 2,
+          "tested": 2,
+          "hit_rate_pct": 100.0,
+          "baseline_pct": 50.0,
+          "lift_pp": 50.0,
+          "ci95_pct": [
+            34.24,
+            100.0
+          ],
+          "brier_score": 0.28972
+        },
+        "shio": {
+          "hits": 0,
+          "tested": 2,
+          "hit_rate_pct": 0.0,
+          "baseline_pct": 25.0,
+          "lift_pp": -25.0,
+          "ci95_pct": [
+            0.0,
+            65.76
+          ],
+          "brier_score": 0.985979
+        },
+        "jalur": {
+          "hits": 1,
+          "tested": 2,
+          "hit_rate_pct": 50.0,
+          "baseline_pct": 33.0,
+          "lift_pp": 17.0,
+          "ci95_pct": [
+            9.45,
+            90.55
+          ],
+          "brier_score": 0.646963
+        }
+      },
+      "trimmer_stats": {
+        "bom10": 0,
+        "medium15": 0,
+        "cadangan": 1,
+        "missed": 1
+      },
+      "sniper_stats": {
+        "hits": 1,
+        "tested": 2,
+        "hit_rate_pct": 50.0,
+        "baseline_pct": 13.0,
+        "lift_pp": 37.0,
+        "ci95_pct": [
+          9.45,
+          90.55
+        ],
+        "active_draws": 2,
+        "participation_rate_pct": 100.0,
+        "top_hits": 0,
+        "secondary_hits": 1,
+        "super_hits": 0
+      }
+    },
+    "accumulators": {
+      "tested": 22,
+      "twins": 2,
+      "replay_draws": 20,
+      "live_draws": 2,
+      "ai": {
+        "3": {
+          "hits": 17
+        },
+        "4": {
+          "hits": 19
+        },
+        "5": {
+          "hits": 19
+        },
+        "6": {
+          "hits": 21
+        }
+      },
+      "bbfs": {
+        "6": {
+          "hits": 15
+        },
+        "7": {
+          "hits": 16
+        },
+        "8": {
+          "hits": 18
+        },
+        "9": {
+          "hits": 20
+        }
+      },
+      "paito": {
+        "biji": {
+          "hits": 11,
+          "baseline_sum": 6.7600000000000025,
+          "brier_sum": 19.15595347664186
+        },
+        "parity": {
+          "hits": 1,
+          "baseline_sum": 5.5,
+          "brier_sum": 17.299657217888182
+        },
+        "magnitude": {
+          "hits": 9,
+          "baseline_sum": 11.0,
+          "brier_sum": 10.858516874438704
+        },
+        "shio": {
+          "hits": 8,
+          "baseline_sum": 5.599999999999999,
+          "brier_sum": 20.01328692712177
+        },
+        "jalur": {
+          "hits": 9,
+          "baseline_sum": 7.260000000000001,
+          "brier_sum": 15.101692796556822
+        }
+      },
+      "trimmer": {
+        "bom10": 3,
+        "medium15": 6,
+        "cadangan": 7,
+        "missed": 6
+      },
+      "sniper": {
+        "active_draws": 22,
+        "any_hits": 8,
+        "top_hits": 1,
+        "secondary_hits": 7,
+        "super_hits": 0,
+        "baseline_sum": 2.8600000000000008
+      },
+      "live_only": {
+        "tested": 2,
+        "twins": 1,
+        "replay_draws": 0,
+        "live_draws": 0,
+        "ai": {
+          "3": {
+            "hits": 0
+          },
+          "4": {
+            "hits": 1
+          },
+          "5": {
+            "hits": 1
+          },
+          "6": {
+            "hits": 1
+          }
+        },
+        "bbfs": {
+          "6": {
+            "hits": 1
+          },
+          "7": {
+            "hits": 1
+          },
+          "8": {
+            "hits": 1
+          },
+          "9": {
+            "hits": 1
+          }
+        },
+        "paito": {
+          "biji": {
+            "hits": 1,
+            "baseline_sum": 0.66,
+            "brier_sum": 1.750127197693482
+          },
+          "parity": {
+            "hits": 0,
+            "baseline_sum": 0.5,
+            "brier_sum": 1.483561172243392
+          },
+          "magnitude": {
+            "hits": 2,
+            "baseline_sum": 1.0,
+            "brier_sum": 0.5794393970740577
+          },
+          "shio": {
+            "hits": 0,
+            "baseline_sum": 0.5,
+            "brier_sum": 1.9719574982252799
+          },
+          "jalur": {
+            "hits": 1,
+            "baseline_sum": 0.66,
+            "brier_sum": 1.293926296820764
+          }
+        },
+        "trimmer": {
+          "bom10": 0,
+          "medium15": 0,
+          "cadangan": 1,
+          "missed": 1
+        },
+        "sniper": {
+          "active_draws": 2,
+          "any_hits": 1,
+          "top_hits": 0,
+          "secondary_hits": 1,
+          "super_hits": 0,
+          "baseline_sum": 0.26
+        }
+      }
+    },
+    "unscored_draws": 0
+  },
+  "last_checked_at": "2026-09-11T12:00:00+00:00",
+  "data_source": "live"
+}
